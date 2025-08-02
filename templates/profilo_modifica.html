@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Modifica Profilo{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">Modifica il tuo Profilo</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="/profilo/modifica">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ user.email or '' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone_number" class="form-label">Numero di Telefono</label>
+                            <input type="tel" class="form-control" id="phone_number" name="phone_number" value="{{ user.phone_number or '' }}">
+                        </div>
+                        <hr class="my-4">
+                        <h5 class="mb-3">Cambia Password</h5>
+                        <p class="text-muted"><small>Lascia vuoto questo campo se non vuoi cambiare la password.</small></p>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label">Nuova Password</label>
+                            <input type="password" class="form-control" id="new_password" name="new_password">
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <a href="/profilo" class="btn btn-secondary me-2">Annulla</a>
+                            <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

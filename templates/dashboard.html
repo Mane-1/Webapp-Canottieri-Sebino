@@ -1,0 +1,84 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-5">
+    <h1 class="display-5 fw-bold text-body-emphasis">Benvenuto, {{ current_user.first_name or current_user.username }}!</h1>
+    <p class="col-lg-8 fs-4">Usa i collegamenti rapidi qui sotto per gestire gli allenamenti, visualizzare il calendario o amministrare gli utenti.</p>
+    <hr class="my-4">
+
+    <div class="row g-4">
+        <!-- Card Allenamenti -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">🗓️ Allenamenti</h5>
+                    <p class="card-text">Visualizza il calendario, la lista e gestisci gli allenamenti.</p>
+                    <div class="mt-auto pt-3">
+                        <a href="/calendario" class="btn btn-primary">Vai agli Allenamenti</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Rubrica -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">📖 Rubrica</h5>
+                    <p class="card-text">Consulta l'elenco di tutti i soci della canottieri.</p>
+                    <div class="mt-auto pt-3">
+                        <a href="/rubrica" class="btn btn-primary">Apri la Rubrica</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Gestione Turni (Solo per Admin) -->
+        {% if current_user.is_admin %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                     <h5 class="card-title">🕒 Turni</h5>
+                     <p class="card-text">Assegna gli allenatori ai turni di apertura e chiusura della società.</p>
+                     <div class="mt-auto pt-3">
+                        <a href="/turni" class="btn btn-primary">Gestisci Turni</a>
+                     </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Card Risorse -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body d-flex flex-column">
+                     <h5 class="card-title">🚣 Risorse</h5>
+                     <p class="card-text">Gestisci le imbarcazioni e le schede pesi degli atleti.</p>
+                     <div class="mt-auto pt-3">
+                        <a href="/risorse/barche" class="btn btn-primary me-2">Barche</a>
+                        <a href="/risorse/pesi" class="btn btn-primary">Pesi</a>
+                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Gestione Utenti (Solo per Admin) -->
+        {% if current_user.is_admin %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-body d-flex flex-column">
+                     <h5 class="card-title">👥 Utenti</h5>
+                     <p class="card-text">Aggiungi, modifica o rimuovi utenti dal sistema.</p>
+                     <div class="mt-auto pt-3">
+                        <a href="/admin/users" class="btn btn-warning">Gestisci Utenti</a>
+                     </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

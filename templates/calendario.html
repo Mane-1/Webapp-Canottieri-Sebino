@@ -1,0 +1,171 @@
+<!-- templates/calendario.html -->
+{% extends "base.html" %}
+
+{% block title %}Calendario Allenamenti{% endblock %}
+
+{% block head_extra %}
+    <!-- Dipendenza di FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="h2 mb-0">Calendario Allenamenti</h1>
+        <div class="d-flex gap-2">
+            <a href="/allenamenti" class="btn btn-outline-secondary">
+                Vai alla Lista
+            </a>
+            <a href="/allenamenti/nuovo" class="btn btn-success">
+                + Aggiungi Allenamento
+            </a>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <a class="btn btn-outline-primary" data-bs-toggle="collapse" href="#filterCollapse" role="button" aria-expanded="false" aria-controls="filterCollapse">
+            Mostra/Nascondi Filtri
+        </a>
+        <div class="collapse mt-2" id="filterCollapse">
+            <div class="card card-body shadow-sm">
+                <div class="d-flex flex-wrap gap-3 align-items-center">
+                    <div>
+                        <label for="filter-macro-group" class="form-label">Filtra per Gruppo:</label>
+                        <select id="filter-macro-group" class="form-select">
+                            <option value="">Tutti i Gruppi</option>
+                            <!-- Opzioni popolate da JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filter-sub-group" class="form-label">Filtra per Sottogruppo:</label>
+                        <select id="filter-sub-group" multiple class="form-select" style="min-width: 200px; height: 120px;">
+                            <!-- Opzioni popolate da JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendario -->
+    <div id="calendar" class="bg-white p-4 rounded shadow-sm"></div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    const calendarEl = document.getElementById('calendar');
+    const macroGroupFilter = document.getElementById('filter-macro-group');
+    const subGroupFilter = document.getElementById('filter-sub-group');
+    let allGroups = [];
+
+    // --- Gestione Modale Dettagli (globale) ---
+    const eventDetailModalEl = document.getElementById('eventDetailModal');
+    if (eventDetailModalEl) {
+        const eventDetailModal = new bootstrap.Modal(eventDetailModalEl);
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDate = document.getElementById('modalDate');
+        const modalTime = document.getElementById('modalTime');
+        const modalDescription = document.getElementById('modalDescription');
+        const modalMacroGroup = document.getElementById('modalMacroGroup');
+        const modalSubGroups = document.getElementById('modalSubGroups');
+        const modalRecurrence = document.getElementById('modalRecurrence');
+        const modalEditButton = document.getElementById('modalEditButton');
+        const modalDeleteButton = document.getElementById('modalDeleteButton');
+
+        async function loadFilterGroups() {
+            try {
+                const response = await fetch('/api/training/groups');
+                if (!response.ok) throw new Error('Network response was not ok');
+                allGroups = await response.json();
+                populateMacroGroupFilter();
+            } catch (error) {
+                console.error('Errore nel caricamento dei gruppi per i filtri:', error);
+            }
+        }
+        function populateMacroGroupFilter() {
+            allGroups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                macroGroupFilter.appendChild(option);
+            });
+        }
+        function populateSubGroupFilter(macroGroupId) {
+            subGroupFilter.innerHTML = '';
+            if (macroGroupId) {
+                const selectedMacroGroup = allGroups.find(g => g.id == macroGroupId);
+                if (selectedMacroGroup && selectedMacroGroup.subgroups) {
+                    selectedMacroGroup.subgroups.forEach(subgroup => {
+                        const option = document.createElement('option');
+                        option.value = subgroup.id;
+                        option.textContent = subgroup.name;
+                        subGroupFilter.appendChild(option);
+                    });
+                }
+            }
+        }
+        function buildEventsUrl() {
+            const params = new URLSearchParams();
+            const macroGroupId = macroGroupFilter.value;
+            const selectedSubgroups = Array.from(subGroupFilter.selectedOptions).map(opt => opt.value);
+            if (macroGroupId) params.append('macro_group_id', macroGroupId);
+            if (selectedSubgroups.length > 0) params.append('subgroup_ids', selectedSubgroups.join(','));
+            const queryString = params.toString();
+            return `/api/allenamenti${queryString ? '?' + queryString : ''}`;
+        }
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'it',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            buttonText: {
+                today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda'
+            },
+            events: (fetchInfo, successCallback, failureCallback) => {
+                fetch(buildEventsUrl())
+                    .then(response => response.json())
+                    .then(data => successCallback(data))
+                    .catch(error => failureCallback(error));
+            },
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+
+                const props = info.event.extendedProps;
+                const startDate = info.event.start;
+
+                modalTitle.textContent = info.event.title;
+                modalDate.textContent = startDate.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                modalTime.textContent = props.orario || 'Non specificato';
+                modalDescription.textContent = props.descrizione || 'Nessuna descrizione.';
+                modalMacroGroup.textContent = props.macro_group || 'Non specificato';
+                modalSubGroups.textContent = props.sub_groups || 'Non specificato';
+                modalRecurrence.textContent = props.is_recurrent || 'No';
+
+                modalEditButton.href = `/allenamenti/${info.event.id}/modifica`;
+                modalDeleteButton.setAttribute('data-allenamento-id', info.event.id);
+                modalDeleteButton.setAttribute('data-recurrence-id', props.recurrence_id || '');
+
+                eventDetailModal.show();
+            }
+        });
+
+        macroGroupFilter.addEventListener('change', (event) => {
+            populateSubGroupFilter(event.target.value);
+            calendar.refetchEvents();
+        });
+        subGroupFilter.addEventListener('change', () => {
+            calendar.refetchEvents();
+        });
+
+        calendar.render();
+        loadFilterGroups();
+    }
+});
+</script>
+{% endblock %}

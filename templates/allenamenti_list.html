@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">{{ page_title }}</h2>
+    <a href="/allenamenti/nuovo" class="btn btn-primary">+ Aggiungi Allenamento</a>
+</div>
+
+<!-- Filtri -->
+<div class="card card-body shadow-sm mb-4">
+    <form method="GET" id="filterForm">
+        <input type="hidden" name="filter" value="{{ current_filters.get('filter', 'future') }}" id="timeFilterInput">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="macro_group_id" class="form-label">Gruppo</label>
+                <select class="form-select" id="macro_group_id" name="macro_group_id">
+                    <option value="">Tutti i Gruppi</option>
+                    {% for group in all_groups %}
+                        <option value="{{ group.id }}" {% if current_filters.macro_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="subgroup_id" class="form-label">Sottogruppo</label>
+                <select class="form-select" id="subgroup_id" name="subgroup_id">
+                    <option value="">Tutti i Sottogruppi</option>
+                    <!-- Popolato da JS -->
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="tipo" class="form-label">Tipo Allenamento</label>
+                <select class="form-select" id="tipo" name="tipo">
+                    <option value="">Tutti i Tipi</option>
+                    {% for type in all_types %}
+                        <option value="{{ type }}" {% if current_filters.tipo == type %}selected{% endif %}>{{ type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary w-100">Filtra</button>
+                <a href="/allenamenti" class="btn btn-outline-secondary">Resetta</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Filtri Temporali -->
+<div class="d-flex justify-content-center gap-2 mb-4" id="timeFilterButtons">
+    <button data-filter="future" class="btn {% if current_filters.get('filter', 'future') == 'future' %}btn-info{% else %}btn-outline-info{% endif %}">Prossimi</button>
+    <button data-filter="past" class="btn {% if current_filters.get('filter') == 'past' %}btn-info{% else %}btn-outline-info{% endif %}">Passati</button>
+    <button data-filter="all" class="btn {% if current_filters.get('filter') == 'all' %}btn-info{% else %}btn-outline-info{% endif %}">Tutti</button>
+</div>
+
+
+<!-- Layout a tabella -->
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col" style="width: 20%;">Tipo</th>
+                <th scope="col">Descrizione</th>
+                <th scope="col" style="width: 15%;">Data</th>
+                <th scope="col" style="width: 15%;">Orario</th>
+                <th scope="col" class="text-end" style="width: 15%;">Azioni</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if allenamenti %}
+                {% for allenamento in allenamenti %}
+                    <tr class="list-item-clickable"
+                        data-bs-toggle="modal"
+                        data-bs-target="#eventDetailModal"
+                        data-id="{{ allenamento.id }}"
+                        data-title="{{ allenamento.tipo }}{% if allenamento.descrizione %} - {{ allenamento.descrizione }}{% endif %}"
+                        data-date="{{ allenamento.data.strftime('%A, %d %B %Y') }}"
+                        data-time="{{ allenamento.orario }}"
+                        data-description="{{ allenamento.descrizione or 'Nessuna descrizione.' }}"
+                        data-recurrence-id="{{ allenamento.recurrence_id or '' }}"
+                        data-is-recurrent="{{ 'Sì' if allenamento.recurrence_id else 'No' }}"
+                        data-macro-group="{{ allenamento.macro_group.name if allenamento.macro_group else 'Nessuno' }}"
+                        data-sub-groups="{{ allenamento.sub_groups|map(attribute='name')|join(', ') if allenamento.sub_groups else 'Nessuno' }}">
+
+                        <td>
+                            <span class="allenamento-type-indicator" style="background-color: {{ get_color_for_type(allenamento.tipo) }}"></span>
+                            <span class="fw-bold">{{ allenamento.tipo }}</span>
+                        </td>
+                        <td class="text-muted">{{ allenamento.descrizione or '–' }}</td>
+                        <td>{{ allenamento.data.strftime('%d-%m-%Y') }}</td>
+                        <td>{{ allenamento.orario }}</td>
+                        <td class="text-end">
+                            <div class="allenamento-actions">
+                                <a href="/allenamenti/{{ allenamento.id }}/modifica" class="btn btn-sm btn-outline-primary me-2">Modifica</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteConfirmationModal"
+                                        data-allenamento-id="{{ allenamento.id }}"
+                                        data-recurrence-id="{{ allenamento.recurrence_id or '' }}">
+                                    Elimina
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" class="text-center p-4">
+                        <div class="alert alert-info mb-0">
+                            Nessun allenamento trovato per il filtro selezionato.
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const allGroupsData = {{ all_groups|tojson }};
+    const currentFilters = {{ current_filters|tojson }};
+    const macroGroupSelect = document.getElementById('macro_group_id');
+    const subGroupSelect = document.getElementById('subgroup_id');
+
+    function populateSubgroups() {
+        const macroId = macroGroupSelect.value;
+        subGroupSelect.innerHTML = '<option value="">Tutti i Sottogruppi</option>'; // Reset
+        if (macroId) {
+            const selectedGroup = allGroupsData.find(g => g.id == macroId);
+            if (selectedGroup && selectedGroup.subgroups) {
+                selectedGroup.subgroups.forEach(sub => {
+                    const option = new Option(sub.name, sub.id);
+                    if (currentFilters.subgroup_id == sub.id) {
+                        option.selected = true;
+                    }
+                    subGroupSelect.add(option);
+                });
+            }
+        }
+    }
+
+    macroGroupSelect.addEventListener('change', populateSubgroups);
+    populateSubgroups(); // Popola al caricamento iniziale
+
+    // Gestione bottoni filtro temporale
+    document.getElementById('timeFilterButtons').addEventListener('click', function(e) {
+        if (e.target.tagName === 'BUTTON') {
+            document.getElementById('timeFilterInput').value = e.target.dataset.filter;
+            document.getElementById('filterForm').submit();
+        }
+    });
+
+    // --- Gestione Modale Dettagli ---
+    const eventDetailModalEl = document.getElementById('eventDetailModal');
+    if (eventDetailModalEl) {
+        const eventDetailModal = new bootstrap.Modal(eventDetailModalEl);
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDate = document.getElementById('modalDate');
+        const modalTime = document.getElementById('modalTime');
+        const modalDescription = document.getElementById('modalDescription');
+        const modalMacroGroup = document.getElementById('modalMacroGroup');
+        const modalSubGroups = document.getElementById('modalSubGroups');
+        const modalRecurrence = document.getElementById('modalRecurrence');
+        const modalEditButton = document.getElementById('modalEditButton');
+        const modalDeleteButton = document.getElementById('modalDeleteButton');
+
+        document.querySelectorAll('.list-item-clickable').forEach(item => {
+            item.addEventListener('click', function (event) {
+                if (event.target.closest('a, button')) {
+                    return;
+                }
+                event.preventDefault();
+
+                const data = this.dataset;
+                modalTitle.textContent = data.title;
+                modalDate.textContent = data.date;
+                modalTime.textContent = data.time;
+                modalDescription.textContent = data.description;
+                modalMacroGroup.textContent = data.macroGroup;
+                modalSubGroups.textContent = data.subGroups;
+                modalRecurrence.textContent = data.isRecurrent;
+
+                modalEditButton.href = `/allenamenti/${data.id}/modifica`;
+                modalDeleteButton.setAttribute('data-allenamento-id', data.id);
+                modalDeleteButton.setAttribute('data-recurrence-id', data.recurrenceId);
+
+                eventDetailModal.show();
+            });
+        });
+    }
+
+    // --- Gestione Modale Eliminazione ---
+    const deleteModalEl = document.getElementById('deleteConfirmationModal');
+    if (deleteModalEl) {
+        const deleteForm = document.getElementById('deleteForm');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+        const recurrentOptions = document.getElementById('recurrentDeleteOptions');
+        const allenamentoIdInput = document.getElementById('deleteAllenamentoId');
+
+        deleteModalEl.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const allenamentoId = button.getAttribute('data-allenamento-id');
+            const recurrenceId = button.getAttribute('data-recurrence-id');
+
+            allenamentoIdInput.value = allenamentoId;
+
+            if (recurrenceId) {
+                recurrentOptions.style.display = 'block';
+                document.getElementById('deleteSingle').checked = true;
+            } else {
+                recurrentOptions.style.display = 'none';
+                let typeInput = deleteForm.querySelector('input[name="deletion_type"]');
+                if (!typeInput) {
+                    typeInput = document.createElement('input');
+                    typeInput.type = 'hidden';
+                    typeInput.name = 'deletion_type';
+                    deleteForm.appendChild(typeInput);
+                }
+                typeInput.value = 'single';
+            }
+        });
+
+        confirmDeleteButton.addEventListener('click', function () {
+            if (recurrentOptions.style.display === 'none') {
+                let typeInput = deleteForm.querySelector('input[name="deletion_type"]');
+                if (!typeInput) {
+                    typeInput = document.createElement('input');
+                    typeInput.type = 'hidden';
+                    typeInput.name = 'deletion_type';
+                    deleteForm.appendChild(typeInput);
+                }
+                typeInput.value = 'single';
+            }
+            deleteForm.submit();
+        });
+    }
+});
+</script>
+{% endblock %}

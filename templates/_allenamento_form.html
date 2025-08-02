@@ -1,0 +1,223 @@
+<!-- templates/_allenamento_form.html -->
+<!-- Questo è un template parziale e riutilizzabile per il form. -->
+<!-- Viene incluso sia in crea_allenamento.html che in modifica_allenamento.html -->
+
+{% set allenamento_data = allenamento or {} %}
+{% set selected_subgroups = selected_subgroup_ids or [] %}
+
+<form method="post" id="allenamentoForm">
+    <!-- Tipo Allenamento -->
+    <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo di Allenamento</label>
+        <select class="form-select" id="tipo" name="tipo" required>
+            <option value="" disabled {% if not allenamento_data.tipo %}selected{% endif %}>Seleziona un tipo...</option>
+            {% set tipi = ["Barca", "Remoergometro", "Pesi", "Circuito", "Corsa", "Altro"] %}
+            {% for t in tipi %}
+                <option value="{{ t }}" {% if allenamento_data.tipo == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Descrizione -->
+    <div class="mb-3">
+        <label for="descrizione" class="form-label">Descrizione (opzionale)</label>
+        <textarea class="form-control" id="descrizione" name="descrizione" rows="3">{{ allenamento_data.descrizione or '' }}</textarea>
+    </div>
+
+    <!-- Orario -->
+    <div class="mb-3">
+        <label for="orario" class="form-label">Orario</label>
+        <select class="form-select" id="orario" name="orario">
+            <option value="" disabled {% if not allenamento_data.orario %}selected{% endif %}>Seleziona un orario...</option>
+            {% set orari = ["7:00-9:00", "8:30-10:30", "9:00-11:00", "10:30-12:00", "17:30-19:30", "18:00-20:00"] %}
+            {% for o in orari %}
+                 <option value="{{ o }}" {% if allenamento_data.orario == o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+            <option value="personalizzato" {% if allenamento_data.orario and allenamento_data.orario not in orari %}selected{% endif %}>Altro (personalizzato)</option>
+        </select>
+    </div>
+    <div class="mb-3" id="orario_personalizzato_wrapper" style="display: none;">
+        <label for="orario_personalizzato" class="form-label">Orario Personalizzato (es. 14:00-15:30)</label>
+        <input type="text" class="form-control" id="orario_personalizzato" name="orario_personalizzato"
+               value="{{ allenamento_data.orario if allenamento_data.orario and allenamento_data.orario not in orari else '' }}"
+               pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+               placeholder="HH:MM-HH:MM">
+    </div>
+
+    <!-- Gruppi -->
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="macro_group_id" class="form-label">Macro Gruppo</label>
+            <select class="form-select" id="macro_group_id" name="macro_group_id" required>
+                <option value="" disabled selected>Seleziona un gruppo...</option>
+                <!-- Opzioni popolate da JS -->
+            </select>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label">Sottogruppi</label>
+            <div id="subgroups_container" class="p-3 border rounded" style="height: 150px; overflow-y: auto;">
+                <!-- Checkbox popolate da JS -->
+                <small class="text-muted">Seleziona prima un Macro Gruppo.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data e Ricorrenza -->
+    <div class="row align-items-end">
+        <div class="col-md-6 mb-3">
+            <label for="data" class="form-label">Data di Inizio</label>
+            <input type="date" class="form-control" id="data" name="data" value="{{ allenamento_data.data or '' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring" value="true">
+                <label class="form-check-label" for="is_recurring">Abilita Ricorrenza</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campi Ricorrenza (nascosti di default) -->
+    <div id="ricorrenza_fields" style="display: none;" class="p-3 border rounded bg-light mb-3">
+        <div class="mb-3">
+            <label class="form-label">Giorni della settimana</label>
+            <div>
+                {% set giorni = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"] %}
+                {% for giorno in giorni %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="giorni" value="{{ giorno }}" id="giorno_{{ loop.index }}">
+                    <label class="form-check-label" for="giorno_{{ loop.index }}">{{ giorno[:3] }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="recurrence_count" class="form-label">Numero di ricorrenze</label>
+            <input type="number" class="form-control" id="recurrence_count" name="recurrence_count" min="1" max="52" placeholder="Es. 8 (per 8 settimane)">
+        </div>
+    </div>
+
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+        <a href="/calendario" class="btn btn-secondary">Annulla</a>
+        <button type="submit" class="btn btn-primary">{{ 'Salva Modifiche' if allenamento else 'Crea Allenamento' }}</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Gestione Orario Personalizzato ---
+    const orarioSelect = document.getElementById('orario');
+    const orarioPersonalizzatoWrapper = document.getElementById('orario_personalizzato_wrapper');
+
+    function toggleOrarioPersonalizzato() {
+        if (orarioSelect.value === 'personalizzato') {
+            orarioPersonalizzatoWrapper.style.display = 'block';
+            document.getElementById('orario_personalizzato').required = true;
+        } else {
+            orarioPersonalizzatoWrapper.style.display = 'none';
+            document.getElementById('orario_personalizzato').required = false;
+        }
+    }
+    orarioSelect.addEventListener('change', toggleOrarioPersonalizzato);
+    toggleOrarioPersonalizzato();
+
+    // --- Gestione Ricorrenza ---
+    const recurringCheckbox = document.getElementById('is_recurring');
+    const ricorrenzaFields = document.getElementById('ricorrenza_fields');
+    const recurrenceCountInput = document.getElementById('recurrence_count');
+
+    function toggleRecurrenceFields() {
+        const isChecked = recurringCheckbox.checked;
+        ricorrenzaFields.style.display = isChecked ? 'block' : 'none';
+        recurrenceCountInput.required = isChecked;
+        recurrenceCountInput.disabled = !isChecked;
+        if (!isChecked) {
+            recurrenceCountInput.value = '';
+        }
+    }
+    recurringCheckbox.addEventListener('change', toggleRecurrenceFields);
+    toggleRecurrenceFields();
+
+    // --- Gestione Gruppi e Sottogruppi ---
+    const macroGroupSelect = document.getElementById('macro_group_id');
+    const subgroupsContainer = document.getElementById('subgroups_container');
+    let allGroupsData = [];
+    const initialMacroGroupId = '{{ allenamento_data.macro_group_id or '' }}';
+    const initialSubgroupIds = {{ selected_subgroups | tojson }};
+
+    async function loadGroups() {
+        try {
+            const response = await fetch('/api/training/groups');
+            allGroupsData = await response.json();
+
+            allGroupsData.forEach(group => {
+                const option = new Option(group.name, group.id, false, group.id == initialMacroGroupId);
+                macroGroupSelect.add(option);
+            });
+
+            if (initialMacroGroupId) {
+                updateSubgroups();
+                // Assicura che il placeholder venga rimosso se c'è una selezione iniziale
+                macroGroupSelect.querySelector('option[value=""]').disabled = true;
+            }
+
+        } catch (error) {
+            console.error("Errore nel caricamento dei gruppi:", error);
+            subgroupsContainer.innerHTML = '<p class="text-danger">Errore caricamento gruppi.</p>';
+        }
+    }
+
+    function updateSubgroups() {
+        const selectedMacroId = macroGroupSelect.value;
+        subgroupsContainer.innerHTML = '';
+
+        if (!selectedMacroId) {
+            subgroupsContainer.innerHTML = '<small class="text-muted">Seleziona prima un Macro Gruppo.</small>';
+            return;
+        }
+
+        const selectedGroup = allGroupsData.find(g => g.id == selectedMacroId);
+        if (selectedGroup && selectedGroup.subgroups) {
+            selectedGroup.subgroups.forEach(subgroup => {
+                const isChecked = initialSubgroupIds.includes(subgroup.id);
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" name="subgroup_ids" value="${subgroup.id}" id="subgroup_${subgroup.id}" ${isChecked ? 'checked' : ''}>
+                    <label class="form-check-label" for="subgroup_${subgroup.id}">
+                        ${subgroup.name}
+                    </label>
+                `;
+                subgroupsContainer.appendChild(div);
+            });
+        }
+    }
+
+    function selectAllSubgroups() {
+        const selectedMacroId = macroGroupSelect.value;
+        subgroupsContainer.innerHTML = '';
+
+        if (!selectedMacroId) {
+            subgroupsContainer.innerHTML = '<small class="text-muted">Seleziona prima un Macro Gruppo.</small>';
+            return;
+        }
+
+        const selectedGroup = allGroupsData.find(g => g.id == selectedMacroId);
+        if (selectedGroup && selectedGroup.subgroups) {
+            selectedGroup.subgroups.forEach(subgroup => {
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" name="subgroup_ids" value="${subgroup.id}" id="subgroup_${subgroup.id}" checked>
+                    <label class="form-check-label" for="subgroup_${subgroup.id}">
+                        ${subgroup.name}
+                    </label>
+                `;
+                subgroupsContainer.appendChild(div);
+            });
+        }
+    }
+
+    macroGroupSelect.addEventListener('change', selectAllSubgroups);
+    loadGroups();
+});
+</script>

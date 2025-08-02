@@ -1,0 +1,134 @@
+/* static/style.css */
+
+/* Custom properties for club colors */
+:root {
+    --club-white: #ffffff;
+    --club-light-blue: #ADD8E6; /* Celeste */
+    --club-navy-blue: #000080;  /* Blu Navy */
+    --club-off-white-bg: #f8f9fa;
+    --club-text-dark: #212529;
+    --bs-primary-rgb: 0, 0, 128; /* Valore RGB del Blu Navy per Bootstrap */
+}
+
+body {
+    font-family: Helvetica, Arial, sans-serif;
+    color: var(--club-text-dark);
+    background-color: var(--club-off-white-bg);
+}
+
+/* Navbar Styling */
+.navbar-dark {
+    background-color: var(--club-navy-blue) !important;
+}
+
+/* General button styling */
+.btn-primary {
+    background-color: var(--club-navy-blue);
+    border-color: var(--club-navy-blue);
+}
+.btn-primary:hover {
+    background-color: #000066; /* Blu Navy più scuro */
+    border-color: #000066;
+}
+
+.btn-info {
+    background-color: var(--club-light-blue);
+    border-color: var(--club-light-blue);
+    color: var(--club-text-dark);
+}
+.btn-info:hover {
+    background-color: #9ac9db; /* Celeste più scuro */
+    border-color: #9ac9db;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--club-navy-blue);
+    --bs-btn-border-color: var(--club-navy-blue);
+    --bs-btn-hover-bg: var(--club-navy-blue);
+    --bs-btn-hover-border-color: var(--club-navy-blue);
+}
+
+a {
+    color: var(--club-navy-blue);
+}
+a:hover {
+    color: var(--club-light-blue);
+}
+
+/* Table styling */
+.table {
+    border-collapse: separate;
+    border-spacing: 0 0.75rem;
+}
+.table thead th {
+    border: none;
+    color: var(--club-navy-blue);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+.table tbody tr {
+    background-color: var(--club-white);
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+.table tbody tr:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 128, 0.15);
+}
+.table tbody td {
+    border: none;
+    padding: 1.25rem 1rem;
+    vertical-align: middle;
+}
+.table tbody tr td:first-child { border-top-left-radius: 0.5rem; border-bottom-left-radius: 0.5rem; }
+.table tbody tr td:last-child { border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; }
+
+.allenamento-type-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    vertical-align: middle;
+}
+
+.allenamento-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+}
+.table tbody tr:hover .allenamento-actions {
+    opacity: 1;
+}
+
+/* Modal styling */
+.modal-header {
+    background-color: var(--club-navy-blue);
+    color: var(--club-white);
+}
+
+/* Stili specifici per FullCalendar */
+.fc-daygrid-event-dot {
+    display: none !important;
+}
+
+/* CORRETTO: Applica lo stile direttamente all'elemento a.fc-event */
+a.fc-event {
+    background-color: var(--fc-event-bg-color) !important;
+    border-color: var(--fc-event-border-color) !important;
+    color: white !important;
+    padding: 3px 5px;
+    font-size: 0.85em;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.fc-event-main {
+    color: white !important;
+}
+
+.fc-event-title {
+    color: white !important;
+    white-space: normal;
+    font-weight: bold;
+}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Profilo Utente{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="h3 mb-0">Profilo Utente</h2>
+            <a href="/profilo/modifica" class="btn btn-light btn-sm">Modifica Dati</a>
+        </div>
+        <div class="card-body p-4">
+            {% if request.query_params.get('message') %}
+                <div class="alert alert-success">{{ request.query_params.get('message') }}</div>
+            {% endif %}
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="display-5">{{ user.first_name }} {{ user.last_name }}</h1>
+                    <p class="lead text-muted">Socio dal {{ user.enrollment_year }}</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    {% for role in user.roles %}
+                        <span class="badge bg-info fs-6 me-1">{{ role.name.capitalize() }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4>Dati Anagrafici</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Username:</strong> {{ user.username }}</li>
+                        <li class="list-group-item"><strong>Data di Nascita:</strong> {{ user.date_of_birth.strftime('%d/%m/%Y') }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h4>Contatti</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Email:</strong> {{ user.email or 'Non specificata' }}</li>
+                        <li class="list-group-item"><strong>Telefono:</strong> {{ user.phone_number or 'Non specificato' }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
