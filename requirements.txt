@@ -9,4 +9,5 @@ passlib[bcrypt]
 jinja2
 python-multipart
 python-dateutil
+itsdangerous
 psycopg2-binary
