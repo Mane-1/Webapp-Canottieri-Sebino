@@ -550,6 +550,29 @@ async def assegna_turno(
     return RedirectResponse(url=f"/turni?week_offset={week_offset}", status_code=status.HTTP_303_SEE_OTHER)
 
 
+# ===== Route di Autenticazione =====
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login", response_class=RedirectResponse)
+async def login(request: Request, db: Session = Depends(get_db), username: str = Form(...), password: str = Form(...)):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or not security.verify_password(password, user.hashed_password):
+        return templates.TemplateResponse("login.html",
+                                          {"request": request, "error_message": "Username o password non validi"},
+                                          status_code=401)
+    request.session["user_id"] = user.id
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/logout", response_class=RedirectResponse)
+async def logout(request: Request):
+    request.session.pop("user_id", None)
+    return RedirectResponse(url="/login?message=Logout effettuato", status_code=status.HTTP_303_SEE_OTHER)
+
+
 # ===== Sezione Amministrazione Utenti =====
 
 @app.get("/admin/users", response_class=HTMLResponse)
