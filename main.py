@@ -17,7 +17,7 @@ from sqlalchemy import or_
 from starlette.middleware.sessions import SessionMiddleware
 from dateutil.rrule import rrule, WEEKLY, MO, TU, WE, TH, FR, SA, SU
 
-from database import engine, Base, get_db
+from database import engine, Base, get_db, SessionLocal
 import models
 import security
 
@@ -78,6 +78,42 @@ def on_startup():
     Base.metadata.create_all(bind=engine)
     logger.info("Verifica tabelle completata.")
 
+    # Popola i dati essenziali solo se non esistono già
+    db = SessionLocal()
+    try:
+        # 1. Popola Ruoli
+        if db.query(models.Role).count() == 0:
+            logger.info("Popolamento dei ruoli...")
+            db.add_all([
+                models.Role(name='atleta'),
+                models.Role(name='allenatore'),
+                models.Role(name='admin')
+            ])
+            db.commit()
+
+        # 2. Crea Utente Admin
+        if not db.query(models.User).filter(models.User.username == "gabriele").first():
+            logger.info("Creazione utente admin...")
+            admin_role = db.query(models.Role).filter_by(name='admin').one()
+            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
+            admin_user = models.User(
+                username="gabriele",
+                hashed_password=security.get_password_hash("manenti"),
+                first_name="Gabriele",
+                last_name="Manenti",
+                email="gabriele.manenti@example.com",
+                date_of_birth=date(1990, 1, 1),
+                roles=[admin_role, allenatore_role]
+            )
+            db.add(admin_user)
+            db.commit()
+            logger.info("Utente admin 'gabriele' creato.")
+    except Exception as e:
+        logger.error(f"Errore durante il popolamento dei dati di base all'avvio: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
 
 # ===== Dipendenze per l'Autenticazione =====
 async def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.User:
@@ -97,6 +133,29 @@ async def get_current_admin_user(current_user: models.User = Depends(get_current
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accesso negato.")
     return current_user
+
+
+# ===== Route di Autenticazione =====
+@app.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login", response_class=RedirectResponse)
+async def login(request: Request, db: Session = Depends(get_db), username: str = Form(...), password: str = Form(...)):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user or not security.verify_password(password, user.hashed_password):
+        return templates.TemplateResponse("login.html",
+                                          {"request": request, "error_message": "Username o password non validi"},
+                                          status_code=401)
+    request.session["user_id"] = user.id
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/logout", response_class=RedirectResponse)
+async def logout(request: Request):
+    request.session.pop("user_id", None)
+    return RedirectResponse(url="/login?message=Logout effettuato", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ===== Route Principali =====
