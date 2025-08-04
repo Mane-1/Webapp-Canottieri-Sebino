@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Modifica Utente{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Modifica: {{ user.first_name }} {{ user.last_name }}</h1>
+    <form action="{{ url_for('admin_edit_user', user_id=user.id) }}" method="post">
+        <!-- Includi il form completo -->
+        {% include "_user_form.html" %}
+        <hr>
+        <button type="submit" class="btn btn-primary">Salva Modifiche</button>
+        <a href="{{ url_for('admin_view_user', user_id=user.id) }}" class="btn btn-secondary">Annulla</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Gestione Utenti{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Gestione Utenti</h1>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if 'add' not in request.url.path %}active{% endif %}" href="{{ url_for('admin_users_list') }}">Elenco Utenti</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if 'add' in request.url.path %}active{% endif %}" href="{{ url_for('admin_add_user_form') }}">Aggiungi Nuovo Utente</a>
+        </li>
+    </ul>
+
+    <div>
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

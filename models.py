@@ -1,69 +1,141 @@
 # File: models.py
-# Questo file definisce la struttura di tutte le tabelle del database
-# usando i modelli di SQLAlchemy.
+# Definisce la struttura di tutte le tabelle del database con SQLAlchemy.
 
-import uuid
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Table, Float
-from sqlalchemy.orm import relationship
-from database import Base  # Importiamo la Base creata in database.py
+from datetime import date
+from sqlalchemy import (
+    Column, Integer, String, Date, Table, ForeignKey, Float
+)
+from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.sql import func
+from database import Base
 
-# Tabella di associazione per la relazione Molti-a-Molti
-# tra Allenamenti e Sottogruppi.
-allenamento_subgroup_association = Table('allenamento_subgroup_association', Base.metadata,
-                                         Column('allenamento_id', Integer, ForeignKey('allenamenti.id'),
-                                                primary_key=True),
-                                         Column('subgroup_id', Integer, ForeignKey('subgroups.id'), primary_key=True)
-                                         )
+# --- TABELLE DI ASSOCIAZIONE (MOLTI-A-MOLTI) ---
 
-# Tabella di associazione per la relazione Molti-a-Molti
-# tra Utenti e Ruoli.
-user_roles = Table('user_roles', Base.metadata,
-                   Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
-                   Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True)
-                   )
+allenamento_subgroup_association = Table(
+    'allenamento_subgroup_association', Base.metadata,
+    Column('allenamento_id', Integer, ForeignKey('allenamenti.id'), primary_key=True),
+    Column('subgroup_id', Integer, ForeignKey('subgroups.id'), primary_key=True)
+)
 
-# Tabella di associazione per la relazione Molti-a-Molti
-# tra Barche e Atleti (Utenti).
-barca_atleti_association = Table('barca_atleti_association', Base.metadata,
-                                 Column('barca_id', Integer, ForeignKey('barche.id'), primary_key=True),
-                                 Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
-                                 )
+user_roles = Table(
+    'user_roles', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('roles.id'), primary_key=True)
+)
+
+barca_atleti_association = Table(
+    'barca_atleti_association', Base.metadata,
+    Column('barca_id', Integer, ForeignKey('barche.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
+
+user_tags = Table(
+    'user_tags', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True)
+)
 
 
-class Role(Base):
-    __tablename__ = 'roles'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True)
-
+# --- MODELLI DELLE TABELLE PRINCIPALI ---
 
 class User(Base):
     __tablename__ = "users"
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
-    email = Column(String, index=True)
+    email = Column(String, unique=True, index=True)
     phone_number = Column(String)
-    date_of_birth = Column(Date, nullable=False)
-    enrollment_year = Column(Integer, nullable=False)
+    date_of_birth = Column(Date)
+    tax_code = Column(String, unique=True)
+    enrollment_year = Column(Integer)
+    membership_date = Column(Date)
+    certificate_expiration = Column(Date)
+    address = Column(String)
+    manual_category = Column(String, nullable=True)
 
-    roles = relationship("Role", secondary=user_roles)
-    turni = relationship("Turno", back_populates="user")
+    # Relazioni
+    roles = relationship("Role", secondary=user_roles, back_populates="users")
+    tags = relationship("Tag", secondary=user_tags, back_populates="users")
     barche_assegnate = relationship("Barca", secondary=barca_atleti_association, back_populates="atleti_assegnati")
     schede_pesi = relationship("SchedaPesi", back_populates="atleta")
+    turni = relationship("Turno", back_populates="user")
 
     @property
-    def is_admin(self):
-        return any(role.name == 'admin' for role in self.roles)
+    def age(self) -> int:
+        """Calcola l'età attuale in anni compiuti."""
+        if not self.date_of_birth:
+            return 0
+        today = date.today()
+        return today.year - self.date_of_birth.year - (
+                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
 
     @property
-    def is_allenatore(self):
-        return any(role.name == 'allenatore' for role in self.roles)
+    def solar_age(self) -> int:
+        """Calcola l'età che l'atleta avrà alla fine dell'anno solare corrente."""
+        if not self.date_of_birth:
+            return 0
+        return date.today().year - self.date_of_birth.year
 
     @property
-    def is_atleta(self):
-        return any(role.name == 'atleta' for role in self.roles)
+    def is_admin(self) -> bool:
+        return any(role.name == "admin" for role in self.roles)
+
+    @property
+    def is_allenatore(self) -> bool:
+        return any(role.name == "allenatore" for role in self.roles)
+
+    @property
+    def is_atleta(self) -> bool:
+        return any(role.name == "atleta" for role in self.roles)
+
+    @property
+    def category(self) -> str:
+        if self.manual_category:
+            return self.manual_category
+        if self.is_atleta and self.date_of_birth:
+            age = self.solar_age
+            if age <= 10: return "Allievo A"
+            if age == 11: return "Allievo B1"
+            if age == 12: return "Allievo B2"
+            if age == 13: return "Allievo C"
+            if age == 14: return "Cadetto"
+            if 15 <= age <= 16: return "Ragazzo"
+            if 17 <= age <= 18: return "Junior"
+            if 19 <= age <= 23: return "Under 23"
+            if 24 <= age <= 27: return "Senior"
+            if age > 27: return "Master"
+        return "N/D"
+
+    @property
+    def macro_group_name(self) -> str:
+        if not self.is_atleta:
+            return "N/D"
+        cat = self.category
+        if cat in ["Allievo A", "Allievo B1", "Allievo B2", "Allievo C", "Cadetto"]:
+            return "Under 14"
+        elif cat == "Master":
+            return "Master"
+        elif cat in ["Ragazzo", "Junior", "Under 23", "Senior"]:
+            return "Over 14"
+        return "N/D"
+
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    users = relationship("User", secondary=user_roles, back_populates="roles")
+
+
+class Tag(Base):
+    __tablename__ = 'tags'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    category = Column(String, default="Generale")
+    users = relationship("User", secondary=user_tags, back_populates="tags")
 
 
 class Barca(Base):
@@ -94,13 +166,11 @@ class SchedaPesi(Base):
     id = Column(Integer, primary_key=True)
     atleta_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     esercizio_id = Column(Integer, ForeignKey('esercizi_pesi.id'), nullable=False)
-
     massimale = Column(Float)
     carico_5_rep = Column(Float)
     carico_7_rep = Column(Float)
     carico_10_rep = Column(Float)
     carico_20_rep = Column(Float)
-
     atleta = relationship("User", back_populates="schede_pesi")
     esercizio = relationship("EsercizioPesi", back_populates="schede")
 
@@ -131,8 +201,6 @@ class Allenamento(Base):
     recurrence_id = Column(String, index=True, nullable=True)
     macro_group_id = Column(Integer, ForeignKey('macro_groups.id'))
     macro_group = relationship("MacroGroup")
-
-    # CORRETTO: La relazione ora punta a "SubGroup"
     sub_groups = relationship("SubGroup", secondary=allenamento_subgroup_association, back_populates="allenamenti")
 
 

@@ -1,0 +1,14 @@
+{% extends "admin_layout.html" %}
+{% block admin_content %}
+<div class="card">
+    <div class="card-header">Aggiungi un nuovo utente</div>
+    <div class="card-body">
+        <form action="{{ url_for('admin_add_user') }}" method="post">
+            <!-- Includi il form completo -->
+            {% include "_user_form.html" %}
+            <hr>
+            <button type="submit" class="btn btn-primary">Crea Utente</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

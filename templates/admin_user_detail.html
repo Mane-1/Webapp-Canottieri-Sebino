@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Dettaglio Utente{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Dettaglio: {{ user.first_name }} {{ user.last_name }}</h1>
+        <a href="{{ url_for('admin_edit_user_form', user_id=user.id) }}" class="btn btn-primary">Modifica Dati</a>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Informazioni Principali</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Username:</strong> {{ user.username }}</li>
+                        <li class="list-group-item"><strong>Email:</strong> {{ user.email or 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Telefono:</strong> {{ user.phone_number or 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Ruoli:</strong> {{ user.roles | map(attribute='name') | map('title') | join(', ') }}</li>
+                        <li class="list-group-item"><strong>Categoria:</strong> {{ user.category }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Dati Anagrafici e Societari</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Data di Nascita:</strong> {{ user.date_of_birth.strftime('%d/%m/%Y') if user.date_of_birth else 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Età:</strong> {{ user.age or 'N/D' }} anni</li>
+                        <li class="list-group-item"><strong>Codice Fiscale:</strong> {{ user.tax_code or 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Anno Iscrizione:</strong> {{ user.enrollment_year or 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Data Tesseramento:</strong> {{ user.membership_date.strftime('%d/%m/%Y') if user.membership_date else 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Scadenza Certificato:</strong> {{ user.certificate_expiration.strftime('%d/%m/%Y') if user.certificate_expiration else 'N/D' }}</li>
+                        <li class="list-group-item"><strong>Indirizzo:</strong> {{ user.address or 'N/D' }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <a href="{{ url_for('admin_users_list') }}" class="btn btn-secondary mt-3">Torna all'elenco</a>
+</div>
+{% endblock %}

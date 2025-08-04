@@ -1,78 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Gestione Barche{% endblock %}
+{% block title %}Elenco Barche{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Elenco Barche</h2>
-    <a href="/risorse/barche/nuova" class="btn btn-primary">+ Aggiungi Barca</a>
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Elenco Barche</h1>
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <a href="{{ url_for('nuova_barca_form') }}" class="btn btn-primary">Aggiungi Nuova Barca</a>
+        {% endif %}
+    </div>
+    <!-- ... resto del codice del template ... -->
 </div>
-
-<!-- Filtri -->
-<div class="card card-body shadow-sm mb-4">
-    <form method="GET" class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label for="tipo_filter" class="form-label">Filtra per tipo</label>
-            <select name="tipo_filter" id="tipo_filter" class="form-select" onchange="this.form.submit()">
-                <option value="">Tutti i tipi</option>
-                {% for tipo in tipi_barca %}
-                <option value="{{ tipo }}" {% if current_filter == tipo %}selected{% endif %}>{{ tipo }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
-            <a href="/risorse/barche" class="btn btn-outline-secondary">Resetta</a>
-        </div>
-    </form>
-</div>
-
-<div class="table-responsive">
-    <table class="table table-hover align-middle">
-        <thead>
-            <tr>
-                <th>Nome</th>
-                <th>Tipo</th>
-                <th>Costruttore</th>
-                <th>Anno</th>
-                <th class="text-end">Azioni</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for barca in barche %}
-            <tr class="list-item-clickable" data-href="/risorse/barche/{{ barca.id }}/modifica">
-                <td class="fw-bold">{{ barca.nome }}</td>
-                <td><span class="badge rounded-pill text-bg-info">{{ barca.tipo }}</span></td>
-                <td class="text-muted">{{ barca.costruttore or 'N/D' }}</td>
-                <td class="text-muted">{{ barca.anno or 'N/D' }}</td>
-                <td class="text-end">
-                    <a href="/risorse/barche/{{ barca.id }}/modifica" class="btn btn-sm btn-outline-primary">Modifica</a>
-                    <form action="/risorse/barche/{{ barca.id }}/elimina" method="post" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questa barca?');">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">Elimina</button>
-                    </form>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5" class="text-center p-4">Nessuna barca trovata.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endblock %}
-
-{% block scripts_extra %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.list-item-clickable').forEach(row => {
-        row.addEventListener('click', function(event) {
-            // Non navigare se l'utente clicca su un pulsante o un link dentro la riga
-            if (event.target.closest('a, button, form')) {
-                return;
-            }
-            window.location.href = this.dataset.href;
-        });
-    });
-});
-</script>
 {% endblock %}

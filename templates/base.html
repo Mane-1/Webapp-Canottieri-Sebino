@@ -63,9 +63,16 @@
                     </ul>
                 </li>
 
+                <!-- MODIFICA: Sostituito link singolo con menu a tendina per la gestione utenti -->
                 {% if current_user.is_admin %}
-                <li class="nav-item">
-                    <a class="nav-link" href="/admin/users">Gestione Utenti</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Utenti
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="adminMenu">
+                        <li><a class="dropdown-item" href="{{ url_for('admin_users_list') }}">Elenco Utenti</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('admin_add_user_form') }}">Aggiungi Utente</a></li>
+                    </ul>
                 </li>
                 {% endif %}
             </ul>

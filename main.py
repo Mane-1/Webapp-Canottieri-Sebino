@@ -1,16 +1,12 @@
 # File: main.py
-# Questo è il file principale dell'applicazione FastAPI. Contiene la configurazione
-# dell'applicazione, le route (percorsi URL) e la logica di business.
+# File principale dell'applicazione FastAPI. Contiene la configurazione, le route e la logica di business.
 
-# 1. Importazioni raggruppate per tipo (standard, terze parti, locali)
-# Librerie standard di Python
-import json
+import os
 import logging
 import uuid
 from datetime import date, datetime, timedelta, time
 from typing import List, Optional
 
-# Librerie di terze parti
 from fastapi import FastAPI, Request, Form, Depends, HTTPException, status, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -21,98 +17,25 @@ from sqlalchemy import or_
 from starlette.middleware.sessions import SessionMiddleware
 from dateutil.rrule import rrule, WEEKLY, MO, TU, WE, TH, FR, SA, SU
 
-# Moduli locali dell'applicazione
-from database import engine, SessionLocal, Base, get_db
+from database import engine, Base, get_db
 import models
 import security
 
-# Configurazione del logging
+# Configurazione
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Creazione dell'istanza dell'applicazione FastAPI
 app = FastAPI()
-import os
 
-# Legge la chiave segreta da una variabile d'ambiente.
-# Se non la trova, ne usa una di default (NON SICURA PER LA PRODUZIONE REALE).
 SECRET_KEY = os.environ.get('SECRET_KEY', 'un-segreto-di-default-non-sicuro')
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
-
-# Configurazione dei template e dei file statici
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ===== Funzioni di supporto =====
-
-def populate_base_data():
-    """Popola i dati di base come gruppi e ruoli se non esistono."""
-    db = SessionLocal()
-    try:
-        if db.query(models.Role).count() == 0:
-            logger.info("Popolamento dei ruoli...")
-            db.add_all([models.Role(name='atleta'), models.Role(name='allenatore'), models.Role(name='admin')])
-            db.commit()
-        if db.query(models.MacroGroup).count() == 0:
-            logger.info("Popolamento dei gruppi di atleti...")
-            over14 = models.MacroGroup(name="Over14")
-            master = models.MacroGroup(name="Master")
-            under14 = models.MacroGroup(name="Under14")
-            db.add_all([over14, master, under14])
-            db.commit()
-            subgroups_over14 = [models.SubGroup(name="Ragazzi", macro_group=over14),
-                                models.SubGroup(name="Junior", macro_group=over14),
-                                models.SubGroup(name="Under23", macro_group=over14),
-                                models.SubGroup(name="Senior", macro_group=over14)]
-            subgroups_master = [models.SubGroup(name="Master", macro_group=master)]
-            subgroups_under14 = [models.SubGroup(name="Allievi A", macro_group=under14),
-                                 models.SubGroup(name="Allievi B", macro_group=under14),
-                                 models.SubGroup(name="Allievi C", macro_group=under14),
-                                 models.SubGroup(name="Cadetti", macro_group=under14)]
-            db.add_all(subgroups_over14 + subgroups_master + subgroups_under14)
-            db.commit()
-            logger.info("Gruppi e ruoli popolati con successo.")
-    except Exception as e:
-        logger.error(f"Errore durante il popolamento dei dati di base: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
-
-def populate_shifts_if_needed():
-    """Crea turni vuoti per i prossimi 90 giorni se non esistono già."""
-    db = SessionLocal()
-    try:
-        today = date.today()
-        end_date = today + timedelta(days=90)
-        last_shift = db.query(models.Turno).order_by(models.Turno.data.desc()).first()
-        start_date = last_shift.data + timedelta(days=1) if last_shift else today
-        current_date = start_date
-        shifts_to_add = []
-        while current_date <= end_date:
-            if current_date.weekday() in range(1, 7):
-                existing = db.query(models.Turno).filter(models.Turno.data == current_date).count()
-                if existing == 0:
-                    shifts_to_add.append(models.Turno(data=current_date, fascia_oraria="Mattina"))
-                    shifts_to_add.append(models.Turno(data=current_date, fascia_oraria="Pomeriggio"))
-            current_date += timedelta(days=1)
-        if shifts_to_add:
-            db.add_all(shifts_to_add)
-            db.commit()
-            logger.info(f"Aggiunti {len(shifts_to_add)} nuovi turni vuoti.")
-    except Exception as e:
-        logger.error(f"Errore durante il popolamento dei turni: {e}")
-        db.rollback()
-    finally:
-        db.close()
-
-
 def get_color_for_type(training_type: Optional[str]) -> str:
-    colors = {
-        "Barca": "#0d6efd", "Remoergometro": "#198754", "Corsa": "#6f42c1",
-        "Pesi": "#dc3545", "Circuito": "#fd7e14", "Altro": "#212529"
-    }
+    colors = {"Barca": "#0d6efd", "Remoergometro": "#198754", "Corsa": "#6f42c1", "Pesi": "#dc3545",
+              "Circuito": "#fd7e14", "Altro": "#212529"}
     return colors.get(training_type, "#6c757d")
 
 
@@ -154,32 +77,9 @@ def on_startup():
     logger.info("Avvio dell'applicazione in corso...")
     Base.metadata.create_all(bind=engine)
     logger.info("Verifica tabelle completata.")
-    populate_base_data()
-    populate_shifts_if_needed()
-    db = SessionLocal()
-    try:
-        if not db.query(models.User).filter(models.User.username == "gabriele").first():
-            hashed_password = security.get_password_hash("manenti")
-            admin_role = db.query(models.Role).filter_by(name='admin').one()
-            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
-            admin_user = models.User(
-                username="gabriele", hashed_password=hashed_password,
-                first_name="Gabriele", last_name="Manenti",
-                email="gabriele.manenti@example.com", phone_number="3331234567",
-                date_of_birth=date(1990, 1, 1), enrollment_year=2020,
-                roles=[admin_role, allenatore_role]
-            )
-            db.add(admin_user)
-            db.commit()
-            logger.info("Utente admin 'gabriele' creato con successo.")
-    except Exception as e:
-        logger.error(f"Errore durante la creazione dell'utente admin: {e}")
-        db.rollback()
-    finally:
-        db.close()
 
 
-# ===== Dipendenze per l'Autenticazione e Autorizzazione =====
+# ===== Dipendenze per l'Autenticazione =====
 async def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.User:
     user_id = request.session.get("user_id")
     if user_id is None:
@@ -195,13 +95,12 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> m
 
 async def get_current_admin_user(current_user: models.User = Depends(get_current_user)) -> models.User:
     if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="Accesso negato: sono richiesti privilegi di amministratore.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accesso negato.")
     return current_user
 
 
-# ===== Route Principali e Viste =====
-@app.get("/", response_class=HTMLResponse)
+# ===== Route Principali =====
+@app.get("/", response_class=RedirectResponse)
 async def root(request: Request):
     if request.session.get("user_id"):
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
@@ -214,20 +113,17 @@ async def dashboard(request: Request, db: Session = Depends(get_db),
     today = date.today()
     dashboard_data = {}
     if current_user.is_allenatore:
-        dashboard_data['prossimi_turni'] = db.query(models.Turno).filter(
-            models.Turno.user_id == current_user.id,
-            models.Turno.data >= today
-        ).order_by(models.Turno.data).limit(3).all()
-
-    if current_user.is_atleta and current_user.subgroup_id:
-        dashboard_data['prossimi_allenamenti'] = db.query(models.Allenamento) \
-            .join(models.allenamento_subgroup_association) \
-            .join(models.SubGroup) \
-            .filter(
-            models.SubGroup.id == current_user.subgroup_id,
-            models.Allenamento.data >= today
-        ).order_by(models.Allenamento.data).limit(3).all()
-
+        dashboard_data['prossimi_turni'] = db.query(models.Turno).filter(models.Turno.user_id == current_user.id,
+                                                                         models.Turno.data >= today).order_by(
+            models.Turno.data).limit(3).all()
+    if current_user.is_atleta:
+        subgroups = db.query(models.SubGroup).filter(models.SubGroup.name == current_user.category).all()
+        if subgroups:
+            subgroup_ids = [sg.id for sg in subgroups]
+            dashboard_data['prossimi_allenamenti'] = db.query(models.Allenamento).join(
+                models.allenamento_subgroup_association).filter(
+                models.allenamento_subgroup_association.c.subgroup_id.in_(subgroup_ids),
+                models.Allenamento.data >= today).order_by(models.Allenamento.data).limit(3).all()
     return templates.TemplateResponse("dashboard.html", {"request": request, "current_user": current_user,
                                                          "dashboard_data": dashboard_data})
 
@@ -311,9 +207,8 @@ async def view_turni(request: Request, db: Session = Depends(get_db),
     start_of_week = today - timedelta(days=today.weekday())
     end_of_week = start_of_week + timedelta(days=6)
     allenatori = db.query(models.User).join(models.User.roles).filter(models.Role.name == 'allenatore').all()
-    turni_settimana = db.query(models.Turno).filter(
-        models.Turno.data.between(start_of_week, end_of_week)
-    ).order_by(models.Turno.data, models.Turno.fascia_oraria).all()
+    turni_settimana = db.query(models.Turno).filter(models.Turno.data.between(start_of_week, end_of_week)).order_by(
+        models.Turno.data, models.Turno.fascia_oraria).all()
     return templates.TemplateResponse("turni.html", {
         "request": request, "current_user": admin_user, "allenatori": allenatori,
         "turni": turni_settimana, "week_offset": week_offset,
@@ -327,10 +222,8 @@ async def view_rubrica(request: Request, db: Session = Depends(get_db),
     query = db.query(models.User).options(joinedload(models.User.roles))
     if role_filter:
         query = query.join(models.User.roles).filter(models.Role.name == role_filter)
-
     users = query.order_by(models.User.last_name, models.User.first_name).all()
     all_roles = db.query(models.Role).all()
-
     return templates.TemplateResponse("rubrica.html", {
         "request": request, "current_user": current_user, "users": users,
         "all_roles": all_roles, "current_filter": role_filter
@@ -344,10 +237,8 @@ async def list_barche(request: Request, db: Session = Depends(get_db),
     query = db.query(models.Barca)
     if tipo_filter:
         query = query.filter(models.Barca.tipo == tipo_filter)
-
     barche = query.order_by(models.Barca.nome).all()
     tipi_barca = db.query(models.Barca.tipo).distinct().order_by(models.Barca.tipo).all()
-
     return templates.TemplateResponse("barche_list.html", {
         "request": request, "current_user": current_user, "barche": barche,
         "tipi_barca": [t[0] for t in tipi_barca], "current_filter": tipo_filter
@@ -389,17 +280,13 @@ async def modifica_barca_form(barca_id: int, request: Request, db: Session = Dep
                               admin_user: models.User = Depends(get_current_admin_user)):
     barca = db.query(models.Barca).options(joinedload(models.Barca.atleti_assegnati)).filter(
         models.Barca.id == barca_id).first()
-    if not barca:
-        raise HTTPException(status_code=404, detail="Barca non trovata")
-
+    if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
     atleti = db.query(models.User).join(models.User.roles).filter(models.Role.name == 'atleta').order_by(
         models.User.last_name).all()
     assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
-
-    return templates.TemplateResponse("modifica_barca.html", {
-        "request": request, "current_user": admin_user, "barca": barca,
-        "atleti": atleti, "assigned_atleta_ids": assigned_atleta_ids
-    })
+    return templates.TemplateResponse("modifica_barca.html",
+                                      {"request": request, "current_user": admin_user, "barca": barca, "atleti": atleti,
+                                       "assigned_atleta_ids": assigned_atleta_ids})
 
 
 @app.post("/risorse/barche/{barca_id}/modifica", response_class=RedirectResponse)
@@ -412,17 +299,13 @@ async def aggiorna_barca(
         apertura_totale: Optional[float] = Form(None), semiapertura_sx: Optional[float] = Form(None)
 ):
     barca = db.query(models.Barca).filter(models.Barca.id == barca_id).first()
-    if not barca:
-        raise HTTPException(status_code=404, detail="Barca non trovata")
-
+    if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
     barca.nome, barca.tipo, barca.costruttore, barca.anno = nome, tipo, costruttore, anno
     barca.remi_assegnati = remi_assegnati
     barca.altezza_scalmi, barca.altezza_carrello = altezza_scalmi, altezza_carrello
     barca.apertura_totale, barca.semiapertura_sx = apertura_totale, semiapertura_sx
-
     atleti_assegnati = db.query(models.User).filter(models.User.id.in_(atleti_ids)).all()
     barca.atleti_assegnati = atleti_assegnati
-
     db.commit()
     return RedirectResponse(url="/risorse/barche", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -431,8 +314,7 @@ async def aggiorna_barca(
 async def elimina_barca(barca_id: int, db: Session = Depends(get_db),
                         admin_user: models.User = Depends(get_current_admin_user)):
     barca = db.query(models.Barca).filter(models.Barca.id == barca_id).first()
-    if not barca:
-        raise HTTPException(status_code=404, detail="Barca non trovata")
+    if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
     db.delete(barca)
     db.commit()
     return RedirectResponse(url="/risorse/barche", status_code=status.HTTP_303_SEE_OTHER)
@@ -445,10 +327,8 @@ async def view_pesi(request: Request, db: Session = Depends(get_db),
     esercizi = db.query(models.EsercizioPesi).order_by(models.EsercizioPesi.ordine).all()
     atleti = db.query(models.User).join(models.User.roles).filter(models.Role.name == 'atleta').order_by(
         models.User.last_name).all()
-
     scheda_data = {}
     selected_atleta = None
-
     if current_user.is_admin or current_user.is_allenatore:
         if atleta_id:
             selected_atleta = db.query(models.User).filter(models.User.id == atleta_id).first()
@@ -459,32 +339,26 @@ async def view_pesi(request: Request, db: Session = Depends(get_db),
         selected_atleta = current_user
         schede = db.query(models.SchedaPesi).filter(models.SchedaPesi.atleta_id == current_user.id).all()
         scheda_data = {s.esercizio_id: s for s in schede}
-
-    return templates.TemplateResponse("pesi.html", {
-        "request": request, "current_user": current_user, "esercizi": esercizi,
-        "atleti": atleti, "selected_atleta": selected_atleta, "scheda_data": scheda_data
-    })
+    return templates.TemplateResponse("pesi.html",
+                                      {"request": request, "current_user": current_user, "esercizi": esercizi,
+                                       "atleti": atleti, "selected_atleta": selected_atleta,
+                                       "scheda_data": scheda_data})
 
 
 @app.post("/risorse/pesi/update", response_class=RedirectResponse)
-async def update_scheda_pesi(
-        request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)
-):
+async def update_scheda_pesi(request: Request, db: Session = Depends(get_db),
+                             current_user: models.User = Depends(get_current_user)):
     form_data = await request.form()
     atleta_id = int(form_data.get("atleta_id"))
-
     if not (current_user.is_admin or current_user.is_allenatore or current_user.id == atleta_id):
         raise HTTPException(status_code=403, detail="Non autorizzato")
-
     for key, value in form_data.items():
         if key.startswith("massimale_"):
             esercizio_id = int(key.split("_")[1])
-
             scheda = db.query(models.SchedaPesi).filter_by(atleta_id=atleta_id, esercizio_id=esercizio_id).first()
             if not scheda:
                 scheda = models.SchedaPesi(atleta_id=atleta_id, esercizio_id=esercizio_id)
                 db.add(scheda)
-
             scheda.massimale = float(value) if value else None
             scheda.carico_5_rep = float(form_data.get(f"5rep_{esercizio_id}")) if form_data.get(
                 f"5rep_{esercizio_id}") else None
@@ -494,16 +368,13 @@ async def update_scheda_pesi(
                 f"10rep_{esercizio_id}") else None
             scheda.carico_20_rep = float(form_data.get(f"20rep_{esercizio_id}")) if form_data.get(
                 f"20rep_{esercizio_id}") else None
-
     db.commit()
     return RedirectResponse(url=f"/risorse/pesi?atleta_id={atleta_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/risorse/pesi/add_esercizio", response_class=RedirectResponse)
-async def add_esercizio_pesi(
-        db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
-        nome: str = Form(...), ordine: int = Form(...)
-):
+async def add_esercizio_pesi(db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
+                             nome: str = Form(...), ordine: int = Form(...)):
     new_esercizio = models.EsercizioPesi(nome=nome, ordine=ordine)
     db.add(new_esercizio)
     db.commit()
@@ -511,7 +382,6 @@ async def add_esercizio_pesi(
 
 
 # ===== API Endpoints =====
-
 @app.get("/api/training/groups")
 async def get_training_groups(db: Session = Depends(get_db)):
     macro_groups = db.query(models.MacroGroup).options(joinedload(models.MacroGroup.subgroups)).all()
@@ -538,8 +408,7 @@ async def get_allenamenti_api(db: Session = Depends(get_db), macro_group_id: Opt
     for a in allenamenti:
         start_dt, end_dt = parse_orario(a.data, a.orario)
         title = a.tipo
-        if a.descrizione:
-            title += f" - {a.descrizione}"
+        if a.descrizione: title += f" - {a.descrizione}"
         formatted_events.append({
             "id": a.id, "title": title, "start": start_dt.isoformat(), "end": end_dt.isoformat(),
             "backgroundColor": get_color_for_type(a.tipo), "borderColor": get_color_for_type(a.tipo),
@@ -558,16 +427,11 @@ async def get_turni_api(db: Session = Depends(get_db)):
     turni = db.query(models.Turno).options(joinedload(models.Turno.user)).all()
     events = []
     for turno in turni:
-        start_hour = 8 if turno.fascia_oraria == "Mattina" else 17
-        end_hour = 12 if turno.fascia_oraria == "Mattina" else 21
+        start_hour, end_hour = (8, 12) if turno.fascia_oraria == "Mattina" else (17, 21)
         start_dt = datetime.combine(turno.data, time(hour=start_hour))
         end_dt = datetime.combine(turno.data, time(hour=end_hour))
-        if turno.user:
-            title = f"{turno.user.first_name} {turno.user.last_name}"
-            color = "#198754"  # Verde
-        else:
-            title = "Turno Libero"
-            color = "#dc3545"  # Rosso
+        title = f"{turno.user.first_name} {turno.user.last_name}" if turno.user else "Turno Libero"
+        color = "#198754" if turno.user else "#dc3545"
         events.append({
             "id": turno.id, "title": title, "start": start_dt.isoformat(), "end": end_dt.isoformat(),
             "backgroundColor": color, "borderColor": color,
@@ -576,8 +440,8 @@ async def get_turni_api(db: Session = Depends(get_db)):
     return events
 
 
-# ===== CRUD Allenamenti (solo Admin) =====
-@app.get("/allenamenti/nuovo")
+# ===== CRUD Allenamenti =====
+@app.get("/allenamenti/nuovo", response_class=HTMLResponse)
 async def nuovo_allenamento_form(request: Request, admin_user: models.User = Depends(get_current_admin_user)):
     return templates.TemplateResponse("crea_allenamento.html", {"request": request, "current_user": admin_user})
 
@@ -589,10 +453,15 @@ async def crea_allenamento(
         orario: str = Form(...), orario_personalizzato: Optional[str] = Form(None),
         is_recurring: Optional[str] = Form(None), giorni: Optional[List[str]] = Form(None),
         recurrence_count: Optional[int] = Form(None), macro_group_id: int = Form(...),
-        subgroup_ids: Optional[List[int]] = Form(None)
+        subgroup_ids: List[int] = Form([])
 ):
     final_orario_str = orario_personalizzato if orario == 'personalizzato' else orario
-    selected_subgroups = db.query(models.SubGroup).filter(models.SubGroup.id.in_(subgroup_ids or [])).all()
+
+    if subgroup_ids:
+        selected_subgroups = db.query(models.SubGroup).filter(models.SubGroup.id.in_(subgroup_ids)).all()
+    else:
+        selected_subgroups = db.query(models.SubGroup).filter(models.SubGroup.macro_group_id == macro_group_id).all()
+
     if is_recurring == 'true':
         if not giorni or not recurrence_count or recurrence_count <= 0:
             return templates.TemplateResponse("crea_allenamento.html", {"request": request,
@@ -622,27 +491,9 @@ async def crea_allenamento(
                                                macro_group_id=macro_group_id)
         nuovo_allenamento.sub_groups.extend(selected_subgroups)
         db.add(nuovo_allenamento)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        return templates.TemplateResponse("crea_allenamento.html", {"request": request,
-                                                                    "error_message": "Errore nel salvataggio. Controlla i dati.",
-                                                                    "current_user": admin_user}, status_code=400)
+
+    db.commit()
     return RedirectResponse(url="/calendario", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@app.get("/allenamenti/{id}/modifica")
-async def modifica_form(id: int, request: Request, db: Session = Depends(get_db),
-                        admin_user: models.User = Depends(get_current_admin_user)):
-    allenamento = db.query(models.Allenamento).options(joinedload(models.Allenamento.sub_groups)).filter(
-        models.Allenamento.id == id).first()
-    if not allenamento:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Allenamento non trovato")
-    selected_subgroup_ids = [sg.id for sg in allenamento.sub_groups]
-    return templates.TemplateResponse("modifica_allenamento.html", {"request": request, "allenamento": allenamento,
-                                                                    "selected_subgroup_ids": selected_subgroup_ids,
-                                                                    "current_user": admin_user})
 
 
 @app.post("/allenamenti/{id}/modifica", response_class=RedirectResponse)
@@ -653,19 +504,14 @@ async def aggiorna_allenamento(
         macro_group_id: int = Form(...), subgroup_ids: Optional[List[int]] = Form(None)
 ):
     allenamento = db.query(models.Allenamento).filter(models.Allenamento.id == id).first()
-    if not allenamento:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Allenamento non trovato")
+    if not allenamento: raise HTTPException(status_code=404, detail="Allenamento non trovato")
     allenamento.tipo, allenamento.descrizione, allenamento.data = tipo, descrizione, data
     allenamento.orario = orario_personalizzato if orario == 'personalizzato' else orario
     allenamento.macro_group_id = macro_group_id
     allenamento.sub_groups.clear()
     if subgroup_ids:
         allenamento.sub_groups.extend(db.query(models.SubGroup).filter(models.SubGroup.id.in_(subgroup_ids)).all())
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=400, detail="Errore di integrità durante l'aggiornamento.")
+    db.commit()
     return RedirectResponse(url="/calendario", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -675,13 +521,11 @@ async def delete_allenamento_events(
         allenamento_id: int = Form(...), deletion_type: str = Form(...)
 ):
     allenamento = db.query(models.Allenamento).filter(models.Allenamento.id == allenamento_id).first()
-    if not allenamento:
-        raise HTTPException(status_code=404, detail="Allenamento non trovato")
+    if not allenamento: raise HTTPException(status_code=404, detail="Allenamento non trovato")
     if deletion_type == 'future' and allenamento.recurrence_id:
-        db.query(models.Allenamento).filter(
-            models.Allenamento.recurrence_id == allenamento.recurrence_id,
-            models.Allenamento.data >= allenamento.data
-        ).delete(synchronize_session=False)
+        db.query(models.Allenamento).filter(models.Allenamento.recurrence_id == allenamento.recurrence_id,
+                                            models.Allenamento.data >= allenamento.data).delete(
+            synchronize_session=False)
     else:
         db.delete(allenamento)
     db.commit()
@@ -690,16 +534,15 @@ async def delete_allenamento_events(
 
 @app.post("/turni/assegna", response_class=RedirectResponse)
 async def assegna_turno(
-        request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
+        db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
         turno_id: int = Form(...), user_id: int = Form(...), week_offset: int = Form(0)
 ):
     turno = db.query(models.Turno).filter(models.Turno.id == turno_id).first()
-    if not turno:
-        raise HTTPException(status_code=404, detail="Turno non trovato")
+    if not turno: raise HTTPException(status_code=404, detail="Turno non trovato")
     if user_id == 0:
         turno.user_id = None
     else:
-        user = db.query(models.User).options(joinedload(models.User.roles)).filter(models.User.id == user_id).first()
+        user = db.query(models.User).filter(models.User.id == user_id).first()
         if not user or not user.is_allenatore:
             raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
         turno.user_id = user.id
@@ -707,88 +550,146 @@ async def assegna_turno(
     return RedirectResponse(url=f"/turni?week_offset={week_offset}", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# ===== Route di Autenticazione =====
-@app.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+# ===== Sezione Amministrazione Utenti =====
 
-
-@app.post("/login", response_class=RedirectResponse)
-async def login(request: Request, db: Session = Depends(get_db), username: str = Form(...), password: str = Form(...)):
-    user = db.query(models.User).filter(models.User.username == username).first()
-    if not user or not security.verify_password(password, user.hashed_password):
-        error_message = "Nome utente o password non validi"
-        return templates.TemplateResponse("login.html", {"request": request, "error_message": error_message},
-                                          status_code=status.HTTP_401_UNAUTHORIZED)
-    request.session["user_id"] = user.id
-    logger.info(f"Utente '{username}' loggato con successo.")
-    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
-
-
-@app.get("/logout", response_class=RedirectResponse)
-async def logout(request: Request):
-    request.session.pop("user_id", None)
-    logger.info("Utente disconnesso.")
-    return RedirectResponse(url="/login?message=Logout effettuato con successo.", status_code=status.HTTP_303_SEE_OTHER)
-
-
-# ===== Route di Amministrazione Utenti =====
 @app.get("/admin/users", response_class=HTMLResponse)
-async def admin_users_list(request: Request, db: Session = Depends(get_db),
-                           admin_user: models.User = Depends(get_current_admin_user),
-                           role_filter: Optional[str] = None):
+async def admin_users_list(
+        request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
+        role_ids: List[int] = Query([]), categories: List[str] = Query([]),
+        enrollment_year: Optional[int] = Query(None), cert_expiring: bool = Query(False),
+        sort_by: str = Query("last_name"), sort_dir: str = Query("asc")
+):
     query = db.query(models.User).options(joinedload(models.User.roles))
-    if role_filter:
-        query = query.join(models.User.roles).filter(models.Role.name == role_filter)
+    if role_ids:
+        query = query.join(models.user_roles).filter(models.user_roles.c.role_id.in_(role_ids))
+    if enrollment_year:
+        query = query.filter(models.User.enrollment_year == enrollment_year)
+    if cert_expiring:
+        two_months_from_now = date.today() + timedelta(days=60)
+        query = query.filter(models.User.certificate_expiration <= two_months_from_now)
 
-    users = query.order_by(models.User.last_name).all()
+    users = query.all()
+    if categories:
+        users = [user for user in users if user.category in categories]
+
+    reverse = sort_dir == "desc"
+    if sort_by == "name":
+        users.sort(key=lambda u: f"{u.first_name} {u.last_name}", reverse=reverse)
+    elif sort_by == "username":
+        users.sort(key=lambda u: u.username, reverse=reverse)
+    elif sort_by == "category":
+        users.sort(key=lambda u: u.category, reverse=reverse)
+    elif sort_by == "date_of_birth":
+        users.sort(key=lambda u: u.date_of_birth or date.min, reverse=reverse)
+    else:
+        users.sort(key=lambda u: u.last_name, reverse=reverse)
+
     all_roles = db.query(models.Role).all()
-    return templates.TemplateResponse("admin_users.html", {
+    all_years = sorted([y[0] for y in db.query(models.User.enrollment_year).distinct().all() if y[0] is not None],
+                       reverse=True)
+    all_categories = sorted(list(set(u.category for u in db.query(models.User).all() if u.category != "N/D")))
+
+    return templates.TemplateResponse("admin_users_list.html", {
         "request": request, "users": users, "current_user": admin_user,
-        "all_roles": all_roles, "current_filter": role_filter
+        "all_roles": all_roles, "all_categories": all_categories, "all_years": all_years,
+        "current_filters": {"role_ids": role_ids, "categories": categories, "enrollment_year": enrollment_year,
+                            "cert_expiring": cert_expiring},
+        "sort_by": sort_by, "sort_dir": sort_dir
     })
 
 
+@app.get("/admin/users/add", response_class=HTMLResponse)
+async def admin_add_user_form(request: Request, db: Session = Depends(get_db),
+                              admin_user: models.User = Depends(get_current_admin_user)):
+    roles = db.query(models.Role).order_by(models.Role.name).all()
+    return templates.TemplateResponse("admin_user_add.html",
+                                      {"request": request, "current_user": admin_user, "all_roles": roles, "user": {},
+                                       "user_role_ids": set()})
+
+
 @app.post("/admin/users/add", response_class=RedirectResponse)
-async def admin_add_user(
-        db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
-        username: str = Form(...), password: str = Form(...),
-        first_name: str = Form(...), last_name: str = Form(...),
-        email: Optional[str] = Form(None), phone_number: Optional[str] = Form(None),
-        date_of_birth: date = Form(...), enrollment_year: int = Form(...),
-        roles: List[int] = Form(...)
-):
-    if db.query(models.User).filter(models.User.username == username).first():
-        return RedirectResponse(url="/admin/users?error_message=Username già esistente.",
+async def admin_add_user(db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user),
+                         username: str = Form(...), password: str = Form(...), first_name: str = Form(...),
+                         last_name: str = Form(...),
+                         email: str = Form(...), date_of_birth: date = Form(...), roles_ids: List[int] = Form(...),
+                         phone_number: Optional[str] = Form(None), tax_code: Optional[str] = Form(None),
+                         enrollment_year: Optional[int] = Form(None), membership_date: Optional[date] = Form(None),
+                         certificate_expiration: Optional[date] = Form(None), address: Optional[str] = Form(None),
+                         manual_category: Optional[str] = Form(None)
+                         ):
+    if db.query(models.User).filter(or_(models.User.username == username, models.User.email == email)).first():
+        return RedirectResponse(url="/admin/users/add?error=Username o email già in uso",
                                 status_code=status.HTTP_303_SEE_OTHER)
-
-    selected_roles = db.query(models.Role).filter(models.Role.id.in_(roles)).all()
-    if not selected_roles:
-        return RedirectResponse(url="/admin/users?error_message=Selezionare almeno un ruolo.",
-                                status_code=status.HTTP_303_SEE_OTHER)
-
+    selected_roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()
     new_user = models.User(
         username=username, hashed_password=security.get_password_hash(password),
-        first_name=first_name, last_name=last_name, email=email,
-        phone_number=phone_number, date_of_birth=date_of_birth,
-        enrollment_year=enrollment_year, roles=selected_roles
+        first_name=first_name, last_name=last_name, email=email, date_of_birth=date_of_birth,
+        phone_number=phone_number, tax_code=tax_code, enrollment_year=enrollment_year,
+        membership_date=membership_date, certificate_expiration=certificate_expiration,
+        address=address, manual_category=manual_category if manual_category else None,
+        roles=selected_roles
     )
     db.add(new_user)
     db.commit()
-    return RedirectResponse(url="/admin/users?message=Utente aggiunto con successo!",
+    return RedirectResponse(url="/admin/users?message=Utente creato con successo",
                             status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/admin/users/{user_id}", response_class=HTMLResponse)
+async def admin_view_user(user_id: int, request: Request, db: Session = Depends(get_db),
+                          admin_user: models.User = Depends(get_current_admin_user)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
+    return templates.TemplateResponse("admin_user_detail.html",
+                                      {"request": request, "user": user, "current_user": admin_user})
+
+
+@app.get("/admin/users/{user_id}/edit", response_class=HTMLResponse)
+async def admin_edit_user_form(user_id: int, request: Request, db: Session = Depends(get_db),
+                               admin_user: models.User = Depends(get_current_admin_user)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
+    roles = db.query(models.Role).all()
+    user_role_ids = {role.id for role in user.roles}
+    return templates.TemplateResponse("admin_user_edit.html",
+                                      {"request": request, "user": user, "current_user": admin_user, "all_roles": roles,
+                                       "user_role_ids": user_role_ids})
+
+
+@app.post("/admin/users/{user_id}/edit", response_class=RedirectResponse)
+async def admin_edit_user(user_id: int, db: Session = Depends(get_db),
+                          admin_user: models.User = Depends(get_current_admin_user),
+                          first_name: str = Form(...), last_name: str = Form(...), email: str = Form(...),
+                          date_of_birth: date = Form(...), roles_ids: List[int] = Form([]),
+                          phone_number: Optional[str] = Form(None), tax_code: Optional[str] = Form(None),
+                          enrollment_year: Optional[int] = Form(None), membership_date: Optional[date] = Form(None),
+                          certificate_expiration: Optional[date] = Form(None), address: Optional[str] = Form(None),
+                          manual_category: Optional[str] = Form(None), password: Optional[str] = Form(None)
+                          ):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
+    user.first_name, user.last_name, user.email = first_name, last_name, email
+    user.date_of_birth = date_of_birth
+    user.phone_number, user.tax_code = phone_number, tax_code
+    user.enrollment_year, user.membership_date = enrollment_year, membership_date
+    user.certificate_expiration, user.address = certificate_expiration, address
+    user.manual_category = manual_category if manual_category else None
+    if password:
+        user.hashed_password = security.get_password_hash(password)
+    selected_roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()
+    user.roles = selected_roles
+    db.commit()
+    return RedirectResponse(url=f"/admin/users/{user_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/admin/users/{user_id}/delete", response_class=RedirectResponse)
 async def admin_delete_user(user_id: int, db: Session = Depends(get_db),
                             admin_user: models.User = Depends(get_current_admin_user)):
     if user_id == admin_user.id:
-        return RedirectResponse(url="/admin/users?error_message=Non puoi eliminare te stesso.",
+        return RedirectResponse(url="/admin/users?error=Non puoi eliminare te stesso.",
                                 status_code=status.HTTP_303_SEE_OTHER)
     user_to_delete = db.query(models.User).filter(models.User.id == user_id).first()
     if user_to_delete:
         db.delete(user_to_delete)
         db.commit()
-        return RedirectResponse(url="/admin/users?message=Utente eliminato con successo!",
-                                status_code=status.HTTP_303_SEE_OTHER)
-    return RedirectResponse(url="/admin/users?error_message=Utente non trovato.", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/admin/users?message=Utente eliminato.", status_code=status.HTTP_303_SEE_OTHER)

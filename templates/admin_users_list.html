@@ -1,0 +1,115 @@
+{% extends "admin_layout.html" %}
+
+{% block admin_content %}
+
+<div class="accordion mb-4" id="filterAccordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-funnel-fill me-2" viewBox="0 0 16 16"><path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.74.439L7 11.583V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5z"/></svg>
+                Filtri di Ricerca
+            </button>
+        </h2>
+        <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#filterAccordion">
+            <div class="accordion-body">
+                <form method="get">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label for="role_ids" class="form-label">Ruolo</label>
+                            <select name="role_ids" id="role_ids" class="form-select" multiple size="3">
+                                {% for role in all_roles %}
+                                <option value="{{ role.id }}" {% if role.id in current_filters.role_ids %}selected{% endif %}>{{ role.name|title }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="categories" class="form-label">Categoria</label>
+                            <select name="categories" id="categories" class="form-select" multiple size="3">
+                                {% for category in all_categories %}
+                                <option value="{{ category }}" {% if category in current_filters.categories %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="enrollment_year" class="form-label">Anno Iscrizione</label>
+                            <select name="enrollment_year" id="enrollment_year" class="form-select">
+                                <option value="">Tutti</option>
+                                {% for year in all_years %}
+                                <option value="{{ year }}" {% if year == current_filters.enrollment_year %}selected{% endif %}>{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="cert_expiring" id="cert_expiring" value="true" {% if current_filters.cert_expiring %}checked{% endif %}>
+                                <label class="form-check-label" for="cert_expiring">
+                                  Certificato in Scadenza (< 2 mesi)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Filtra</button>
+                    <a href="{{ url_for('admin_users_list') }}" class="btn btn-secondary">Resetta</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        Elenco Utenti ({{ users|length }})
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        {% macro sort_link(field, text) %}
+                            {% set new_dir = 'asc' if sort_by != field or sort_dir == 'desc' else 'desc' %}
+                            {% set params = request.query_params.multi_items()|list %}
+                            {% set final_params = [] %}
+                            {% for key, val in params %}
+                                {% if key not in ['sort_by', 'sort_dir'] %}
+                                    {% set _ = final_params.append((key, val)) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% set _ = final_params.append(('sort_by', field)) %}
+                            {% set _ = final_params.append(('sort_dir', new_dir)) %}
+                            <th><a href="{{ url_for('admin_users_list') }}?{{ final_params|urlencode }}">{{ text }}
+                                {% if sort_by == field %}
+                                    <i class="fas fa-sort-{{ 'up' if sort_dir == 'asc' else 'down' }}"></i>
+                                {% endif %}
+                            </a></th>
+                        {% endmacro %}
+
+                        {{ sort_link('name', 'Nome e Cognome') }}
+                        {{ sort_link('username', 'Username') }}
+                        <th>Ruoli</th>
+                        {{ sort_link('category', 'Categoria') }}
+                        {{ sort_link('date_of_birth', 'Data di Nascita') }}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr onclick="window.location='{{ url_for('admin_view_user', user_id=user.id) }}';" style="cursor: pointer;">
+                        <td>{{ user.first_name }} {{ user.last_name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.roles | map(attribute='name') | map('title') | join(', ') }}</td>
+                        <td>{{ user.category }}</td>
+                        <td>{{ user.date_of_birth.strftime('%d/%m/%Y') if user.date_of_birth else 'N/D' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">Nessun utente trovato con i filtri selezionati.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Aggiungi FontAwesome per le icone di ordinamento -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js" xintegrity="sha512-Tn2m0TIpgVyTzzvmxLNuqbSJH3JP8jm+Cy3hvHrW7ndTDcJ1w5mBiksqDBb8GpE2ksktFvDB/ykZ0mDpsZj20w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
