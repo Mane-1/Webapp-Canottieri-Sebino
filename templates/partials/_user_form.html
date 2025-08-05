@@ -1,17 +1,17 @@
 <div class="row">
-    <div class="col-md-6 mb-3"><label for="first_name" class="form-label">Nome</label><input type="text" class="form-control" name="first_name" value="{{ user.first_name or '' }}" required></div>
-    <div class="col-md-6 mb-3"><label for="last_name" class="form-label">Cognome</label><input type="text" class="form-control" name="last_name" value="{{ user.last_name or '' }}" required></div>
+    <div class="col-md-6 mb-3"><label for="first_name" class="form-label">Nome*</label><input type="text" class="form-control" name="first_name" value="{{ user.first_name or '' }}" required></div>
+    <div class="col-md-6 mb-3"><label for="last_name" class="form-label">Cognome*</label><input type="text" class="form-control" name="last_name" value="{{ user.last_name or '' }}" required></div>
 </div>
 <div class="row">
-    <div class="col-md-6 mb-3"><label for="username" class="form-label">Username</label><input type="text" class="form-control" name="username" value="{{ user.username or '' }}" required></div>
-    <div class="col-md-6 mb-3"><label for="password" class="form-label">Password</label><input type="password" class="form-control" name="password" {% if not user %}required{% endif %}><div class="form-text">Lasciare vuoto per non modificare.</div></div>
+    <div class="col-md-6 mb-3"><label for="username" class="form-label">Username*</label><input type="text" class="form-control" name="username" value="{{ user.username or '' }}" required></div>
+    <div class="col-md-6 mb-3"><label for="password" class="form-label">Password{% if not user %}*{% endif %}</label><input type="password" class="form-control" name="password" {% if not user %}required{% endif %}><div class="form-text">{% if user %}Lasciare vuoto per non modificare.{% endif %}</div></div>
 </div>
 <div class="row">
-    <div class="col-md-6 mb-3"><label for="email" class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ user.email or '' }}" required></div>
+    <div class="col-md-6 mb-3"><label for="email" class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ user.email or '' }}"></div>
     <div class="col-md-6 mb-3"><label for="phone_number" class="form-label">Telefono</label><input type="tel" class="form-control" name="phone_number" value="{{ user.phone_number or '' }}"></div>
 </div>
 <div class="row">
-    <div class="col-md-6 mb-3"><label for="date_of_birth" class="form-label">Data di Nascita</label><input type="date" class="form-control" name="date_of_birth" value="{{ user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '' }}" required></div>
+    <div class="col-md-6 mb-3"><label for="date_of_birth" class="form-label">Data di Nascita*</label><input type="date" class="form-control" name="date_of_birth" value="{{ user.date_of_birth.strftime('%Y-%m-%d') if user.date_of_birth else '' }}" required></div>
     <div class="col-md-6 mb-3"><label for="tax_code" class="form-label">Codice Fiscale</label><input type="text" class="form-control" name="tax_code" value="{{ user.tax_code or '' }}"></div>
 </div>
 <div class="row">
@@ -24,7 +24,7 @@
      <div class="col-md-6 mb-3"><label for="manual_category" class="form-label">Categoria Manuale</label><input type="text" class="form-control" name="manual_category" value="{{ user.manual_category or '' }}"><div class="form-text">Lasciare vuoto per calcolo automatico.</div></div>
 </div>
 <div class="mb-3">
-    <label class="form-label">Ruoli</label>
+    <label class="form-label">Ruoli*</label>
     <div>
         {% for role in all_roles %}
         <div class="form-check form-check-inline">

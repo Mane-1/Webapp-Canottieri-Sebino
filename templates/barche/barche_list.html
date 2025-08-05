@@ -1,0 +1,71 @@
+{% extends "layouts/_base.html" %}
+
+{% block title %}Elenco Barche{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Elenco Barche</h1>
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <a href="{{ url_for('nuova_barca_form') }}" class="btn btn-primary">Aggiungi Nuova Barca</a>
+        {% endif %}
+    </div>
+
+    <div class="card card-body shadow-sm mb-4">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label for="tipo_filter" class="form-label">Filtra per tipo</label>
+                <select name="tipo_filter" id="tipo_filter" class="form-select" onchange="this.form.submit()">
+                    <option value="">Tutti i tipi</option>
+                    {% for tipo in tipi_barca %}
+                    <option value="{{ tipo }}" {% if current_filter == tipo %}selected{% endif %}>{{ tipo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <a href="/risorse/barche" class="btn btn-outline-secondary">Resetta</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Tipo</th>
+                    <th>Costruttore</th>
+                    <th>Anno</th>
+                    <th>Atleti Assegnati</th>
+                    {% if current_user.is_admin or current_user.is_allenatore %}
+                    <th class="text-end">Azioni</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for barca in barche %}
+                <tr>
+                    <td class="fw-bold">{{ barca.nome }}</td>
+                    <td>{{ barca.tipo }}</td>
+                    <td>{{ barca.costruttore or 'N/D' }}</td>
+                    <td>{{ barca.anno or 'N/D' }}</td>
+                    <td>{{ barca.atleti_assegnati|map(attribute='last_name')|join(', ') or 'Nessuno' }}</td>
+                    {% if current_user.is_admin or current_user.is_allenatore %}
+                    <td class="text-end">
+                        <a href="{{ url_for('modifica_barca_form', barca_id=barca.id) }}" class="btn btn-sm btn-outline-primary">Modifica</a>
+                        <form action="{{ url_for('elimina_barca', barca_id=barca.id) }}" method="post" class="d-inline" onsubmit="return confirm('Sei sicuro di voler eliminare questa barca?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Elimina</button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center p-4">Nessuna barca trovata.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+<!-- templates/calendario.html -->
+{% extends "layouts/_base.html" %}
+
+{% block title %}Calendario Allenamenti{% endblock %}
+
+{% block head_extra %}
+    <!-- Dipendenza di FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/core/locales/it.js'></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="h2 mb-0">Calendario Allenamenti</h1>
+        <div class="d-flex gap-2">
+            <a href="/allenamenti" class="btn btn-outline-secondary">
+                <i class="bi bi-list-ul me-1"></i> Vai alla Lista
+            </a>
+            {% if current_user.is_admin or current_user.is_allenatore %}
+            <a href="/allenamenti/nuovo" class="btn btn-success">
+                <i class="bi bi-plus-lg me-1"></i> Aggiungi Allenamento
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filtri (visibili solo ad admin e allenatori) -->
+    {% if current_user.is_admin or current_user.is_allenatore %}
+    <div class="mb-4">
+        <a class="btn btn-outline-primary" data-bs-toggle="collapse" href="#filterCollapse" role="button" aria-expanded="false" aria-controls="filterCollapse">
+            <i class="bi bi-filter me-1"></i> Mostra/Nascondi Filtri Categoria
+        </a>
+        <div class="collapse mt-2" id="filterCollapse">
+            <div class="card card-body shadow-sm">
+                <div id="category-filters" class="row">
+                    <!-- Checkbox delle categorie verranno popolate da JS -->
+                    <p class="text-muted">Caricamento categorie...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Calendario -->
+    <div id="calendar" class="bg-white p-4 rounded shadow-sm"></div>
+</div>
+
+<!-- Modale Dettagli Evento -->
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Dettagli Allenamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Data:</strong> <span id="modalDate"></span></p>
+                <p><strong>Orario:</strong> <span id="modalTime"></span></p>
+                <p><strong>Descrizione:</strong> <span id="modalDescription"></span></p>
+                <p><strong>Categorie Assegnate:</strong> <span id="modalCategories" class="badge bg-info text-dark"></span></p>
+                <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                {% if current_user.is_admin or current_user.is_allenatore %}
+                <a href="#" id="modalEditButton" class="btn btn-primary">Modifica</a>
+                <button type="button" id="modalDeleteButton" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal">Elimina</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modale Conferma Eliminazione (necessaria se non già presente in _base.html) -->
+<!-- ... -->
+
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    const calendarEl = document.getElementById('calendar');
+    const categoryFiltersContainer = document.getElementById('category-filters');
+
+    // --- Variabili Utente dal Backend ---
+    const isAtleta = {{ current_user.is_atleta | tojson }};
+    const userCategory = "{{ current_user.category }}";
+    const isAdminOrTrainer = {{ (current_user.is_admin or current_user.is_allenatore) | tojson }};
+
+    // --- Gestione Modale Dettagli ---
+    const eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDate = document.getElementById('modalDate');
+    const modalTime = document.getElementById('modalTime');
+    const modalDescription = document.getElementById('modalDescription');
+    const modalCategories = document.getElementById('modalCategories');
+    const modalRecurrence = document.getElementById('modalRecurrence');
+    const modalEditButton = document.getElementById('modalEditButton');
+    const modalDeleteButton = document.getElementById('modalDeleteButton');
+
+    // --- Funzione per costruire l'URL degli eventi ---
+    function buildEventsUrl() {
+        // Se l'utente è un atleta, mostra solo la sua categoria
+        if (isAtleta && userCategory !== 'N/D') {
+            const params = new URLSearchParams({ user_category: userCategory });
+            return `/api/allenamenti?${params.toString()}`;
+        }
+
+        // Se è admin/allenatore, usa i filtri selezionati
+        if (isAdminOrTrainer) {
+            const params = new URLSearchParams();
+            const selectedCategories = Array.from(document.querySelectorAll('#category-filters .form-check-input:checked'))
+                .map(cb => cb.value);
+
+            selectedCategories.forEach(cat => params.append('category_filter', cat));
+            const queryString = params.toString();
+            return `/api/allenamenti${queryString ? '?' + queryString : ''}`;
+        }
+
+        // Fallback per utenti senza categoria (non dovrebbero vedere nulla)
+        return '/api/allenamenti?user_category=INVALID';
+    }
+
+    // --- Inizializzazione Calendario ---
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'it',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,listWeek'
+        },
+        buttonText: {
+            today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda'
+        },
+        events: (fetchInfo, successCallback, failureCallback) => {
+            fetch(buildEventsUrl())
+                .then(response => response.json())
+                .then(data => successCallback(data))
+                .catch(error => failureCallback(error));
+        },
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            const props = info.event.extendedProps;
+            modalTitle.textContent = info.event.title;
+            modalDate.textContent = info.event.start.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            modalTime.textContent = props.orario || 'Non specificato';
+            modalDescription.textContent = props.descrizione || 'Nessuna descrizione.';
+            modalCategories.textContent = props.categories || 'Nessuna';
+            modalRecurrence.textContent = props.recurrence_id ? 'Sì' : 'No';
+
+            if (modalEditButton) {
+                modalEditButton.href = `/allenamenti/${info.event.id}/modifica`;
+            }
+            if (modalDeleteButton) {
+                modalDeleteButton.setAttribute('data-allenamento-id', info.event.id);
+                modalDeleteButton.setAttribute('data-recurrence-id', props.recurrence_id || '');
+            }
+            eventDetailModal.show();
+        }
+    });
+
+    // --- Logica Filtri per Admin/Allenatori ---
+    async function setupFilters() {
+        if (!isAdminOrTrainer) return;
+        try {
+            const response = await fetch('/api/all-categories'); // Assumendo esista un'API che restituisce tutte le categorie
+            const categories = await response.json();
+
+            categoryFiltersContainer.innerHTML = ''; // Pulisce il messaggio di caricamento
+            categories.forEach(cat => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3';
+                const div = document.createElement('div');
+                div.className = 'form-check';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" value="${cat.name}" id="filter_cat_${cat.id}">
+                    <label class="form-check-label" for="filter_cat_${cat.id}">${cat.name}</label>
+                `;
+                col.appendChild(div);
+                categoryFiltersContainer.appendChild(col);
+            });
+
+            // Aggiunge l'event listener per aggiornare il calendario quando un filtro cambia
+            categoryFiltersContainer.addEventListener('change', () => {
+                calendar.refetchEvents();
+            });
+
+        } catch (error) {
+            console.error("Errore nel caricamento delle categorie per i filtri:", error);
+            categoryFiltersContainer.innerHTML = '<p class="text-danger">Impossibile caricare i filtri.</p>';
+        }
+    }
+
+    calendar.render();
+    setupFilters();
+});
+</script>
+{% endblock %}

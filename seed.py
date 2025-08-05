@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # --- DATI ESTRATTI E PULITI DAL PDF ---
 atleti_data = [
-    # Dati puliti e mappati dal PDF ATLETI 2025.pdf
+    # ... i tuoi dati degli atleti rimangono invariati ...
     {'nome': 'MASSIMO', 'cognome': 'ARMENI', 'data_nascita': '01/10/1968', 'email': 'massimoarmeni@icloud.com',
      'cf': 'RMNMSM68R01L117G', 'data_tess': '08/01/2025', 'scad_cert': '04/11/2025',
      'indirizzo': 'VIA OTTORINO VILLA 18 - 25124 BRESCIA'},
@@ -38,7 +38,7 @@ atleti_data = [
     {'nome': 'ALESSANDRO', 'cognome': 'BONETTI', 'data_nascita': '12/02/2013', 'email': 'claudia.delasa@tiscali.it',
      'cf': 'BNTLSN13B12D434S', 'data_tess': '08/01/2025', 'scad_cert': '23/04/2026',
      'indirizzo': 'VIA MAMELI NR 7 - 24060 ROGNO'},
-    {'nome': 'REBECCA', 'cognome': 'BONETTI', 'data_nascita': '24/07/2010', 'email': 'info@canottierisebino.it',
+    {'nome': 'REBECCA', 'cognome': 'BONETTI', 'data_nascita': '24/07/2010', 'email': 'claudia.delasa@tiscali.it',
      'cf': 'BNTRCC10L64D434Q', 'data_tess': '08/01/2025', 'scad_cert': '22/08/2025',
      'indirizzo': 'VIA GOFFREDO MAMELI, 7 - 24060 ROGNO'},
     {'nome': 'ARISTIDE', 'cognome': 'BONOMELLI', 'data_nascita': '25/09/1982', 'email': 'aristidebonomelli@hotmail.com',
@@ -149,7 +149,7 @@ atleti_data = [
     {'nome': 'GIULIA', 'cognome': 'ROTA', 'data_nascita': '29/05/2008', 'email': 'andrearotaedania@gmail.com',
      'cf': 'RTOGLI08E69D434V', 'data_tess': '08/01/2025', 'scad_cert': '08/10/2025',
      'indirizzo': 'VIA NAZIONALE NR 7 - 24062 COSTA VOLPINO'},
-    {'nome': 'CHIARA', 'cognome': 'RUSCITTO', 'data_nascita': '29/12/1973', 'email': 'chiara.ruscitto@gmail.com',
+    {'nome': 'CHIARA', 'cognome': 'RUSCITTO', 'data_nascita': '29/01/1973', 'email': 'chiara.ruscitto@gmail.com',
      'cf': 'RSCCHR73T69L388R', 'data_tess': '07/04/2025', 'scad_cert': '01/10/2025',
      'indirizzo': 'VIA TERZAGO 3 - 24020 SCANZOROSCIATE'},
     {'nome': 'DANIELE', 'cognome': 'SBARDOLINI', 'data_nascita': '28/04/1989', 'email': 'danielesbardolini@tiscali.it',
@@ -182,11 +182,35 @@ atleti_data = [
 ]
 
 
+def seed_categories(db: Session):
+    """Popola la tabella delle categorie con i dati standard."""
+    logger.info("Popolamento categorie...")
+    if db.query(models.Categoria).count() > 0:
+        logger.info("Tabella categorie già popolata. Skippo.")
+        return
+
+    categorie = [
+        # Dati basati sulle regole federali
+        models.Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1, macro_group="Under 14"),
+        models.Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2, macro_group="Under 14"),
+        models.Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3, macro_group="Under 14"),
+        models.Categoria(nome="Allievo C", eta_min=13, eta_max=13, ordine=4, macro_group="Under 14"),
+        models.Categoria(nome="Cadetto", eta_min=14, eta_max=14, ordine=5, macro_group="Under 14"),
+        models.Categoria(nome="Ragazzo", eta_min=15, eta_max=16, ordine=6, macro_group="Over 14"),
+        models.Categoria(nome="Junior", eta_min=17, eta_max=18, ordine=7, macro_group="Over 14"),
+        models.Categoria(nome="Under 23", eta_min=19, eta_max=23, ordine=8, macro_group="Over 14"),
+        models.Categoria(nome="Senior", eta_min=24, eta_max=27, ordine=9, macro_group="Over 14"),
+        models.Categoria(nome="Master", eta_min=28, eta_max=150, ordine=10, macro_group="Master"),
+    ]
+    db.add_all(categorie)
+    db.commit()
+    logger.info("Categorie popolate con successo.")
+
+
 def main():
     """Funzione principale per eseguire il seeding del database."""
     logger.info("Avvio script di seeding completo...")
 
-    # Cancella e ricrea le tabelle per una partenza pulita
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
     input("Premi Invio per continuare, o CTRL+C per annullare...")
     Base.metadata.drop_all(bind=engine)
@@ -202,6 +226,9 @@ def main():
             if not db.query(models.Role).filter_by(name=nome_ruolo).first():
                 db.add(models.Role(name=nome_ruolo))
         db.commit()
+
+        # NUOVO: Popola Categorie
+        seed_categories(db)
 
         # 2. Crea Utente Admin
         logger.info("Creazione utente admin...")
@@ -227,26 +254,55 @@ def main():
         logger.info("Inizio creazione atleti...")
         atleta_role = db.query(models.Role).filter_by(name='atleta').one()
         emails_usate = set()
-        for atleta in atleti_data:
-            if atleta['email'] in emails_usate:
-                logger.warning(f"Email duplicata, skip: {atleta['email']} per {atleta['nome']}")
-                continue
 
+        # Aggiungiamo l'email dell'admin per evitare conflitti
+        admin_email = "gabriele.manenti@example.com"
+        if db.query(models.User).filter(models.User.email == admin_email).first():
+            emails_usate.add(admin_email)
+
+        for atleta in atleti_data:
             nome = atleta['nome'].title()
             cognome = atleta['cognome'].title()
-            username = f"{nome.split(' ')[0]}.{cognome.split(' ')[0]}".lower().replace("'", "")
+            username_base = f"{nome.split(' ')[0]}.{cognome.split(' ')[0]}".lower().replace("'", "")
+            username = username_base
 
-            # Controlla se lo username esiste già
-            if db.query(models.User).filter(models.User.username == username).first():
-                logger.warning(f"Username {username} già esistente, ne creo uno unico.")
-                username = f"{username}{db.query(models.User).count()}"
+            counter = 1
+            while db.query(models.User).filter(models.User.username == username).first():
+                username = f"{username_base}{counter}"
+                counter += 1
+
+            # --- NUOVA GESTIONE EMAIL DUPLICATE ---
+            original_email = atleta['email']
+            final_email = original_email
+
+            if final_email in emails_usate:
+                logger.warning(f"Email duplicata trovata: {original_email} per {nome} {cognome}. Creo una variante.")
+                try:
+                    local_part, domain = original_email.split('@')
+                    email_counter = 1
+                    while True:
+                        final_email = f"{local_part}+{email_counter}@{domain}"
+                        if final_email not in emails_usate:
+                            break
+                        email_counter += 1
+                    logger.info(f"Nuova email generata: {final_email}")
+                except ValueError:  # Gestisce email malformate
+                    logger.error(f"Formato email non valido: {original_email}. Salto l'utente.")
+                    continue
+
+            # Controlla se l'email finale è già nel DB per sicurezza
+            if db.query(models.User).filter(models.User.email == final_email).first():
+                logger.warning(f"L'email {final_email} è già presente nel DB. Salto l'utente {username}")
+                continue
+
+            # --- FINE NUOVA GESTIONE ---
 
             new_user = models.User(
                 username=username,
                 hashed_password=security.get_password_hash(username),
                 first_name=nome,
                 last_name=cognome,
-                email=atleta['email'],
+                email=final_email,  # Usa l'email finale (potenzialmente modificata)
                 date_of_birth=datetime.strptime(atleta['data_nascita'], '%d/%m/%Y').date(),
                 tax_code=atleta.get('cf'),
                 membership_date=datetime.strptime(atleta['data_tess'], '%d/%m/%Y').date(),
@@ -255,8 +311,8 @@ def main():
             )
             new_user.roles.append(atleta_role)
             db.add(new_user)
-            emails_usate.add(atleta['email'])
-            logger.info(f"Creato utente: {username}")
+            emails_usate.add(final_email)  # Aggiunge l'email usata al set
+            logger.info(f"Creato utente: {username} con email {final_email}")
 
         db.commit()
         logger.info("Atleti popolati con successo.")

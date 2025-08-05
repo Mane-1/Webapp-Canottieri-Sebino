@@ -1,12 +1,12 @@
 <!-- templates/modifica_allenamento.html -->
-{% extends "base.html" %}
+{% extends "layouts/_base.html" %}
 
 {% block title %}Modifica Allenamento{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-10">
             <div class="card shadow-sm">
                 <div class="card-header">
                     <h2 class="h4 mb-0">Modifica Allenamento</h2>
@@ -16,8 +16,13 @@
                         <div class="alert alert-danger">{{ error_message }}</div>
                     {% endif %}
 
-                    {# CORRETTO: Rimosso 'with' dalla dichiarazione include #}
-                    {% include '_allenamento_form.html' %}
+                    {# CORREZIONE: Passa le variabili necessarie al form parziale #}
+                    {% include '_allenamento_form.html' with {
+                        'allenamento': allenamento,
+                        'selected_category_names': selected_category_names,
+                        'training_groups': training_groups,
+                        'all_categories': all_categories
+                    } %}
                 </div>
             </div>
         </div>

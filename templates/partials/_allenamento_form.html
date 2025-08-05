@@ -1,0 +1,141 @@
+<!-- templates/_allenamento_form.html -->
+{% set allenamento_data = allenamento or {} %}
+{% set selected_categories = selected_category_names or [] %}
+
+<form method="post" id="allenamentoForm">
+    <!-- Tipo, Descrizione, Orario (invariati) -->
+    <div class="mb-3">
+        <label for="tipo" class="form-label">Tipo di Allenamento</label>
+        <select class="form-select" id="tipo" name="tipo" required>
+            <option value="" disabled {% if not allenamento_data.tipo %}selected{% endif %}>Seleziona...</option>
+            {% set tipi = ["Barca", "Remoergometro", "Pesi", "Circuito", "Corsa", "Altro"] %}
+            {% for t in tipi %}
+                <option value="{{ t }}" {% if allenamento_data.tipo == t %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="descrizione" class="form-label">Descrizione</label>
+        <textarea class="form-control" id="descrizione" name="descrizione" rows="2">{{ allenamento_data.descrizione or '' }}</textarea>
+    </div>
+
+    <!-- Orario -->
+    <div class="mb-3">
+        <label for="orario" class="form-label">Orario</label>
+        <select class="form-select" id="orario" name="orario">
+            <option value="" disabled {% if not allenamento_data.orario %}selected{% endif %}>Seleziona un orario...</option>
+            {% set orari = ["7:00-9:00", "8:30-10:30", "9:00-11:00", "10:30-12:00", "17:30-19:30", "18:00-20:00"] %}
+            {% for o in orari %}
+                 <option value="{{ o }}" {% if allenamento_data.orario == o %}selected{% endif %}>{{ o }}</option>
+            {% endfor %}
+            <option value="personalizzato" {% if allenamento_data.orario and allenamento_data.orario not in orari %}selected{% endif %}>Altro (personalizzato)</option>
+        </select>
+    </div>
+    <div class="mb-3" id="orario_personalizzato_wrapper" style="display: none;">
+        <label for="orario_personalizzato" class="form-label">Orario Personalizzato (es. 14:00-15:30)</label>
+        <input type="text" class="form-control" id="orario_personalizzato" name="orario_personalizzato"
+               value="{{ allenamento_data.orario if allenamento_data.orario and allenamento_data.orario not in orari else '' }}"
+               pattern="^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+               placeholder="HH:MM-HH:MM">
+    </div>
+
+    <!-- NUOVA SEZIONE GRUPPI E CATEGORIE MIGLIORATA -->
+    <div class="mb-4">
+        <label class="form-label fw-bold">Assegna Allenamento a Gruppi e Categorie</label>
+        <p class="form-text">Seleziona un gruppo per preselezionare le relative categorie, poi affina la selezione se necessario.</p>
+        <div class="row g-3">
+            {% for group_name, categories in training_groups.items() %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-light">
+                        <div class="form-check">
+                            <input class="form-check-input group-checkbox" type="checkbox" value="{{ group_name }}" id="group_{{ group_name.replace(' ', '_') }}" data-categories="{{ categories | join(',') }}">
+                            <label class="form-check-label fw-bold" for="group_{{ group_name.replace(' ', '_') }}">
+                                {{ group_name }}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {% for category in categories %}
+                        <div class="form-check">
+                            <input class="form-check-input category-checkbox" type="checkbox" name="category_names" value="{{ category }}" id="cat_{{ category.replace(' ', '_') }}" {% if category in selected_categories %}checked{% endif %}>
+                            <label class="form-check-label" for="cat_{{ category.replace(' ', '_') }}">
+                                {{ category }}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Data e Ricorrenza -->
+    <div class="row align-items-end">
+        <div class="col-md-6 mb-3">
+            <label for="data" class="form-label fw-bold">Data di Inizio</label>
+            <input type="date" class="form-control" id="data" name="data" value="{{ allenamento_data.data or '' }}" required>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="is_recurring" name="is_recurring" value="true">
+                <label class="form-check-label" for="is_recurring">Abilita Ricorrenza</label>
+            </div>
+        </div>
+    </div>
+
+    <div id="ricorrenza_fields" style="display: none;" class="p-3 border rounded bg-light mb-3">
+        <!-- ... campi ricorrenza ... -->
+    </div>
+
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+        <a href="/calendario" class="btn btn-secondary">Annulla</a>
+        <button type="submit" class="btn btn-primary">{{ 'Salva Modifiche' if allenamento else 'Crea Allenamento' }}</button>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- GESTIONE RICORRENZA (BUGFIX) ---
+    const recurringCheckbox = document.getElementById('is_recurring');
+    const ricorrenzaFields = document.getElementById('ricorrenza_fields');
+    const recurrenceCountInput = document.getElementById('recurrence_count');
+
+    function toggleRecurrenceFields() {
+        const isChecked = recurringCheckbox.checked;
+        ricorrenzaFields.style.display = isChecked ? 'block' : 'none';
+
+        // CORREZIONE: Rende il campo richiesto E attivo solo se la ricorrenza è abilitata
+        if (recurrenceCountInput) {
+            recurrenceCountInput.required = isChecked;
+            recurrenceCountInput.disabled = !isChecked;
+            if (!isChecked) {
+                recurrenceCountInput.value = ''; // Pulisce il valore se deselezionato
+            }
+        }
+    }
+    recurringCheckbox.addEventListener('change', toggleRecurrenceFields);
+    toggleRecurrenceFields(); // Esegui al caricamento per impostare lo stato iniziale
+
+    // --- LOGICA GRUPPI E CATEGORIE ---
+    const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+    const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
+    const categoryMap = new Map();
+    categoryCheckboxes.forEach(cb => categoryMap.set(cb.value, cb));
+
+    groupCheckboxes.forEach(groupCb => {
+        groupCb.addEventListener('change', function() {
+            const categories = this.dataset.categories.split(',');
+            categories.forEach(catName => {
+                const categoryCb = categoryMap.get(catName);
+                if (categoryCb) {
+                    categoryCb.checked = this.checked;
+                }
+            });
+        });
+    });
+});
+</script>

@@ -1,0 +1,150 @@
+{% extends "layouts/_admin_layout.html" %}
+
+{% block admin_content %}
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0">
+            <a class="btn btn-link text-decoration-none text-dark w-100 text-start p-0" data-bs-toggle="collapse" href="#filterCollapse" role="button" aria-expanded="true" aria-controls="filterCollapse">
+                <i class="fas fa-filter me-2"></i>
+                Filtri di Ricerca
+            </a>
+        </h5>
+    </div>
+    <div id="filterCollapse" class="collapse show">
+        <div class="card-body">
+            <form method="get">
+                <div class="row">
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label class="form-label fw-bold">Ruolo</label>
+                        <div class="border rounded p-2" style="height: 120px; overflow-y: auto;">
+                            {% for role in all_roles %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="role_ids" value="{{ role.id }}" id="role_{{ role.id }}" {% if role.id in current_filters.role_ids %}checked{% endif %}>
+                                <label class="form-check-label" for="role_{{ role.id }}">{{ role.name|title }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label class="form-label fw-bold">Categoria</label>
+                         <div class="border rounded p-2" style="height: 120px; overflow-y: auto;">
+                            {% for category in all_categories %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="categories" value="{{ category }}" id="cat_{{ category }}" {% if category in current_filters.categories %}checked{% endif %}>
+                                <label class="form-check-label" for="cat_{{ category }}">{{ category }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3">
+                        <label for="enrollment_year_str" class="form-label fw-bold">Anno Iscrizione</label>
+                        <select name="enrollment_year_str" id="enrollment_year_str" class="form-select">
+                            <option value="">Tutti</option>
+                            {% for year in all_years %}
+                            <option value="{{ year }}" {% if year == current_filters.enrollment_year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 col-lg-3 mb-3 d-flex align-items-start pt-4">
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" name="cert_expiring" id="cert_expiring" value="true" {% if current_filters.cert_expiring %}checked{% endif %}>
+                            <label class="form-check-label" for="cert_expiring">
+                              Certificato in Scadenza (<60gg)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-search me-1"></i> Applica Filtri</button>
+                    <a href="{{ url_for('admin_users_list') }}" class="btn btn-secondary">Resetta</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        Elenco Utenti ({{ users|length }})
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        {% macro sort_link(field, text) %}
+                            {% set new_dir = 'asc' if sort_by == field and sort_dir == 'asc' else 'desc' %}
+                            {% if sort_by == field and sort_dir == 'desc' %}{% set new_dir = 'asc' %}{% endif %}
+
+                            {% set params = request.query_params.multi_items()|list %}
+                            {% set final_params = [] %}
+                            {% for key, val in params if key not in ['sort_by', 'sort_dir'] %}
+                                {% for item in val.split(',') if item %}
+                                  {% set _ = final_params.append((key, item)) %}
+                                {% else %}
+                                  {% set _ = final_params.append((key, val)) %}
+                                {% endfor %}
+                            {% endfor %}
+                            {% set _ = final_params.append(('sort_by', field)) %}
+                            {% set _ = final_params.append(('sort_dir', new_dir)) %}
+                            <th scope="col">
+                                <a href="{{ url_for('admin_users_list') }}?{{ final_params|urlencode }}" class="text-decoration-none text-dark fw-bold d-flex align-items-center">
+                                    {{ text }}
+                                    {% if sort_by == field %}
+                                        <i class="fas fa-sort-{{ 'up' if sort_dir == 'asc' else 'down' }} ms-2"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort text-muted ms-2"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        {% endmacro %}
+
+                        {{ sort_link('name', 'Nome e Cognome') }}
+                        {{ sort_link('username', 'Username') }}
+                        <th>Ruoli</th>
+                        <th>Categoria</th>
+                        {{ sort_link('certificate_expiration', 'Scadenza Cert. Medico') }}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr onclick="window.location='{{ url_for('admin_view_user', user_id=user.id) }}';" style="cursor: pointer;">
+                        <td class="fw-bold">{{ user.last_name }} {{ user.first_name }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.roles | map(attribute='name') | map('title') | join(', ') }}</td>
+                        <td>{{ user.category }}</td>
+                        <td class="text-center">
+                            {% if user.certificate_expiration %}
+                                {% set days_left = (user.certificate_expiration - today).days %}
+                                {% set badge_class = 'text-dark' %}
+                                {% if days_left <= 0 %}
+                                    {% set badge_class = 'bg-dark text-white' %}
+                                {% elif days_left <= 30 %}
+                                    {% set badge_class = 'bg-danger text-white' %}
+                                {% elif days_left <= 90 %}
+                                    {% set badge_class = 'bg-warning text-dark' %}
+                                {% else %}
+                                    {% set badge_class = 'bg-success text-white' %}
+                                {% endif %}
+                                <span class="badge rounded-pill {{ badge_class }}">
+                                    {{ user.certificate_expiration.strftime('%d/%m/%Y') }}
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill bg-secondary">N/D</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center p-4">Nessun utente trovato con i filtri selezionati.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}

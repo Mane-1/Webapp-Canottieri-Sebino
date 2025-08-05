@@ -5,9 +5,10 @@ from datetime import date
 from sqlalchemy import (
     Column, Integer, String, Date, Table, ForeignKey, Float
 )
-from sqlalchemy.orm import relationship, column_property
-from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship, object_session
+from sqlalchemy.orm.attributes import flag_modified
 from database import Base
+from functools import lru_cache
 
 # --- TABELLE DI ASSOCIAZIONE (MOLTI-A-MOLTI) ---
 
@@ -38,6 +39,16 @@ user_tags = Table(
 
 # --- MODELLI DELLE TABELLE PRINCIPALI ---
 
+class Categoria(Base):
+    __tablename__ = "categorie"
+    id = Column(Integer, primary_key=True)
+    nome = Column(String, unique=True, nullable=False)
+    eta_min = Column(Integer, nullable=False)
+    eta_max = Column(Integer, nullable=False)
+    ordine = Column(Integer, default=0)  # Per ordinamento personalizzato se necessario
+    macro_group = Column(String, default="N/D")
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -65,16 +76,14 @@ class User(Base):
 
     @property
     def age(self) -> int:
-        """Calcola l'età attuale in anni compiuti."""
         if not self.date_of_birth:
             return 0
         today = date.today()
         return today.year - self.date_of_birth.year - (
-                    (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
+                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
 
     @property
     def solar_age(self) -> int:
-        """Calcola l'età che l'atleta avrà alla fine dell'anno solare corrente."""
         if not self.date_of_birth:
             return 0
         return date.today().year - self.date_of_birth.year
@@ -92,35 +101,42 @@ class User(Base):
         return any(role.name == "atleta" for role in self.roles)
 
     @property
+    @lru_cache(maxsize=1)
+    def _category_obj(self) -> Categoria | None:
+        """
+        Metodo interno e "cachato" per recuperare l'oggetto Categoria dal DB.
+        Usa object_session per accedere alla sessione del database a cui questo utente è collegato.
+        """
+        if not self.is_atleta or not self.date_of_birth:
+            return None
+
+        db_session = object_session(self)
+        if not db_session:
+            # Se l'oggetto non è in una sessione, non possiamo fare la query.
+            # Questo può accadere in contesti non-http (es. script).
+            return None
+
+        age = self.solar_age
+        return db_session.query(Categoria).filter(
+            Categoria.eta_min <= age,
+            Categoria.eta_max >= age
+        ).first()
+
+    @property
     def category(self) -> str:
         if self.manual_category:
             return self.manual_category
-        if self.is_atleta and self.date_of_birth:
-            age = self.solar_age
-            if age <= 10: return "Allievo A"
-            if age == 11: return "Allievo B1"
-            if age == 12: return "Allievo B2"
-            if age == 13: return "Allievo C"
-            if age == 14: return "Cadetto"
-            if 15 <= age <= 16: return "Ragazzo"
-            if 17 <= age <= 18: return "Junior"
-            if 19 <= age <= 23: return "Under 23"
-            if 24 <= age <= 27: return "Senior"
-            if age > 27: return "Master"
-        return "N/D"
+
+        categoria_obj = self._category_obj
+        return categoria_obj.nome if categoria_obj else "N/D"
 
     @property
     def macro_group_name(self) -> str:
         if not self.is_atleta:
             return "N/D"
-        cat = self.category
-        if cat in ["Allievo A", "Allievo B1", "Allievo B2", "Allievo C", "Cadetto"]:
-            return "Under 14"
-        elif cat == "Master":
-            return "Master"
-        elif cat in ["Ragazzo", "Junior", "Under 23", "Senior"]:
-            return "Over 14"
-        return "N/D"
+
+        categoria_obj = self._category_obj
+        return categoria_obj.macro_group if categoria_obj else "N/D"
 
 
 class Role(Base):
