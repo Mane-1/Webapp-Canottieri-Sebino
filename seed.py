@@ -1,12 +1,9 @@
 # File: seed.py
-# Script per popolare il database con tutti i dati iniziali.
-
 import os
 import sys
 from datetime import date, datetime
 import logging
 
-# Aggiunge la directory principale al path per le importazioni
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.orm import Session
@@ -181,16 +178,42 @@ atleti_data = [
      'indirizzo': 'VIA QUAIA NR 5 - 24060 PIANICO'},
 ]
 
+# --- DATI BARCHE INTEGRATI ---
+barche_data = [
+    {'nome': 'ELPIS', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2022},
+    {'nome': 'ZEUS', 'tipo': '2x', 'costruttore': 'Filippi', 'anno': 2019},
+    {'nome': 'KRONOS', 'tipo': '4x', 'costruttore': 'Salani', 'anno': 2021},
+    {'nome': 'EROS', 'tipo': '2-', 'costruttore': 'Salani', 'anno': 2023},
+    {'nome': 'POSEIDONE', 'tipo': '8+', 'costruttore': 'Filippi', 'anno': 2018},
+    {'nome': 'ARES', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2022},
+    {'nome': 'ARTEMIDE', 'tipo': '4-', 'costruttore': 'Filippi', 'anno': 2020},
+    {'nome': 'APOLLO', 'tipo': '2x', 'costruttore': 'Salani', 'anno': 2021},
+    {'nome': 'PEGASO', 'tipo': '4x', 'costruttore': 'Filippi', 'anno': 2019},
+    {'nome': 'ORIONE', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2023},
+]
+
+
+def seed_barche(db: Session):
+    logger.info("Popolamento barche...")
+    if db.query(models.Barca).count() > 0:
+        logger.info("Tabella barche già popolata. Skippo.")
+        return
+    try:
+        barche_da_creare = [models.Barca(**data) for data in barche_data]
+        db.add_all(barche_da_creare)
+        db.commit()
+        logger.info(f"{len(barche_da_creare)} barche popolate con successo.")
+    except Exception as e:
+        logger.error(f"Errore durante il popolamento delle barche: {e}")
+        db.rollback()
+
 
 def seed_categories(db: Session):
-    """Popola la tabella delle categorie con i dati standard."""
     logger.info("Popolamento categorie...")
     if db.query(models.Categoria).count() > 0:
         logger.info("Tabella categorie già popolata. Skippo.")
         return
-
     categorie = [
-        # Dati basati sulle regole federali
         models.Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1, macro_group="Under 14"),
         models.Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2, macro_group="Under 14"),
         models.Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3, macro_group="Under 14"),
@@ -204,13 +227,10 @@ def seed_categories(db: Session):
     ]
     db.add_all(categorie)
     db.commit()
-    logger.info("Categorie popolate con successo.")
 
 
 def main():
-    """Funzione principale per eseguire il seeding del database."""
     logger.info("Avvio script di seeding completo...")
-
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
     input("Premi Invio per continuare, o CTRL+C per annullare...")
     Base.metadata.drop_all(bind=engine)
@@ -219,90 +239,63 @@ def main():
 
     db = SessionLocal()
     try:
-        # 1. Popola Ruoli
-        logger.info("Popolamento dei ruoli...")
+        # Popola Ruoli
         ruoli_da_creare = ['atleta', 'allenatore', 'admin']
         for nome_ruolo in ruoli_da_creare:
             if not db.query(models.Role).filter_by(name=nome_ruolo).first():
                 db.add(models.Role(name=nome_ruolo))
         db.commit()
+        logger.info("Ruoli popolati.")
 
-        # NUOVO: Popola Categorie
+        # Popola Categorie
         seed_categories(db)
 
-        # 2. Crea Utente Admin
-        logger.info("Creazione utente admin...")
+        # Crea Utente Admin
         if not db.query(models.User).filter(models.User.username == "gabriele").first():
             admin_role = db.query(models.Role).filter_by(name='admin').one()
             allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
             admin_user = models.User(
-                username="gabriele",
-                hashed_password=security.get_password_hash("manenti"),
-                first_name="Gabriele",
-                last_name="Manenti",
-                email="gabriele.manenti@example.com",
-                phone_number="3331234567",
-                date_of_birth=date(1990, 1, 1),
-                enrollment_year=2020,
-                roles=[admin_role, allenatore_role]
+                username="gabriele", hashed_password=security.get_password_hash("manenti"),
+                first_name="Gabriele", last_name="Manenti", email="gabriele.manenti@example.com",
+                date_of_birth=date(1990, 1, 1), roles=[admin_role, allenatore_role]
             )
             db.add(admin_user)
             db.commit()
             logger.info("Utente admin 'gabriele' creato.")
 
-        # 3. Popola Atleti
-        logger.info("Inizio creazione atleti...")
+        # Popola Atleti
         atleta_role = db.query(models.Role).filter_by(name='atleta').one()
-        emails_usate = set()
-
-        # Aggiungiamo l'email dell'admin per evitare conflitti
-        admin_email = "gabriele.manenti@example.com"
-        if db.query(models.User).filter(models.User.email == admin_email).first():
-            emails_usate.add(admin_email)
-
+        emails_usate = {"gabriele.manenti@example.com"}
+        atleti_creati = 0
         for atleta in atleti_data:
             nome = atleta['nome'].title()
             cognome = atleta['cognome'].title()
             username_base = f"{nome.split(' ')[0]}.{cognome.split(' ')[0]}".lower().replace("'", "")
             username = username_base
-
             counter = 1
             while db.query(models.User).filter(models.User.username == username).first():
                 username = f"{username_base}{counter}"
                 counter += 1
 
-            # --- NUOVA GESTIONE EMAIL DUPLICATE ---
             original_email = atleta['email']
             final_email = original_email
-
             if final_email in emails_usate:
-                logger.warning(f"Email duplicata trovata: {original_email} per {nome} {cognome}. Creo una variante.")
                 try:
                     local_part, domain = original_email.split('@')
                     email_counter = 1
                     while True:
                         final_email = f"{local_part}+{email_counter}@{domain}"
-                        if final_email not in emails_usate:
-                            break
+                        if final_email not in emails_usate: break
                         email_counter += 1
-                    logger.info(f"Nuova email generata: {final_email}")
-                except ValueError:  # Gestisce email malformate
-                    logger.error(f"Formato email non valido: {original_email}. Salto l'utente.")
+                except ValueError:
                     continue
 
-            # Controlla se l'email finale è già nel DB per sicurezza
             if db.query(models.User).filter(models.User.email == final_email).first():
-                logger.warning(f"L'email {final_email} è già presente nel DB. Salto l'utente {username}")
                 continue
 
-            # --- FINE NUOVA GESTIONE ---
-
             new_user = models.User(
-                username=username,
-                hashed_password=security.get_password_hash(username),
-                first_name=nome,
-                last_name=cognome,
-                email=final_email,  # Usa l'email finale (potenzialmente modificata)
+                username=username, hashed_password=security.get_password_hash(username),
+                first_name=nome, last_name=cognome, email=final_email,
                 date_of_birth=datetime.strptime(atleta['data_nascita'], '%d/%m/%Y').date(),
                 tax_code=atleta.get('cf'),
                 membership_date=datetime.strptime(atleta['data_tess'], '%d/%m/%Y').date(),
@@ -311,18 +304,20 @@ def main():
             )
             new_user.roles.append(atleta_role)
             db.add(new_user)
-            emails_usate.add(final_email)  # Aggiunge l'email usata al set
-            logger.info(f"Creato utente: {username} con email {final_email}")
+            emails_usate.add(final_email)
+            atleti_creati += 1
 
         db.commit()
-        logger.info("Atleti popolati con successo.")
+        logger.info(f"{atleti_creati} atleti popolati con successo.")
+
+        # Popola Barche
+        seed_barche(db)
 
     except Exception as e:
         logger.error(f"Errore durante il seeding: {e}")
         db.rollback()
     finally:
         db.close()
-
     logger.info("Seeding completato!")
 
 

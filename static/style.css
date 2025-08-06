@@ -132,3 +132,9 @@ a.fc-event {
     white-space: normal;
     font-weight: bold;
 }
+
+/* Aggiungi alla fine di static/style.css */
+.bg-purple {
+    background-color: #6f42c1 !important; /* Viola di Bootstrap */
+    color: white;
+}

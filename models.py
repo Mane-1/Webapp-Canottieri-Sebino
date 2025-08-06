@@ -1,9 +1,8 @@
 # File: models.py
-# Definisce la struttura di tutte le tabelle del database con SQLAlchemy.
-
 from datetime import date
+from typing import Tuple
 from sqlalchemy import (
-    Column, Integer, String, Date, Table, ForeignKey, Float
+    Column, Integer, String, Date, Table, ForeignKey, Float, Boolean
 )
 from sqlalchemy.orm import relationship, object_session
 from sqlalchemy.orm.attributes import flag_modified
@@ -45,13 +44,12 @@ class Categoria(Base):
     nome = Column(String, unique=True, nullable=False)
     eta_min = Column(Integer, nullable=False)
     eta_max = Column(Integer, nullable=False)
-    ordine = Column(Integer, default=0)  # Per ordinamento personalizzato se necessario
+    ordine = Column(Integer, default=0)
     macro_group = Column(String, default="N/D")
 
 
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -66,8 +64,6 @@ class User(Base):
     certificate_expiration = Column(Date)
     address = Column(String)
     manual_category = Column(String, nullable=True)
-
-    # Relazioni
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     tags = relationship("Tag", secondary=user_tags, back_populates="users")
     barche_assegnate = relationship("Barca", secondary=barca_atleti_association, back_populates="atleti_assegnati")
@@ -76,16 +72,13 @@ class User(Base):
 
     @property
     def age(self) -> int:
-        if not self.date_of_birth:
-            return 0
+        if not self.date_of_birth: return 0
         today = date.today()
-        return today.year - self.date_of_birth.year - (
-                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
+        return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
 
     @property
     def solar_age(self) -> int:
-        if not self.date_of_birth:
-            return 0
+        if not self.date_of_birth: return 0
         return date.today().year - self.date_of_birth.year
 
     @property
@@ -103,38 +96,21 @@ class User(Base):
     @property
     @lru_cache(maxsize=1)
     def _category_obj(self) -> Categoria | None:
-        """
-        Metodo interno e "cachato" per recuperare l'oggetto Categoria dal DB.
-        Usa object_session per accedere alla sessione del database a cui questo utente è collegato.
-        """
-        if not self.is_atleta or not self.date_of_birth:
-            return None
-
+        if not self.is_atleta or not self.date_of_birth: return None
         db_session = object_session(self)
-        if not db_session:
-            # Se l'oggetto non è in una sessione, non possiamo fare la query.
-            # Questo può accadere in contesti non-http (es. script).
-            return None
-
+        if not db_session: return None
         age = self.solar_age
-        return db_session.query(Categoria).filter(
-            Categoria.eta_min <= age,
-            Categoria.eta_max >= age
-        ).first()
+        return db_session.query(Categoria).filter(Categoria.eta_min <= age, Categoria.eta_max >= age).first()
 
     @property
     def category(self) -> str:
-        if self.manual_category:
-            return self.manual_category
-
+        if self.manual_category: return self.manual_category
         categoria_obj = self._category_obj
         return categoria_obj.nome if categoria_obj else "N/D"
 
     @property
     def macro_group_name(self) -> str:
-        if not self.is_atleta:
-            return "N/D"
-
+        if not self.is_atleta: return "N/D"
         categoria_obj = self._category_obj
         return categoria_obj.macro_group if categoria_obj else "N/D"
 
@@ -159,15 +135,39 @@ class Barca(Base):
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String, nullable=False)
     tipo = Column(String, index=True, nullable=False)
-    costruttore = Column(String)
-    anno = Column(Integer)
-    remi_assegnati = Column(String)
-    altezza_scalmi = Column(Float)
-    altezza_carrello = Column(Float)
-    apertura_totale = Column(Float)
-    semiapertura_sx = Column(Float)
+    costruttore = Column(String, nullable=True)
+    anno = Column(Integer, nullable=True)
+    remi_assegnati = Column(String, nullable=True)
     atleti_assegnati = relationship("User", secondary=barca_atleti_association, back_populates="barche_assegnate")
+    in_manutenzione = Column(Boolean, default=False, nullable=False)
+    fuori_uso = Column(Boolean, default=False, nullable=False)
+    in_prestito = Column(Boolean, default=False, nullable=False)
+    in_trasferta = Column(Boolean, default=False, nullable=False)
+    disponibile_dal = Column(Date, nullable=True)
+    lunghezza_puntapiedi = Column(Float, nullable=True)
+    altezza_puntapiedi = Column(Float, nullable=True)
+    apertura_totale = Column(Float, nullable=True)
+    altezza_scalmo_sx = Column(Float, nullable=True)
+    altezza_scalmo_dx = Column(Float, nullable=True)
+    semiapertura_sx = Column(Float, nullable=True)
+    semiapertura_dx = Column(Float, nullable=True)
+    appruamento_appoppamento = Column(Float, nullable=True)
+    gradi_attacco = Column(Float, nullable=True)
+    gradi_finale = Column(Float, nullable=True)
+    boccola_sx_sopra = Column(String, nullable=True)
+    boccola_dx_sopra = Column(String, nullable=True)
+    rondelle_sx = Column(String, nullable=True)
+    rondelle_dx = Column(String, nullable=True)
+    altezza_carrello = Column(Float, nullable=True)
+    avanzamento_guide = Column(Float, nullable=True)
 
+    @property
+    def status(self) -> Tuple[str, str]:
+        if self.fuori_uso: return "Fuori uso", "bg-danger"
+        if self.in_manutenzione: return "In manutenzione", "bg-warning text-dark"
+        if self.in_prestito: return "In prestito", "bg-info text-dark"
+        if self.in_trasferta: return "In trasferta", "bg-purple"
+        return "In uso", "bg-success"
 
 class EsercizioPesi(Base):
     __tablename__ = "esercizi_pesi"

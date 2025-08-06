@@ -5,69 +5,47 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-lg-8">
+        <div class="col-lg-10">
             <div class="card shadow-sm">
                 <div class="card-header">
-                    <h2 class="h4 mb-0">Dettagli / Modifica Imbarcazione: {{ barca.nome }}</h2>
+                    <h2 class="h4 mb-0">Dettagli / Modifica: {{ barca.nome }}</h2>
                 </div>
                 <div class="card-body">
-                    <form action="/risorse/barche/{{ barca.id }}/modifica" method="post">
-                        
-                        <fieldset class="mb-4">
-                            <legend class="h5">Generalità</legend>
-                            <div class="mb-3">
-                                <label for="nome" class="form-label">Nome*</label>
-                                <input type="text" id="nome" name="nome" class="form-control" value="{{ barca.nome }}" required>
+                     {% if error_message %}
+                        <div class="alert alert-danger">{{ error_message }}</div>
+                    {% endif %}
+                    <form action="{{ url_for('aggiorna_barca', barca_id=barca.id) }}" method="post">
+                        {% include "barche/_barca_form.html" %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteBarcaModal">Elimina Barca</button>
+                            <div>
+                                <a href="{{ url_for('list_barche') }}" class="btn btn-secondary me-2">Annulla</a>
+                                <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                             </div>
-                            <div class="mb-3">
-                                <label for="tipo" class="form-label">Tipo*</label>
-                                <select id="tipo" name="tipo" class="form-select" required>
-                                    {% set tipi = ["1P 7,20", "1x", "2x", "2-", "2x-", "2+", "4x", "4-", "4x-", "4+", "8+", "Jole 1x", "Jole 2x", "Jole 4x"] %}
-                                    {% for t in tipi %}
-                                    <option {% if barca.tipo == t %}selected{% endif %}>{{ t }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3"><label for="costruttore" class="form-label">Costruttore</label><input type="text" id="costruttore" name="costruttore" class="form-control" value="{{ barca.costruttore or '' }}"></div>
-                                <div class="col-md-6 mb-3"><label for="anno" class="form-label">Anno</label><input type="number" id="anno" name="anno" class="form-control" value="{{ barca.anno or '' }}"></div>
-                            </div>
-                        </fieldset>
-
-                        <fieldset class="mb-4">
-                            <legend class="h5">Utilizzo</legend>
-                            <div class="mb-3">
-                                <label for="atleti_ids" class="form-label">Atleti Assegnati</label>
-                                <select id="atleti_ids" name="atleti_ids" class="form-select" multiple size="8">
-                                    {% for atleta in atleti %}
-                                    <option value="{{ atleta.id }}" {% if atleta.id in assigned_atleta_ids %}selected{% endif %}>
-                                        {{ atleta.first_name }} {{ atleta.last_name }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="remi_assegnati" class="form-label">Remi Assegnati</label>
-                                <input type="text" id="remi_assegnati" name="remi_assegnati" class="form-control" placeholder="Es. Coppia Concept2, Pala Macon..." value="{{ barca.remi_assegnati or '' }}">
-                            </div>
-                        </fieldset>
-
-                        <fieldset>
-                            <legend class="h5">Misure</legend>
-                            <div class="row">
-                                <div class="col-md-6 mb-3"><label for="altezza_scalmi" class="form-label">Altezza Scalmi (cm)</label><input type="number" step="0.1" id="altezza_scalmi" name="altezza_scalmi" class="form-control" value="{{ barca.altezza_scalmi or '' }}"></div>
-                                <div class="col-md-6 mb-3"><label for="altezza_carrello" class="form-label">Altezza Carrello (cm)</label><input type="number" step="0.1" id="altezza_carrello" name="altezza_carrello" class="form-control" value="{{ barca.altezza_carrello or '' }}"></div>
-                                <div class="col-md-6 mb-3"><label for="apertura_totale" class="form-label">Apertura Totale (cm)</label><input type="number" step="0.1" id="apertura_totale" name="apertura_totale" class="form-control" value="{{ barca.apertura_totale or '' }}"></div>
-                                <div class="col-md-6 mb-3"><label for="semiapertura_sx" class="form-label">Semiapertura SX (cm)</label><input type="number" step="0.1" id="semiapertura_sx" name="semiapertura_sx" class="form-control" value="{{ barca.semiapertura_sx or '' }}"></div>
-                            </div>
-                        </fieldset>
-
-                        <div class="d-flex justify-content-end mt-4">
-                            <a href="/risorse/barche" class="btn btn-secondary me-2">Annulla</a>
-                            <button type="submit" class="btn btn-primary">Salva Modifiche</button>
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteBarcaModal" tabindex="-1" aria-labelledby="deleteBarcaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteBarcaModalLabel">Conferma Eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Sei sicuro di voler eliminare definitivamente la barca <strong>{{ barca.nome }}</strong>?</p>
+                <p class="text-danger">L'azione è irreversibile.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                <form action="{{ url_for('elimina_barca', barca_id=barca.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Conferma Eliminazione</button>
+                </form>
             </div>
         </div>
     </div>
