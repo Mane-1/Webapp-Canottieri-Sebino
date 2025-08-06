@@ -1,4 +1,4 @@
-# File: seed.py
+# seed.py
 import os
 import sys
 from datetime import date, datetime
@@ -7,9 +7,9 @@ import logging
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.orm import Session
-from database import SessionLocal, engine, Base
-import models
-import security
+from app.database.database import SessionLocal, engine, Base
+from app import models
+from app.security.security import get_password_hash
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -255,7 +255,7 @@ def main():
             admin_role = db.query(models.Role).filter_by(name='admin').one()
             allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
             admin_user = models.User(
-                username="gabriele", hashed_password=security.get_password_hash("manenti"),
+                username="gabriele", hashed_password=get_password_hash("manenti"),
                 first_name="Gabriele", last_name="Manenti", email="gabriele.manenti@example.com",
                 date_of_birth=date(1990, 1, 1), roles=[admin_role, allenatore_role]
             )
@@ -294,7 +294,7 @@ def main():
                 continue
 
             new_user = models.User(
-                username=username, hashed_password=security.get_password_hash(username),
+                username=username, hashed_password=get_password_hash(username),
                 first_name=nome, last_name=cognome, email=final_email,
                 date_of_birth=datetime.strptime(atleta['data_nascita'], '%d/%m/%Y').date(),
                 tax_code=atleta.get('cf'),

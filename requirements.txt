@@ -1,13 +1,10 @@
-# File: requirements.txt
-# Elenco delle dipendenze Python per il progetto.
-# Esegui `pip install -r requirements.txt` per installarle tutte.
-
 fastapi
 uvicorn
 sqlalchemy
 passlib[bcrypt]
-jinja2
 python-multipart
+jinja2
 python-dateutil
-itsdangerous
+python-dotenv
 psycopg2-binary
+alembic
