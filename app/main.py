@@ -1,5 +1,4 @@
 # app/main.py
-
 import os
 import logging
 from datetime import date
@@ -18,66 +17,53 @@ from app.routers import authentication, users, trainings, resources, admin
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Istanza FastAPI
 app = FastAPI(title="Gestionale Canottieri")
 
-# Secret key per le sessioni
-SECRET_KEY = os.environ.get('SECRET_KEY', 'un-segreto-di-default-non-sicuro')
+# Carica la SECRET_KEY da env var
+SECRET_KEY = os.getenv("SECRET_KEY", "un-segreto-di-default-non-sicuro")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
-# Templates e file statici
+# Templates e static files
 templates = Jinja2Templates(directory="templates")
 templates.env.globals['get_color_for_type'] = get_color_for_type
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
 @app.on_event("startup")
 def on_startup():
-    """
-    1. Crea tutte le tabelle se non esistono.
-    2. Popola i ruoli e l'utente admin se il DB è vuoto.
-    """
-    logger.info("Avvio dell'applicazione in corso...")
+    logger.info("Avvio dell'applicazione…")
+    # Crea tabelle
     Base.metadata.create_all(bind=engine)
-    logger.info("Tabelle verificate/creati.")
-
     db = SessionLocal()
     try:
-        # Popola Ruoli se vuoti
+        # Seed ruoli
         if db.query(models.Role).count() == 0:
-            logger.info("Popolamento ruoli iniziale...")
             db.add_all([
                 models.Role(name='atleta'),
                 models.Role(name='allenatore'),
-                models.Role(name='admin')
+                models.Role(name='admin'),
             ])
             db.commit()
-
-        # Crea utente admin 'gabriele' se non esiste
-        if not db.query(models.User).filter(models.User.username == "gabriele").first():
-            logger.info("Creazione utente admin di default...")
+        # Seed admin user
+        if not db.query(models.User).filter(models.User.username=='gabriele').first():
             admin_role = db.query(models.Role).filter_by(name='admin').one()
-            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
-            admin_user = models.User(
+            allen_role = db.query(models.Role).filter_by(name='allenatore').one()
+            admin = models.User(
                 username="gabriele",
                 hashed_password=get_password_hash("manenti"),
                 first_name="Gabriele",
                 last_name="Manenti",
                 email="gabriele.manenti@example.com",
-                date_of_birth=date(1990, 1, 1),
-                roles=[admin_role, allenatore_role]
+                date_of_birth=date(1990,1,1),
+                roles=[admin_role, allen_role],
             )
-            db.add(admin_user)
+            db.add(admin)
             db.commit()
-            logger.info("Utente admin 'gabriele' creato.")
-    except Exception as e:
-        logger.error(f"Errore during startup seeding: {e}")
+    except:
         db.rollback()
     finally:
         db.close()
 
-
-# Inclusione router modulari
+# Include router
 app.include_router(authentication.router)
 app.include_router(users.router)
 app.include_router(trainings.router)

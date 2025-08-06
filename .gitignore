@@ -1,4 +1,4 @@
-# Byte-compiled / optimized / DLL files
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -12,6 +12,9 @@ ENV/
 # Env files
 .env
 
-# IDE/configuration files
+# IDE files
 *.idea/
-*.vscode/
+.vscode/
+
+# Database
+*.db
