@@ -16,7 +16,10 @@
                         <div class="alert alert-danger">{{ error_message }}</div>
                     {% endif %}
 
-                    {% include '_allenamento_form.html' %}
+                    {% include '_allenamento_form.html' with {
+                        'macro_groups': macro_groups,
+                        'selected_subgroup_ids': []
+                    } %}
                 </div>
             </div>
         </div>

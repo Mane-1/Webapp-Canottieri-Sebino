@@ -1,6 +1,7 @@
 <!-- templates/_allenamento_form.html -->
 {% set allenamento_data = allenamento or {} %}
-{% set selected_categories = selected_category_names or [] %}
+{% set macro_groups = macro_groups or [] %}
+{% set selected_subgroup_ids = selected_subgroup_ids or [] %}
 
 <form method="post" id="allenamentoForm">
     <!-- Tipo, Descrizione, Orario (invariati) -->
@@ -39,28 +40,28 @@
                placeholder="HH:MM-HH:MM">
     </div>
 
-    <!-- NUOVA SEZIONE GRUPPI E CATEGORIE MIGLIORATA -->
+    <!-- Sezione Gruppi e Sottogruppi -->
     <div class="mb-4">
         <label class="form-label fw-bold">Assegna Allenamento a Gruppi e Categorie</label>
         <p class="form-text">Seleziona un gruppo per preselezionare le relative categorie, poi affina la selezione se necessario.</p>
         <div class="row g-3">
-            {% for group_name, categories in training_groups.items() %}
+            {% for group in macro_groups %}
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm">
                     <div class="card-header bg-light">
                         <div class="form-check">
-                            <input class="form-check-input group-checkbox" type="checkbox" value="{{ group_name }}" id="group_{{ group_name.replace(' ', '_') }}" data-categories="{{ categories | join(',') }}">
-                            <label class="form-check-label fw-bold" for="group_{{ group_name.replace(' ', '_') }}">
-                                {{ group_name }}
+                            <input class="form-check-input group-radio" type="radio" name="macro_group_id" id="group_{{ group.id }}" value="{{ group.id }}" data-subgroups="{{ group.subgroups | map(attribute='id') | join(',') }}" {% if allenamento_data.macro_group_id == group.id %}checked{% endif %} required>
+                            <label class="form-check-label fw-bold" for="group_{{ group.id }}">
+                                {{ group.name }}
                             </label>
                         </div>
                     </div>
                     <div class="card-body">
-                        {% for category in categories %}
+                        {% for sg in group.subgroups %}
                         <div class="form-check">
-                            <input class="form-check-input category-checkbox" type="checkbox" name="category_names" value="{{ category }}" id="cat_{{ category.replace(' ', '_') }}" {% if category in selected_categories %}checked{% endif %}>
-                            <label class="form-check-label" for="cat_{{ category.replace(' ', '_') }}">
-                                {{ category }}
+                            <input class="form-check-input category-checkbox" type="checkbox" name="subgroup_ids" value="{{ sg.id }}" id="sg_{{ sg.id }}" {% if sg.id in selected_subgroup_ids %}checked{% endif %}>
+                            <label class="form-check-label" for="sg_{{ sg.id }}">
+                                {{ sg.name }}
                             </label>
                         </div>
                         {% endfor %}
@@ -121,18 +122,19 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleRecurrenceFields(); // Esegui al caricamento per impostare lo stato iniziale
 
     // --- LOGICA GRUPPI E CATEGORIE ---
-    const groupCheckboxes = document.querySelectorAll('.group-checkbox');
+    const groupRadios = document.querySelectorAll('.group-radio');
     const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
     const categoryMap = new Map();
     categoryCheckboxes.forEach(cb => categoryMap.set(cb.value, cb));
 
-    groupCheckboxes.forEach(groupCb => {
-        groupCb.addEventListener('change', function() {
-            const categories = this.dataset.categories.split(',');
-            categories.forEach(catName => {
-                const categoryCb = categoryMap.get(catName);
-                if (categoryCb) {
-                    categoryCb.checked = this.checked;
+    groupRadios.forEach(rb => {
+        rb.addEventListener('change', function() {
+            const ids = this.dataset.subgroups ? this.dataset.subgroups.split(',') : [];
+            categoryCheckboxes.forEach(cb => cb.checked = false);
+            ids.forEach(id => {
+                const cb = categoryMap.get(id);
+                if (cb) {
+                    cb.checked = true;
                 }
             });
         });

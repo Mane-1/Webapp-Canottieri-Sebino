@@ -35,8 +35,12 @@ async def list_allenamenti(request: Request, db: Session = Depends(get_db), curr
     return templates.TemplateResponse("allenamenti/allenamenti_list.html", {"request": request, "allenamenti": query.all(), "current_user": current_user, "page_title": page_title, "all_groups": all_groups, "all_types": all_types, "current_filters": {"filter": filter, "macro_group_id": macro_group_id, "subgroup_id": subgroup_id, "tipo": tipo}})
 
 @router.get("/allenamenti/nuovo", response_class=HTMLResponse)
-async def nuovo_allenamento_form(request: Request, admin_user: models.User = Depends(get_current_admin_user)):
-    return templates.TemplateResponse("allenamenti/crea_allenamento.html", {"request": request, "current_user": admin_user})
+async def nuovo_allenamento_form(request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user)):
+    macro_groups = db.query(models.MacroGroup).options(joinedload(models.MacroGroup.subgroups)).all()
+    return templates.TemplateResponse(
+        "allenamenti/crea_allenamento.html",
+        {"request": request, "current_user": admin_user, "macro_groups": macro_groups},
+    )
 
 @router.post("/allenamenti/nuovo", response_class=RedirectResponse)
 async def crea_allenamento(request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user), tipo: str = Form(...), descrizione: Optional[str] = Form(None), data: date = Form(...), orario: str = Form(...), orario_personalizzato: Optional[str] = Form(None), is_recurring: Optional[str] = Form(None), giorni: Optional[List[str]] = Form(None), recurrence_count: Optional[int] = Form(None), macro_group_id: int = Form(...), subgroup_ids: List[int] = Form([])):
@@ -63,9 +67,20 @@ async def crea_allenamento(request: Request, db: Session = Depends(get_db), admi
 @router.get("/allenamenti/{id}/modifica", response_class=HTMLResponse)
 async def modifica_allenamento_form(id: int, request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user)):
     allenamento = db.query(models.Allenamento).options(joinedload(models.Allenamento.sub_groups)).get(id)
-    if not allenamento: raise HTTPException(status_code=404, detail="Allenamento non trovato")
+    if not allenamento:
+        raise HTTPException(status_code=404, detail="Allenamento non trovato")
     selected_subgroup_ids = [sg.id for sg in allenamento.sub_groups]
-    return templates.TemplateResponse("allenamenti/modifica_allenamento.html", {"request": request, "current_user": admin_user, "allenamento": allenamento, "selected_subgroup_ids": selected_subgroup_ids})
+    macro_groups = db.query(models.MacroGroup).options(joinedload(models.MacroGroup.subgroups)).all()
+    return templates.TemplateResponse(
+        "allenamenti/modifica_allenamento.html",
+        {
+            "request": request,
+            "current_user": admin_user,
+            "allenamento": allenamento,
+            "macro_groups": macro_groups,
+            "selected_subgroup_ids": selected_subgroup_ids,
+        },
+    )
 
 @router.post("/allenamenti/{id}/modifica", response_class=RedirectResponse)
 async def aggiorna_allenamento(id: int, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user), tipo: str = Form(...), descrizione: Optional[str] = Form(None), data: date = Form(...), orario: str = Form(...), orario_personalizzato: Optional[str] = Form(None), macro_group_id: int = Form(...), subgroup_ids: List[int] = Form([])):

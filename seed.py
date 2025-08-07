@@ -229,6 +229,25 @@ def seed_categories(db: Session):
     db.commit()
 
 
+def seed_macro_groups(db: Session):
+    logger.info("Popolamento macrogruppi...")
+    if db.query(models.MacroGroup).count() > 0:
+        logger.info("Tabella macro_groups già popolata. Skippo.")
+        return
+    groups = {
+        "Under 14": ["Allievo A", "Allievo B1", "Allievo B2", "Allievo C", "Cadetto"],
+        "Over 14": ["Ragazzo", "Junior", "Under 23", "Senior"],
+        "Master": ["Master"],
+    }
+    for name, subcats in groups.items():
+        mg = models.MacroGroup(name=name)
+        db.add(mg)
+        db.flush()
+        for sub in subcats:
+            db.add(models.SubGroup(name=sub, macro_group_id=mg.id))
+    db.commit()
+
+
 def main():
     logger.info("Avvio script di seeding completo...")
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
@@ -249,6 +268,9 @@ def main():
 
         # Popola Categorie
         seed_categories(db)
+
+        # Popola Macro Gruppi e Sottogruppi
+        seed_macro_groups(db)
 
         # Crea Utente Admin
         if not db.query(models.User).filter(models.User.username == "gabriele").first():

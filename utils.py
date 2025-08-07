@@ -10,12 +10,12 @@ def get_color_for_type(training_type: Optional[str]) -> str:
     Restituisce un codice colore esadecimale basato sul tipo di allenamento.
     """
     colors = {
-        "Barca": "#0d6efd",
-        "Remoergometro": "#198754",
-        "Corsa": "#6f42c1",
-        "Pesi": "#dc3545",
-        "Circuito": "#fd7e14",
-        "Altro": "#212529"
+        "Barca": "#0d6efd",          # blu
+        "Remoergometro": "#fd7e14",  # arancione
+        "Pesi": "#dc3545",           # rosso
+        "Corsa": "#6f42c1",          # viola
+        "Circuito": "#198754",       # verde
+        "Altro": "#6c757d"           # grigio
     }
     return colors.get(training_type, "#6c757d")
 
