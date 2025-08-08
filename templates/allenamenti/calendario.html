@@ -25,22 +25,30 @@
         </div>
     </div>
 
-    <!-- Filtri (visibili solo ad admin e allenatori) -->
-    {% if current_user.is_admin or current_user.is_allenatore %}
+    <!-- Filtri -->
     <div class="mb-4">
         <a class="btn btn-outline-primary" data-bs-toggle="collapse" href="#filterCollapse" role="button" aria-expanded="false" aria-controls="filterCollapse">
-            <i class="bi bi-filter me-1"></i> Mostra/Nascondi Filtri Categoria
+            <i class="bi bi-filter me-1"></i> Mostra/Nascondi Filtri
         </a>
         <div class="collapse mt-2" id="filterCollapse">
             <div class="card card-body shadow-sm">
-                <div id="category-filters" class="row">
-                    <!-- Checkbox delle categorie verranno popolate da JS -->
-                    <p class="text-muted">Caricamento categorie...</p>
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <h6>Tipi Allenamento</h6>
+                        <div id="type-filters" class="row g-2"></div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6>Macrogruppi</h6>
+                        <div id="macro-filters" class="row g-2"></div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <h6>Categorie</h6>
+                        <div id="category-filters" class="row g-2"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endif %}
 
     <!-- Calendario -->
     <div id="calendar" class="bg-white p-4 rounded shadow-sm"></div>
@@ -81,12 +89,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
     const calendarEl = document.getElementById('calendar');
+    const typeFiltersContainer = document.getElementById('type-filters');
+    const macroFiltersContainer = document.getElementById('macro-filters');
     const categoryFiltersContainer = document.getElementById('category-filters');
 
     // --- Variabili Utente dal Backend ---
     const isAtleta = {{ current_user.is_atleta | tojson }};
     const userCategory = "{{ current_user.category }}";
-    const isAdminOrTrainer = {{ (current_user.is_admin or current_user.is_allenatore) | tojson }};
 
     // --- Gestione Modale Dettagli ---
     const eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
@@ -101,25 +110,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // --- Funzione per costruire l'URL degli eventi ---
     function buildEventsUrl() {
-        // Se l'utente è un atleta, mostra solo la sua categoria
+        const params = new URLSearchParams();
         if (isAtleta && userCategory !== 'N/D') {
-            const params = new URLSearchParams({ user_category: userCategory });
-            return `/api/allenamenti?${params.toString()}`;
+            params.append('user_category', userCategory);
         }
 
-        // Se è admin/allenatore, usa i filtri selezionati
-        if (isAdminOrTrainer) {
-            const params = new URLSearchParams();
-            const selectedCategories = Array.from(document.querySelectorAll('#category-filters .form-check-input:checked'))
-                .map(cb => cb.value);
+        const selectedTypes = Array.from(document.querySelectorAll('#type-filters .form-check-input:checked')).map(cb => cb.value);
+        selectedTypes.forEach(t => params.append('type_filter', t));
 
-            selectedCategories.forEach(cat => params.append('category_filter', cat));
-            const queryString = params.toString();
-            return `/api/allenamenti${queryString ? '?' + queryString : ''}`;
-        }
+        const selectedMacros = Array.from(document.querySelectorAll('#macro-filters .form-check-input:checked')).map(cb => cb.value);
+        selectedMacros.forEach(m => params.append('macro_group_ids', m));
 
-        // Fallback per utenti senza categoria (non dovrebbero vedere nulla)
-        return '/api/allenamenti?user_category=INVALID';
+        const selectedCategories = Array.from(document.querySelectorAll('#category-filters .form-check-input:checked')).map(cb => cb.value);
+        selectedCategories.forEach(c => params.append('category_filter', c));
+
+        const queryString = params.toString();
+        return `/api/allenamenti${queryString ? '?' + queryString : ''}`;
     }
 
     // --- Inizializzazione Calendario ---
@@ -163,33 +169,63 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // --- Logica Filtri per Admin/Allenatori ---
     async function setupFilters() {
-        if (!isAdminOrTrainer) return;
         try {
-            const response = await fetch('/api/all-categories'); // Assumendo esista un'API che restituisce tutte le categorie
-            const categories = await response.json();
+            const [typesRes, groupsRes, categoriesRes] = await Promise.all([
+                fetch('/api/training/types'),
+                fetch('/api/training/groups'),
+                fetch('/api/all-categories')
+            ]);
+            const types = await typesRes.json();
+            const groups = await groupsRes.json();
+            const categories = await categoriesRes.json();
 
-            categoryFiltersContainer.innerHTML = ''; // Pulisce il messaggio di caricamento
-            categories.forEach(cat => {
+            // Tipi
+            typeFiltersContainer.innerHTML = '';
+            types.forEach((t, idx) => {
                 const col = document.createElement('div');
-                col.className = 'col-6 col-md-4 col-lg-3';
-                const div = document.createElement('div');
-                div.className = 'form-check';
-                div.innerHTML = `
-                    <input class="form-check-input" type="checkbox" value="${cat.name}" id="filter_cat_${cat.id}">
-                    <label class="form-check-label" for="filter_cat_${cat.id}">${cat.name}</label>
-                `;
-                col.appendChild(div);
+                col.className = 'col-6';
+                col.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${t}" id="type_${idx}">
+                        <label class="form-check-label" for="type_${idx}">${t}</label>
+                    </div>`;
+                typeFiltersContainer.appendChild(col);
+            });
+
+            // Macrogruppi
+            macroFiltersContainer.innerHTML = '';
+            groups.forEach(g => {
+                const col = document.createElement('div');
+                col.className = 'col-6';
+                col.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${g.id}" id="macro_${g.id}">
+                        <label class="form-check-label" for="macro_${g.id}">${g.name}</label>
+                    </div>`;
+                macroFiltersContainer.appendChild(col);
+            });
+
+            categoryFiltersContainer.innerHTML = '';
+            categories.forEach(c => {
+                const col = document.createElement('div');
+                col.className = 'col-6';
+                col.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${c.name}" id="cat_${c.id}">
+                        <label class="form-check-label" for="cat_${c.id}">${c.name}</label>
+                    </div>`;
                 categoryFiltersContainer.appendChild(col);
             });
 
-            // Aggiunge l'event listener per aggiornare il calendario quando un filtro cambia
-            categoryFiltersContainer.addEventListener('change', () => {
-                calendar.refetchEvents();
+            const filterContainers = [typeFiltersContainer, macroFiltersContainer, categoryFiltersContainer];
+            filterContainers.forEach(container => {
+                container.addEventListener('change', () => calendar.refetchEvents());
             });
-
         } catch (error) {
-            console.error("Errore nel caricamento delle categorie per i filtri:", error);
-            categoryFiltersContainer.innerHTML = '<p class="text-danger">Impossibile caricare i filtri.</p>';
+            console.error('Errore nel caricamento dei filtri:', error);
+            typeFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento tipi.</p>';
+            macroFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento gruppi.</p>';
+            categoryFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento categorie.</p>';
         }
     }
 
