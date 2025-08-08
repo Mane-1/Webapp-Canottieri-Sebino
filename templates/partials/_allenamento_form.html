@@ -1,6 +1,7 @@
 <!-- templates/_allenamento_form.html -->
 {% set allenamento_data = allenamento or {} %}
 {% set selected_categories = selected_category_names or [] %}
+{% set grouped = grouped_categories or {} %}
 
 <form method="post" id="allenamentoForm">
     <!-- Tipo, Descrizione, Orario (invariati) -->
@@ -39,36 +40,23 @@
                placeholder="HH:MM-HH:MM">
     </div>
 
-    <!-- NUOVA SEZIONE GRUPPI E CATEGORIE MIGLIORATA -->
+    <!-- Selezione Categorie -->
     <div class="mb-4">
-        <label class="form-label fw-bold">Assegna Allenamento a Gruppi e Categorie</label>
-        <p class="form-text">Seleziona un gruppo per preselezionare le relative categorie, poi affina la selezione se necessario.</p>
-        <div class="row g-3">
-            {% for group_name, categories in training_groups.items() %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-header bg-light">
-                        <div class="form-check">
-                            <input class="form-check-input group-checkbox" type="checkbox" value="{{ group_name }}" id="group_{{ group_name.replace(' ', '_') }}" data-categories="{{ categories | join(',') }}">
-                            <label class="form-check-label fw-bold" for="group_{{ group_name.replace(' ', '_') }}">
-                                {{ group_name }}
-                            </label>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {% for category in categories %}
-                        <div class="form-check">
-                            <input class="form-check-input category-checkbox" type="checkbox" name="category_names" value="{{ category }}" id="cat_{{ category.replace(' ', '_') }}" {% if category in selected_categories %}checked{% endif %}>
-                            <label class="form-check-label" for="cat_{{ category.replace(' ', '_') }}">
-                                {{ category }}
-                            </label>
-                        </div>
-                        {% endfor %}
-                    </div>
+        <label class="form-label fw-bold">Categorie</label>
+        <p class="form-text">Seleziona le categorie di atleti a cui assegnare l'allenamento.</p>
+        {% for group_name, cats in grouped.items() %}
+        <h6 class="mt-2">{{ group_name }}</h6>
+        <div class="row g-2 mb-2">
+            {% for category in cats %}
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="category_names" value="{{ category }}" id="cat_{{ category.replace(' ', '_') }}" {% if category in selected_categories %}checked{% endif %}>
+                    <label class="form-check-label" for="cat_{{ category.replace(' ', '_') }}">{{ category }}</label>
                 </div>
             </div>
             {% endfor %}
         </div>
+        {% endfor %}
     </div>
 
     <hr class="my-4">
@@ -120,22 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     recurringCheckbox.addEventListener('change', toggleRecurrenceFields);
     toggleRecurrenceFields(); // Esegui al caricamento per impostare lo stato iniziale
 
-    // --- LOGICA GRUPPI E CATEGORIE ---
-    const groupCheckboxes = document.querySelectorAll('.group-checkbox');
-    const categoryCheckboxes = document.querySelectorAll('.category-checkbox');
-    const categoryMap = new Map();
-    categoryCheckboxes.forEach(cb => categoryMap.set(cb.value, cb));
-
-    groupCheckboxes.forEach(groupCb => {
-        groupCb.addEventListener('change', function() {
-            const categories = this.dataset.categories.split(',');
-            categories.forEach(catName => {
-                const categoryCb = categoryMap.get(catName);
-                if (categoryCb) {
-                    categoryCb.checked = this.checked;
-                }
-            });
-        });
-    });
+    // Nessuna logica aggiuntiva per le categorie singole
 });
 </script>
