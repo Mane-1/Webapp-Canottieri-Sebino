@@ -44,7 +44,6 @@ class Categoria(Base):
     eta_min = Column(Integer, nullable=False)
     eta_max = Column(Integer, nullable=False)
     ordine = Column(Integer, default=0)
-    macro_group = Column(String, default="N/D")
 
 
 class User(Base):
@@ -116,24 +115,6 @@ class User(Base):
                 return self.manual_category
         categoria_obj = self._category_obj
         return categoria_obj.nome if categoria_obj else "N/D"
-
-    @property
-    def macro_group_name(self) -> str:
-        """Return the name of the macro group for the athlete.
-
-        The macro group is derived from the manual category if present; if the
-        manual value is invalid or missing we use the automatically calculated
-        category.  Non athletes always return ``"N/D"``.
-        """
-        if not self.is_atleta:
-            return "N/D"
-        db_session = object_session(self)
-        if self.manual_category and db_session:
-            cat = db_session.query(Categoria).filter_by(nome=self.manual_category).first()
-            if cat:
-                return cat.macro_group
-        categoria_obj = self._category_obj
-        return categoria_obj.macro_group if categoria_obj else "N/D"
 
 
 class Role(Base):
@@ -212,19 +193,10 @@ class SchedaPesi(Base):
     esercizio = relationship("EsercizioPesi", back_populates="schede")
 
 
-class MacroGroup(Base):
-    __tablename__ = "macro_groups"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
-    subgroups = relationship("SubGroup", back_populates="macro_group")
-
-
 class SubGroup(Base):
     __tablename__ = "subgroups"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    macro_group_id = Column(Integer, ForeignKey('macro_groups.id'))
-    macro_group = relationship("MacroGroup", back_populates="subgroups")
     allenamenti = relationship("Allenamento", secondary=allenamento_subgroup_association, back_populates="sub_groups")
 
 
@@ -236,8 +208,6 @@ class Allenamento(Base):
     data = Column(Date, nullable=False)
     orario = Column(String)
     recurrence_id = Column(String, index=True, nullable=True)
-    macro_group_id = Column(Integer, ForeignKey('macro_groups.id'))
-    macro_group = relationship("MacroGroup")
     sub_groups = relationship("SubGroup", secondary=allenamento_subgroup_association, back_populates="allenamenti")
 
 
@@ -248,3 +218,4 @@ class Turno(Base):
     fascia_oraria = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     user = relationship("User", back_populates="turni")
+

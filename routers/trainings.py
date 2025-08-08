@@ -12,23 +12,25 @@ from database import get_db
 from dependencies import get_current_user, get_current_admin_user
 from utils import DAY_MAP_DATETIL, parse_orario, get_color_for_type
 
+CATEGORY_GROUPS: Dict[str, List[str]] = {
+    "Over14": ["Ragazzo", "Junior", "Under 23", "Senior"],
+    "Master": ["Master"],
+    "Under14": ["Allievo A", "Allievo B1", "Allievo B2", "Allievo C", "Cadetto"],
+}
+
 router = APIRouter(tags=["Allenamenti e Calendario"])
 templates = Jinja2Templates(directory="templates")
 
 
 def _group_categories(db: Session) -> Dict[str, List[str]]:
-    """Return category names grouped by their visual sections."""
-    groups: Dict[str, List[str]] = {"Under14": [], "Over14": [], "Master": []}
-    subgroups = (
-        db.query(models.SubGroup)
-        .join(models.SubGroup.macro_group)
-        .order_by(models.MacroGroup.name, models.SubGroup.name)
-        .all()
-    )
+    """Return category names grouped for visual sections."""
+    groups: Dict[str, List[str]] = {k: [] for k in CATEGORY_GROUPS.keys()}
+    subgroups = db.query(models.SubGroup).order_by(models.SubGroup.name).all()
     for sg in subgroups:
-        raw_name = sg.macro_group.name if sg.macro_group else "Other"
-        group_name = raw_name.replace(" ", "")
-        groups.setdefault(group_name, []).append(sg.name)
+        for group, names in CATEGORY_GROUPS.items():
+            if sg.name in names:
+                groups[group].append(sg.name)
+                break
     return groups
 
 
@@ -281,14 +283,8 @@ async def get_training_types(db: Session = Depends(get_db)):
 @router.get("/api/all-categories")
 def list_all_categories(db: Session = Depends(get_db)):
     return [
-        {
-            "id": sg.id,
-            "name": sg.name,
-            "macro_group": (sg.macro_group.name.replace(" ", "") if sg.macro_group else ""),
-        }
-        for sg in db.query(models.SubGroup)
-        .join(models.SubGroup.macro_group)
-        .order_by(models.MacroGroup.name, models.SubGroup.name)
+        {"id": sg.id, "name": sg.name}
+        for sg in db.query(models.SubGroup).order_by(models.SubGroup.name)
     ]
 
 

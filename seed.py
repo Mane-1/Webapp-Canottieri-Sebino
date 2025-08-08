@@ -214,29 +214,23 @@ def seed_categories(db: Session):
         logger.info("Tabella categorie già popolata. Skippo.")
         return
     categorie = [
-        models.Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1, macro_group="Under 14"),
-        models.Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2, macro_group="Under 14"),
-        models.Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3, macro_group="Under 14"),
-        models.Categoria(nome="Allievo C", eta_min=13, eta_max=13, ordine=4, macro_group="Under 14"),
-        models.Categoria(nome="Cadetto", eta_min=14, eta_max=14, ordine=5, macro_group="Under 14"),
-        models.Categoria(nome="Ragazzo", eta_min=15, eta_max=16, ordine=6, macro_group="Over 14"),
-        models.Categoria(nome="Junior", eta_min=17, eta_max=18, ordine=7, macro_group="Over 14"),
-        models.Categoria(nome="Under 23", eta_min=19, eta_max=23, ordine=8, macro_group="Over 14"),
-        models.Categoria(nome="Senior", eta_min=24, eta_max=27, ordine=9, macro_group="Over 14"),
-        models.Categoria(nome="Master", eta_min=28, eta_max=150, ordine=10, macro_group="Master"),
+        models.Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1),
+        models.Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2),
+        models.Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3),
+        models.Categoria(nome="Allievo C", eta_min=13, eta_max=13, ordine=4),
+        models.Categoria(nome="Cadetto", eta_min=14, eta_max=14, ordine=5),
+        models.Categoria(nome="Ragazzo", eta_min=15, eta_max=16, ordine=6),
+        models.Categoria(nome="Junior", eta_min=17, eta_max=18, ordine=7),
+        models.Categoria(nome="Under 23", eta_min=19, eta_max=23, ordine=8),
+        models.Categoria(nome="Senior", eta_min=24, eta_max=27, ordine=9),
+        models.Categoria(nome="Master", eta_min=28, eta_max=150, ordine=10),
     ]
     db.add_all(categorie)
     db.commit()
 
-    # Popola anche MacroGroup e SubGroup per gli allenamenti
-    macro_objs = {}
+    # Popola anche le categorie per gli allenamenti
     for cat in categorie:
-        if cat.macro_group not in macro_objs:
-            mg = models.MacroGroup(name=cat.macro_group)
-            db.add(mg)
-            db.flush()  # ottiene l'ID senza commit separato
-            macro_objs[cat.macro_group] = mg
-        db.add(models.SubGroup(name=cat.nome, macro_group_id=macro_objs[cat.macro_group].id))
+        db.add(models.SubGroup(name=cat.nome))
     db.commit()
 
 

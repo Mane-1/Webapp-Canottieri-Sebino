@@ -184,12 +184,22 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Categorie raggruppate
             categoryFiltersContainer.innerHTML = '';
-            const grouped = {};
+            const groupMap = {
+                'Over14': ['Ragazzo','Junior','Under 23','Senior'],
+                'Master': ['Master'],
+                'Under14': ['Allievo A','Allievo B1','Allievo B2','Allievo C','Cadetto']
+            };
+            const grouped = {Over14: [], Master: [], Under14: []};
             categories.forEach(c => {
-                const g = c.macro_group || 'Altro';
-                (grouped[g] = grouped[g] || []).push(c);
+                for (const [g, names] of Object.entries(groupMap)) {
+                    if (names.includes(c.name)) {
+                        grouped[g].push(c);
+                        break;
+                    }
+                }
             });
             Object.entries(grouped).forEach(([groupName, cats]) => {
+                if (cats.length === 0) return;
                 const title = document.createElement('h6');
                 title.textContent = groupName;
                 categoryFiltersContainer.appendChild(title);
