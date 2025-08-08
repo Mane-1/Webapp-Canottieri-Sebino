@@ -1,6 +1,7 @@
 <!-- templates/_allenamento_form.html -->
 {% set allenamento_data = allenamento or {} %}
 {% set selected_categories = selected_category_names or [] %}
+{% set grouped = grouped_categories or {} %}
 
 <form method="post" id="allenamentoForm">
     <!-- Tipo, Descrizione, Orario (invariati) -->
@@ -43,8 +44,10 @@
     <div class="mb-4">
         <label class="form-label fw-bold">Categorie</label>
         <p class="form-text">Seleziona le categorie di atleti a cui assegnare l'allenamento.</p>
-        <div class="row g-2">
-            {% for category in categories %}
+        {% for group_name, cats in grouped.items() %}
+        <h6 class="mt-2">{{ group_name }}</h6>
+        <div class="row g-2 mb-2">
+            {% for category in cats %}
             <div class="col-md-4">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" name="category_names" value="{{ category }}" id="cat_{{ category.replace(' ', '_') }}" {% if category in selected_categories %}checked{% endif %}>
@@ -53,6 +56,7 @@
             </div>
             {% endfor %}
         </div>
+        {% endfor %}
     </div>
 
     <hr class="my-4">

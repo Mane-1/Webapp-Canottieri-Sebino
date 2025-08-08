@@ -33,15 +33,11 @@
         <div class="collapse mt-2" id="filterCollapse">
             <div class="card card-body shadow-sm">
                 <div class="row">
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-6 mb-3">
                         <h6>Tipi Allenamento</h6>
                         <div id="type-filters" class="row g-2"></div>
                     </div>
-                    <div class="col-md-4 mb-3">
-                        <h6>Macrogruppi</h6>
-                        <div id="macro-filters" class="row g-2"></div>
-                    </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-6 mb-3">
                         <h6>Categorie</h6>
                         <div id="category-filters" class="row g-2"></div>
                     </div>
@@ -90,7 +86,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
     const calendarEl = document.getElementById('calendar');
     const typeFiltersContainer = document.getElementById('type-filters');
-    const macroFiltersContainer = document.getElementById('macro-filters');
     const categoryFiltersContainer = document.getElementById('category-filters');
 
     // --- Variabili Utente dal Backend ---
@@ -117,9 +112,6 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const selectedTypes = Array.from(document.querySelectorAll('#type-filters .form-check-input:checked')).map(cb => cb.value);
         selectedTypes.forEach(t => params.append('type_filter', t));
-
-        const selectedMacros = Array.from(document.querySelectorAll('#macro-filters .form-check-input:checked')).map(cb => cb.value);
-        selectedMacros.forEach(m => params.append('macro_group_ids', m));
 
         const selectedCategories = Array.from(document.querySelectorAll('#category-filters .form-check-input:checked')).map(cb => cb.value);
         selectedCategories.forEach(c => params.append('category_filter', c));
@@ -170,13 +162,11 @@ document.addEventListener('DOMContentLoaded', async function() {
     // --- Logica Filtri per Admin/Allenatori ---
     async function setupFilters() {
         try {
-            const [typesRes, groupsRes, categoriesRes] = await Promise.all([
+            const [typesRes, categoriesRes] = await Promise.all([
                 fetch('/api/training/types'),
-                fetch('/api/training/groups'),
                 fetch('/api/all-categories')
             ]);
             const types = await typesRes.json();
-            const groups = await groupsRes.json();
             const categories = await categoriesRes.json();
 
             // Tipi
@@ -192,39 +182,39 @@ document.addEventListener('DOMContentLoaded', async function() {
                 typeFiltersContainer.appendChild(col);
             });
 
-            // Macrogruppi
-            macroFiltersContainer.innerHTML = '';
-            groups.forEach(g => {
-                const col = document.createElement('div');
-                col.className = 'col-6';
-                col.innerHTML = `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="${g.id}" id="macro_${g.id}">
-                        <label class="form-check-label" for="macro_${g.id}">${g.name}</label>
-                    </div>`;
-                macroFiltersContainer.appendChild(col);
-            });
-
+            // Categorie raggruppate
             categoryFiltersContainer.innerHTML = '';
+            const grouped = {};
             categories.forEach(c => {
-                const col = document.createElement('div');
-                col.className = 'col-6';
-                col.innerHTML = `
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="${c.name}" id="cat_${c.id}">
-                        <label class="form-check-label" for="cat_${c.id}">${c.name}</label>
-                    </div>`;
-                categoryFiltersContainer.appendChild(col);
+                const g = c.macro_group || 'Altro';
+                (grouped[g] = grouped[g] || []).push(c);
+            });
+            Object.entries(grouped).forEach(([groupName, cats]) => {
+                const title = document.createElement('h6');
+                title.textContent = groupName;
+                categoryFiltersContainer.appendChild(title);
+                const row = document.createElement('div');
+                row.className = 'row g-2 mb-2';
+                cats.forEach(c => {
+                    const col = document.createElement('div');
+                    col.className = 'col-6';
+                    col.innerHTML = `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${c.name}" id="cat_${c.id}">
+                            <label class="form-check-label" for="cat_${c.id}">${c.name}</label>
+                        </div>`;
+                    row.appendChild(col);
+                });
+                categoryFiltersContainer.appendChild(row);
             });
 
-            const filterContainers = [typeFiltersContainer, macroFiltersContainer, categoryFiltersContainer];
+            const filterContainers = [typeFiltersContainer, categoryFiltersContainer];
             filterContainers.forEach(container => {
                 container.addEventListener('change', () => calendar.refetchEvents());
             });
         } catch (error) {
             console.error('Errore nel caricamento dei filtri:', error);
             typeFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento tipi.</p>';
-            macroFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento gruppi.</p>';
             categoryFiltersContainer.innerHTML = '<p class="text-danger">Errore caricamento categorie.</p>';
         }
     }

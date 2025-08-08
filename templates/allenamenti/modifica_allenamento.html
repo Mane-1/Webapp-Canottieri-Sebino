@@ -19,7 +19,7 @@
                     {# Includi il form parziale passandogli esplicitamente le variabili necessarie #}
                     {% with allenamento=allenamento,
                            selected_category_names=selected_category_names,
-                           categories=categories %}
+                           grouped_categories=grouped_categories %}
                         {% include 'partials/_allenamento_form.html' %}
                     {% endwith %}
                 </div>
