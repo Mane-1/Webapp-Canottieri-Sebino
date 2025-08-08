@@ -65,9 +65,18 @@ async def admin_users_list(request: Request, db: Session = Depends(get_db),
 async def admin_add_user_form(request: Request, db: Session = Depends(get_db),
                               admin_user: models.User = Depends(get_current_admin_user)):
     roles = db.query(models.Role).order_by(models.Role.name).all()
-    return templates.TemplateResponse("admin/user_add.html",
-                                      {"request": request, "current_user": admin_user, "all_roles": roles, "user": {},
-                                       "user_role_ids": set()})
+    categories = db.query(models.Categoria).order_by(models.Categoria.ordine).all()
+    return templates.TemplateResponse(
+        "admin/user_add.html",
+        {
+            "request": request,
+            "current_user": admin_user,
+            "all_roles": roles,
+            "all_categories": categories,
+            "user": {},
+            "user_role_ids": set(),
+        },
+    )
 
 
 @router.post("/users/add", response_class=RedirectResponse)
@@ -89,12 +98,26 @@ async def admin_add_user(db: Session = Depends(get_db), admin_user: models.User 
     if not roles_ids: return RedirectResponse(url="/admin/users/add?error=È necessario selezionare almeno un ruolo.",
                                               status_code=status.HTTP_303_SEE_OTHER)
     selected_roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()
-    new_user = models.User(username=username, hashed_password=security.get_password_hash(password),
-                           first_name=first_name, last_name=last_name, date_of_birth=date_of_birth,
-                           roles=selected_roles, email=email, phone_number=phone_number, tax_code=tax_code,
-                           enrollment_year=enrollment_year, membership_date=membership_date,
-                           certificate_expiration=certificate_expiration, address=address,
-                           manual_category=manual_category)
+    if manual_category and not db.query(models.Categoria).filter_by(nome=manual_category).first():
+        return RedirectResponse(
+            url="/admin/users/add?error=Categoria non valida", status_code=status.HTTP_303_SEE_OTHER
+        )
+    new_user = models.User(
+        username=username,
+        hashed_password=security.get_password_hash(password),
+        first_name=first_name,
+        last_name=last_name,
+        date_of_birth=date_of_birth,
+        roles=selected_roles,
+        email=email,
+        phone_number=phone_number,
+        tax_code=tax_code,
+        enrollment_year=enrollment_year,
+        membership_date=membership_date,
+        certificate_expiration=certificate_expiration,
+        address=address,
+        manual_category=manual_category or None,
+    )
     db.add(new_user)
     db.commit()
     return RedirectResponse(url="/admin/users?message=Utente creato con successo",
@@ -102,40 +125,89 @@ async def admin_add_user(db: Session = Depends(get_db), admin_user: models.User 
 
 
 @router.get("/users/{user_id}", response_class=HTMLResponse)
-async def admin_view_user(user_id: int, request: Request, db: Session = Depends(get_db),
-                          admin_user: models.User = Depends(get_current_admin_user)):
+async def admin_view_user(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
-    return templates.TemplateResponse("admin/user_detail.html",
-                                      {"request": request, "user": user, "current_user": admin_user})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return templates.TemplateResponse(
+        "admin/_user_detail.html",
+        {"request": request, "user": user, "current_user": admin_user},
+    )
 
 
 @router.get("/users/{user_id}/edit", response_class=HTMLResponse)
-async def admin_edit_user_form(user_id: int, request: Request, db: Session = Depends(get_db),
-                               admin_user: models.User = Depends(get_current_admin_user)):
+async def admin_edit_user_form(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
     roles = db.query(models.Role).all()
+    categories = db.query(models.Categoria).order_by(models.Categoria.ordine).all()
     user_role_ids = {role.id for role in user.roles}
-    return templates.TemplateResponse("admin/user_edit.html",
-                                      {"request": request, "user": user, "current_user": admin_user, "all_roles": roles,
-                                       "user_role_ids": user_role_ids})
+    return templates.TemplateResponse(
+        "admin/_user_edit.html",
+        {
+            "request": request,
+            "user": user,
+            "current_user": admin_user,
+            "all_roles": roles,
+            "all_categories": categories,
+            "user_role_ids": user_role_ids,
+        },
+    )
 
 
 @router.post("/users/{user_id}/edit", response_class=RedirectResponse)
-async def admin_edit_user(user_id: int, db: Session = Depends(get_db),
-                          admin_user: models.User = Depends(get_current_admin_user), first_name: str = Form(...),
-                          last_name: str = Form(...), email: str = Form(...), date_of_birth: date = Form(...),
-                          roles_ids: List[int] = Form([]), phone_number: Optional[str] = Form(None),
-                          tax_code: Optional[str] = Form(None), enrollment_year: Optional[int] = Form(None),
-                          membership_date: Optional[date] = Form(None),
-                          certificate_expiration: Optional[date] = Form(None), address: Optional[str] = Form(None),
-                          manual_category: Optional[str] = Form(None), password: Optional[str] = Form(None)):
+async def admin_edit_user(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    email: str = Form(...),
+    date_of_birth: date = Form(...),
+    roles_ids: List[int] = Form([]),
+    phone_number: Optional[str] = Form(None),
+    tax_code: Optional[str] = Form(None),
+    enrollment_year: Optional[int] = Form(None),
+    membership_date: Optional[date] = Form(None),
+    certificate_expiration: Optional[date] = Form(None),
+    address: Optional[str] = Form(None),
+    manual_category: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
     user.first_name, user.last_name, user.email, user.date_of_birth = first_name, last_name, email, date_of_birth
     user.phone_number, user.tax_code, user.enrollment_year, user.membership_date = phone_number, tax_code, enrollment_year, membership_date
     user.certificate_expiration, user.address = certificate_expiration, address
+    if manual_category and not db.query(models.Categoria).filter_by(nome=manual_category).first():
+        categories = db.query(models.Categoria).order_by(models.Categoria.ordine).all()
+        roles = db.query(models.Role).all()
+        user_role_ids = {role.id for role in user.roles}
+        return templates.TemplateResponse(
+            "admin/_user_edit.html",
+            {
+                "request": request,
+                "user": user,
+                "current_user": admin_user,
+                "all_roles": roles,
+                "all_categories": categories,
+                "user_role_ids": user_role_ids,
+                "error_message": "Categoria non valida",
+            },
+            status_code=400,
+        )
     user.manual_category = manual_category if manual_category else None
     if password: user.hashed_password = security.get_password_hash(password)
     user.roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()

@@ -21,7 +21,16 @@
 <div class="mb-3"><label for="address" class="form-label">Indirizzo</label><input type="text" class="form-control" name="address" value="{{ user.address or '' }}"></div>
 <div class="row">
      <div class="col-md-6 mb-3"><label for="enrollment_year" class="form-label">Anno Iscrizione</label><input type="number" class="form-control" name="enrollment_year" value="{{ user.enrollment_year or '' }}" placeholder="Es. 2024"></div>
-     <div class="col-md-6 mb-3"><label for="manual_category" class="form-label">Categoria Manuale</label><input type="text" class="form-control" name="manual_category" value="{{ user.manual_category or '' }}"><div class="form-text">Lasciare vuoto per calcolo automatico.</div></div>
+     <div class="col-md-6 mb-3">
+        <label for="manual_category" class="form-label">Categoria</label>
+        <select class="form-select" name="manual_category" id="manual_category">
+            <option value="" {% if not user.manual_category %}selected{% endif %}>Automatica</option>
+            {% for cat in all_categories %}
+            <option value="{{ cat.nome }}" {% if user.manual_category == cat.nome %}selected{% endif %}>{{ cat.nome }}</option>
+            {% endfor %}
+        </select>
+        <div class="form-text">Seleziona una categoria per impostarla manualmente.</div>
+     </div>
 </div>
 <div class="mb-3">
     <label class="form-label">Ruoli*</label>

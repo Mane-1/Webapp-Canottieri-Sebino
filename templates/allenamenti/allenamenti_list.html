@@ -5,7 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">{{ page_title }}</h2>
+    {% if current_user.is_admin or current_user.is_allenatore %}
     <a href="/allenamenti/nuovo" class="btn btn-primary">+ Aggiungi Allenamento</a>
+    {% endif %}
 </div>
 
 <!-- Filtri -->
@@ -13,23 +15,16 @@
     <form method="GET" id="filterForm">
         <input type="hidden" name="filter" value="{{ current_filters.get('filter', 'future') }}" id="timeFilterInput">
         <div class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label for="macro_group_id" class="form-label">Gruppo</label>
-                <select class="form-select" id="macro_group_id" name="macro_group_id">
-                    <option value="">Tutti i Gruppi</option>
-                    {% for group in all_groups %}
-                        <option value="{{ group.id }}" {% if current_filters.macro_group_id == group.id %}selected{% endif %}>{{ group.name }}</option>
+            <div class="col-md-4">
+                <label for="category" class="form-label">Categoria</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">Tutte le Categorie</option>
+                    {% for cat in all_categories %}
+                        <option value="{{ cat }}" {% if current_filters.category == cat %}selected{% endif %}>{{ cat }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="subgroup_id" class="form-label">Sottogruppo</label>
-                <select class="form-select" id="subgroup_id" name="subgroup_id">
-                    <option value="">Tutti i Sottogruppi</option>
-                    <!-- Popolato da JS -->
-                </select>
-            </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="tipo" class="form-label">Tipo Allenamento</label>
                 <select class="form-select" id="tipo" name="tipo">
                     <option value="">Tutti i Tipi</option>
@@ -38,7 +33,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3 d-flex gap-2">
+            <div class="col-md-4 d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100">Filtra</button>
                 <a href="/allenamenti" class="btn btn-outline-secondary">Resetta</a>
             </div>
@@ -79,8 +74,7 @@
                         data-description="{{ allenamento.descrizione or 'Nessuna descrizione.' }}"
                         data-recurrence-id="{{ allenamento.recurrence_id or '' }}"
                         data-is-recurrent="{{ 'Sì' if allenamento.recurrence_id else 'No' }}"
-                        data-macro-group="{{ allenamento.macro_group.name if allenamento.macro_group else 'Nessuno' }}"
-                        data-sub-groups="{{ allenamento.sub_groups|map(attribute='name')|join(', ') if allenamento.sub_groups else 'Nessuno' }}">
+                        data-categories="{{ allenamento.sub_groups|map(attribute='name')|join(', ') if allenamento.sub_groups else 'Nessuna' }}">
 
                         <td>
                             <span class="allenamento-type-indicator" style="background-color: {{ get_color_for_type(allenamento.tipo) }}"></span>
@@ -120,38 +114,13 @@
 {% block scripts_extra %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const allGroupsData = {{ all_groups|tojson }};
-    const currentFilters = {{ current_filters|tojson }};
-    const macroGroupSelect = document.getElementById('macro_group_id');
-    const subGroupSelect = document.getElementById('subgroup_id');
-
-    function populateSubgroups() {
-        const macroId = macroGroupSelect.value;
-        subGroupSelect.innerHTML = '<option value="">Tutti i Sottogruppi</option>'; // Reset
-        if (macroId) {
-            const selectedGroup = allGroupsData.find(g => g.id == macroId);
-            if (selectedGroup && selectedGroup.subgroups) {
-                selectedGroup.subgroups.forEach(sub => {
-                    const option = new Option(sub.name, sub.id);
-                    if (currentFilters.subgroup_id == sub.id) {
-                        option.selected = true;
-                    }
-                    subGroupSelect.add(option);
-                });
+        // Gestione bottoni filtro temporale
+        document.getElementById('timeFilterButtons').addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON') {
+                document.getElementById('timeFilterInput').value = e.target.dataset.filter;
+                document.getElementById('filterForm').submit();
             }
-        }
-    }
-
-    macroGroupSelect.addEventListener('change', populateSubgroups);
-    populateSubgroups(); // Popola al caricamento iniziale
-
-    // Gestione bottoni filtro temporale
-    document.getElementById('timeFilterButtons').addEventListener('click', function(e) {
-        if (e.target.tagName === 'BUTTON') {
-            document.getElementById('timeFilterInput').value = e.target.dataset.filter;
-            document.getElementById('filterForm').submit();
-        }
-    });
+        });
 
     // --- Gestione Modale Dettagli ---
     const eventDetailModalEl = document.getElementById('eventDetailModal');
@@ -161,8 +130,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const modalDate = document.getElementById('modalDate');
         const modalTime = document.getElementById('modalTime');
         const modalDescription = document.getElementById('modalDescription');
-        const modalMacroGroup = document.getElementById('modalMacroGroup');
-        const modalSubGroups = document.getElementById('modalSubGroups');
+        const modalCategories = document.getElementById('modalCategories');
         const modalRecurrence = document.getElementById('modalRecurrence');
         const modalEditButton = document.getElementById('modalEditButton');
         const modalDeleteButton = document.getElementById('modalDeleteButton');
@@ -179,8 +147,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 modalDate.textContent = data.date;
                 modalTime.textContent = data.time;
                 modalDescription.textContent = data.description;
-                modalMacroGroup.textContent = data.macroGroup;
-                modalSubGroups.textContent = data.subGroups;
+                modalCategories.textContent = data.categories;
                 modalRecurrence.textContent = data.isRecurrent;
 
                 modalEditButton.href = `/allenamenti/${data.id}/modifica`;
