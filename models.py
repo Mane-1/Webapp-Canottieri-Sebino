@@ -7,7 +7,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, object_session
 from sqlalchemy.orm.attributes import flag_modified
 from database import Base
-from functools import lru_cache
 
 # --- TABELLE DI ASSOCIAZIONE (MOLTI-A-MOLTI) ---
 
@@ -94,7 +93,6 @@ class User(Base):
         return any(role.name == "atleta" for role in self.roles)
 
     @property
-    @lru_cache(maxsize=1)
     def _category_obj(self) -> Categoria | None:
         if not self.is_atleta or not self.date_of_birth: return None
         db_session = object_session(self)
@@ -104,13 +102,36 @@ class User(Base):
 
     @property
     def category(self) -> str:
-        if self.manual_category: return self.manual_category
+        """Return the user's category name.
+
+        If ``manual_category`` is populated we verify that such category exists
+        in the database.  This prevents typos from returning an inconsistent
+        value.  When the manual category is invalid we gracefully fall back to
+        the automatically calculated one so that the application never
+        crashes and always shows a meaningful category.
+        """
+        if self.manual_category:
+            db_session = object_session(self)
+            if db_session and db_session.query(Categoria).filter_by(nome=self.manual_category).first():
+                return self.manual_category
         categoria_obj = self._category_obj
         return categoria_obj.nome if categoria_obj else "N/D"
 
     @property
     def macro_group_name(self) -> str:
-        if not self.is_atleta: return "N/D"
+        """Return the name of the macro group for the athlete.
+
+        The macro group is derived from the manual category if present; if the
+        manual value is invalid or missing we use the automatically calculated
+        category.  Non athletes always return ``"N/D"``.
+        """
+        if not self.is_atleta:
+            return "N/D"
+        db_session = object_session(self)
+        if self.manual_category and db_session:
+            cat = db_session.query(Categoria).filter_by(nome=self.manual_category).first()
+            if cat:
+                return cat.macro_group
         categoria_obj = self._category_obj
         return categoria_obj.macro_group if categoria_obj else "N/D"
 

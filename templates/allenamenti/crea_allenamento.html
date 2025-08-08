@@ -16,7 +16,11 @@
                         <div class="alert alert-danger">{{ error_message }}</div>
                     {% endif %}
 
-                    {% include '_allenamento_form.html' %}
+                    {% with categories=categories,
+                           selected_category_names=selected_category_names,
+                           allenamento=None %}
+                        {% include 'partials/_allenamento_form.html' %}
+                    {% endwith %}
                 </div>
             </div>
         </div>

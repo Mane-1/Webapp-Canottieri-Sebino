@@ -5,7 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">{{ page_title }}</h2>
+    {% if current_user.is_admin or current_user.is_allenatore %}
     <a href="/allenamenti/nuovo" class="btn btn-primary">+ Aggiungi Allenamento</a>
+    {% endif %}
 </div>
 
 <!-- Filtri -->

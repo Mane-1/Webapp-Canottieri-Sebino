@@ -228,6 +228,17 @@ def seed_categories(db: Session):
     db.add_all(categorie)
     db.commit()
 
+    # Popola anche MacroGroup e SubGroup per gli allenamenti
+    macro_objs = {}
+    for cat in categorie:
+        if cat.macro_group not in macro_objs:
+            mg = models.MacroGroup(name=cat.macro_group)
+            db.add(mg)
+            db.flush()  # ottiene l'ID senza commit separato
+            macro_objs[cat.macro_group] = mg
+        db.add(models.SubGroup(name=cat.nome, macro_group_id=macro_objs[cat.macro_group].id))
+    db.commit()
+
 
 def main():
     logger.info("Avvio script di seeding completo...")
