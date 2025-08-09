@@ -16,13 +16,8 @@
                         <div class="alert alert-danger">{{ error_message }}</div>
                     {% endif %}
 
-                    {# CORREZIONE: Passa le variabili necessarie al form parziale #}
-                    {% include '_allenamento_form.html' with {
-                        'allenamento': allenamento,
-                        'selected_category_names': selected_category_names,
-                        'training_groups': training_groups,
-                        'all_categories': all_categories
-                    } %}
+                    {# Includi il form parziale con il contesto corrente #}
+                    {% include 'partials/_allenamento_form.html' %}
                 </div>
             </div>
         </div>

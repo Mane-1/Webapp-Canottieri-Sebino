@@ -7,14 +7,13 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, object_session
 from sqlalchemy.orm.attributes import flag_modified
 from database import Base
-from functools import lru_cache
 
 # --- TABELLE DI ASSOCIAZIONE (MOLTI-A-MOLTI) ---
 
-allenamento_subgroup_association = Table(
-    'allenamento_subgroup_association', Base.metadata,
+allenamento_categoria_association = Table(
+    'allenamento_categoria_association', Base.metadata,
     Column('allenamento_id', Integer, ForeignKey('allenamenti.id'), primary_key=True),
-    Column('subgroup_id', Integer, ForeignKey('subgroups.id'), primary_key=True)
+    Column('categoria_id', Integer, ForeignKey('categorie.id'), primary_key=True)
 )
 
 user_roles = Table(
@@ -45,7 +44,9 @@ class Categoria(Base):
     eta_min = Column(Integer, nullable=False)
     eta_max = Column(Integer, nullable=False)
     ordine = Column(Integer, default=0)
-    macro_group = Column(String, default="N/D")
+    allenamenti = relationship(
+        "Allenamento", secondary=allenamento_categoria_association, back_populates="categories"
+    )
 
 
 class User(Base):
@@ -94,7 +95,6 @@ class User(Base):
         return any(role.name == "atleta" for role in self.roles)
 
     @property
-    @lru_cache(maxsize=1)
     def _category_obj(self) -> Categoria | None:
         if not self.is_atleta or not self.date_of_birth: return None
         db_session = object_session(self)
@@ -104,15 +104,20 @@ class User(Base):
 
     @property
     def category(self) -> str:
-        if self.manual_category: return self.manual_category
+        """Return the user's category name.
+
+        If ``manual_category`` is populated we verify that such category exists
+        in the database.  This prevents typos from returning an inconsistent
+        value.  When the manual category is invalid we gracefully fall back to
+        the automatically calculated one so that the application never
+        crashes and always shows a meaningful category.
+        """
+        if self.manual_category:
+            db_session = object_session(self)
+            if db_session and db_session.query(Categoria).filter_by(nome=self.manual_category).first():
+                return self.manual_category
         categoria_obj = self._category_obj
         return categoria_obj.nome if categoria_obj else "N/D"
-
-    @property
-    def macro_group_name(self) -> str:
-        if not self.is_atleta: return "N/D"
-        categoria_obj = self._category_obj
-        return categoria_obj.macro_group if categoria_obj else "N/D"
 
 
 class Role(Base):
@@ -191,22 +196,6 @@ class SchedaPesi(Base):
     esercizio = relationship("EsercizioPesi", back_populates="schede")
 
 
-class MacroGroup(Base):
-    __tablename__ = "macro_groups"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True, nullable=False)
-    subgroups = relationship("SubGroup", back_populates="macro_group")
-
-
-class SubGroup(Base):
-    __tablename__ = "subgroups"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
-    macro_group_id = Column(Integer, ForeignKey('macro_groups.id'))
-    macro_group = relationship("MacroGroup", back_populates="subgroups")
-    allenamenti = relationship("Allenamento", secondary=allenamento_subgroup_association, back_populates="sub_groups")
-
-
 class Allenamento(Base):
     __tablename__ = "allenamenti"
     id = Column(Integer, primary_key=True, index=True)
@@ -215,9 +204,9 @@ class Allenamento(Base):
     data = Column(Date, nullable=False)
     orario = Column(String)
     recurrence_id = Column(String, index=True, nullable=True)
-    macro_group_id = Column(Integer, ForeignKey('macro_groups.id'))
-    macro_group = relationship("MacroGroup")
-    sub_groups = relationship("SubGroup", secondary=allenamento_subgroup_association, back_populates="allenamenti")
+    categories = relationship(
+        "Categoria", secondary=allenamento_categoria_association, back_populates="allenamenti"
+    )
 
 
 class Turno(Base):
@@ -227,3 +216,4 @@ class Turno(Base):
     fascia_oraria = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     user = relationship("User", back_populates="turni")
+

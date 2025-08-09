@@ -5,8 +5,29 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-5">
-    <h1 class="display-5 fw-bold text-body-emphasis">Benvenuto, {{ current_user.first_name or current_user.username }}!</h1>
-    <p class="col-lg-8 fs-4">Usa i collegamenti rapidi qui sotto per gestire gli allenamenti, visualizzare il calendario o amministrare gli utenti.</p>
+    <h1 class="display-5 fw-bold">Ciao, {{ current_user.first_name or current_user.username }}!</h1>
+    <p class="col-lg-8 fs-4">Usa i collegamenti qua sotto per accedere alle varie sezioni della Webapp. Di seguito i tuoi prossimi eventi:</p>
+
+    <div class="mb-4">
+        {% if events %}
+            {% for ev in events %}
+                {% if ev.type == 'allenamento' %}
+                <div class="p-2 mb-2 rounded text-white d-flex justify-content-between align-items-center" style="background-color: {{ ev.color }};">
+                    <span class="fw-semibold">{{ ev.title }}</span>
+                    <span>{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}</span>
+                </div>
+                {% else %}
+                <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.fascia }}</span>
+                    <span>🕒 {{ ev.start.strftime('%H:%M') }} - {{ ev.end.strftime('%H:%M') }}</span>
+                </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+        <p class="text-muted">Nessun evento in programma.</p>
+        {% endif %}
+    </div>
+
     <hr class="my-4">
 
     <div class="row g-4">
@@ -41,11 +62,11 @@
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-body d-flex flex-column">
-                     <h5 class="card-title">🕒 Turni</h5>
-                     <p class="card-text">Assegna gli allenatori ai turni di apertura e chiusura della società.</p>
-                     <div class="mt-auto pt-3">
+                    <h5 class="card-title">🕒 Turni</h5>
+                    <p class="card-text">Assegna gli allenatori ai turni di apertura e chiusura della società.</p>
+                    <div class="mt-auto pt-3">
                         <a href="/turni" class="btn btn-primary">Gestisci Turni</a>
-                     </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -55,12 +76,12 @@
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm">
                 <div class="card-body d-flex flex-column">
-                     <h5 class="card-title">🚣 Risorse</h5>
-                     <p class="card-text">Gestisci le imbarcazioni e le schede pesi degli atleti.</p>
-                     <div class="mt-auto pt-3">
+                    <h5 class="card-title">🚣 Risorse</h5>
+                    <p class="card-text">Gestisci le imbarcazioni e le schede pesi degli atleti.</p>
+                    <div class="mt-auto pt-3">
                         <a href="/risorse/barche" class="btn btn-primary me-2">Barche</a>
                         <a href="/risorse/pesi" class="btn btn-primary">Pesi</a>
-                     </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -70,11 +91,11 @@
         <div class="col-md-6 col-lg-4">
             <div class="card h-100 shadow-sm border-warning">
                 <div class="card-body d-flex flex-column">
-                     <h5 class="card-title">👥 Utenti</h5>
-                     <p class="card-text">Aggiungi, modifica o rimuovi utenti dal sistema.</p>
-                     <div class="mt-auto pt-3">
+                    <h5 class="card-title">👥 Utenti</h5>
+                    <p class="card-text">Aggiungi, modifica o rimuovi utenti dal sistema.</p>
+                    <div class="mt-auto pt-3">
                         <a href="/admin/users" class="btn btn-warning">Gestisci Utenti</a>
-                     </div>
+                    </div>
                 </div>
             </div>
         </div>

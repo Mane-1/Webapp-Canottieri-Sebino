@@ -9,6 +9,7 @@ from datetime import date
 from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 # Importa i moduli del progetto
@@ -17,6 +18,7 @@ import security
 from database import engine, Base, SessionLocal
 from utils import get_color_for_type
 from routers import authentication, users, trainings, resources, admin
+from seed import seed_categories
 
 # Configurazione del logging
 logging.basicConfig(level=logging.INFO)
@@ -58,6 +60,9 @@ def on_startup():
             ])
             db.commit()
 
+        # Popola la tabella delle categorie se è vuota
+        seed_categories(db)
+
         if not db.query(models.User).filter(models.User.username == "gabriele").first():
             logger.info("Creazione utente admin...")
             admin_role = db.query(models.Role).filter_by(name='admin').one()
@@ -87,3 +92,11 @@ app.include_router(users.router)
 app.include_router(trainings.router)
 app.include_router(resources.router)
 app.include_router(admin.router)
+
+@app.get('/manifest.webmanifest')
+async def manifest():
+    return FileResponse('static/manifest.webmanifest', media_type='application/manifest+json')
+
+@app.get('/sw.js')
+async def service_worker():
+    return FileResponse('static/sw.js', media_type='application/javascript')

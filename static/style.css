@@ -112,11 +112,9 @@ a:hover {
     display: none !important;
 }
 
-/* CORRETTO: Applica lo stile direttamente all'elemento a.fc-event */
+/* Style for FullCalendar events: rely on inline colors from data */
 a.fc-event {
-    background-color: var(--fc-event-bg-color) !important;
-    border-color: var(--fc-event-border-color) !important;
-    color: white !important;
+    color: #fff !important;
     padding: 3px 5px;
     font-size: 0.85em;
     cursor: pointer;
@@ -131,6 +129,18 @@ a.fc-event {
     color: white !important;
     white-space: normal;
     font-weight: bold;
+}
+
+/* Responsive calendar container */
+#calendar {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+    #calendar {
+        font-size: 0.8rem;
+    }
 }
 
 /* Aggiungi alla fine di static/style.css */

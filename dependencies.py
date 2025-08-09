@@ -45,3 +45,31 @@ async def get_current_admin_user(current_user: models.User = Depends(get_current
             detail="Accesso negato. Sono richiesti privilegi di amministratore."
         )
     return current_user
+
+
+async def get_current_admin_or_coach_user(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Garantisce accesso ad admin e allenatori.
+
+    Solleva 403 se l'utente non possiede almeno uno di questi ruoli."""
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accesso negato. Sono richiesti privilegi di amministratore o allenatore.",
+        )
+    return current_user
+
+
+async def get_current_admin_or_coach_user(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    """Garantisce accesso ad admin e allenatori.
+
+    Solleva 403 se l'utente non possiede almeno uno di questi ruoli."""
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accesso negato. Sono richiesti privilegi di amministratore o allenatore.",
+        )
+    return current_user

@@ -1,6 +1,6 @@
 # File: routers/users.py
 from typing import Optional
-from datetime import date
+from datetime import date, datetime, time
 from fastapi import APIRouter, Request, Depends, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
@@ -8,6 +8,7 @@ from fastapi.templating import Jinja2Templates
 import models, security
 from database import get_db
 from dependencies import get_current_user
+from utils import parse_orario, get_color_for_type
 
 router = APIRouter(tags=["Utenti e Pagine Principali"])
 templates = Jinja2Templates(directory="templates")
@@ -17,17 +18,66 @@ async def root(request: Request):
     return RedirectResponse(url="/login" if not request.session.get("user_id") else "/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def dashboard(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
     today = date.today()
-    dashboard_data = {}
-    if current_user.is_allenatore:
-        dashboard_data['prossimi_turni'] = db.query(models.Turno).filter(models.Turno.user_id == current_user.id, models.Turno.data >= today).order_by(models.Turno.data).limit(3).all()
+    events = []
+
     if current_user.is_atleta:
-        subgroups = db.query(models.SubGroup).filter(models.SubGroup.name == current_user.category).all()
-        if subgroups:
-            subgroup_ids = [sg.id for sg in subgroups]
-            dashboard_data['prossimi_allenamenti'] = db.query(models.Allenamento).join(models.allenamento_subgroup_association).filter(models.allenamento_subgroup_association.c.subgroup_id.in_(subgroup_ids), models.Allenamento.data >= today).order_by(models.Allenamento.data).limit(3).all()
-    return templates.TemplateResponse("dashboard.html", {"request": request, "current_user": current_user, "dashboard_data": dashboard_data})
+        allenamenti = (
+            db.query(models.Allenamento)
+            .join(models.Allenamento.categories)
+            .filter(
+                models.Categoria.nome == current_user.category,
+                models.Allenamento.data >= today,
+            )
+            .order_by(models.Allenamento.data, models.Allenamento.orario)
+            .all()
+        )
+        for a in allenamenti:
+            start_dt, end_dt = parse_orario(a.data, a.orario)
+            events.append(
+                {
+                    "type": "allenamento",
+                    "title": f"{a.tipo} - {a.descrizione}" if a.descrizione else a.tipo,
+                    "date": a.data,
+                    "start": start_dt,
+                    "end": end_dt,
+                    "color": get_color_for_type(a.tipo),
+                }
+            )
+
+    if current_user.is_allenatore:
+        turni = (
+            db.query(models.Turno)
+            .filter(models.Turno.user_id == current_user.id, models.Turno.data >= today)
+            .order_by(models.Turno.data, models.Turno.fascia_oraria)
+            .all()
+        )
+        for t in turni:
+            start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
+            start_dt = datetime.combine(t.data, time(hour=start_hour))
+            end_dt = datetime.combine(t.data, time(hour=end_hour))
+            events.append(
+                {
+                    "type": "turno",
+                    "date": t.data,
+                    "start": start_dt,
+                    "end": end_dt,
+                    "fascia": t.fascia_oraria,
+                }
+            )
+
+    events.sort(key=lambda e: e["start"])
+    events = events[:5]
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "current_user": current_user, "events": events},
+    )
 
 @router.get("/profilo", response_class=HTMLResponse)
 async def view_profile(request: Request, current_user: models.User = Depends(get_current_user)):
