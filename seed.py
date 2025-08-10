@@ -1,7 +1,7 @@
 # File: seed.py
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import logging
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -229,6 +229,54 @@ def seed_categories(db: Session):
     db.commit()
 
 
+def seed_turni(db: Session):
+    """Crea i turni predefiniti dell'estate 2025 se la tabella è vuota."""
+    if db.query(models.Turno).count() > 0:
+        logger.info("Tabella turni già popolata. Skippo.")
+        return
+    logger.info("Popolamento turni estivi 2025...")
+    start = date(2025, 6, 1)
+    end = date(2025, 9, 15)
+    day = start
+    while day <= end:
+        # Salta il lunedì (weekday 0)
+        if day.weekday() != 0:
+            db.add(models.Turno(data=day, fascia_oraria="Mattina"))
+            db.add(models.Turno(data=day, fascia_oraria="Sera"))
+        day += timedelta(days=1)
+    db.commit()
+
+
+def seed_default_allenamenti(db: Session):
+    """Inserisce alcuni allenamenti di esempio se non presenti."""
+    if db.query(models.Allenamento).count() > 0:
+        logger.info("Allenamenti già presenti. Skippo seeding di esempio.")
+        return
+    logger.info("Popolamento allenamenti di esempio...")
+    categorie = {c.nome: c for c in db.query(models.Categoria).all()}
+    esempi = [
+        ("Barca", date(2025, 6, 5), "08:00-10:00", ["Allievo A"]),
+        ("Corsa", date(2025, 6, 6), "10:00-11:00", ["Junior", "Senior"]),
+        ("Pesi", date(2025, 6, 7), "17:00-18:30", ["Master"]),
+    ]
+    allenatori = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .all()
+    )
+    for idx, (tipo, giorno, orario, cats) in enumerate(esempi):
+        a = models.Allenamento(tipo=tipo, data=giorno, orario=orario)
+        for nome in cats:
+            cat = categorie.get(nome)
+            if cat:
+                a.categories.append(cat)
+        if allenatori:
+            a.coaches.append(allenatori[idx % len(allenatori)])
+        db.add(a)
+    db.commit()
+
+
 def main():
     logger.info("Avvio script di seeding completo...")
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
@@ -249,6 +297,8 @@ def main():
 
         # Popola Categorie
         seed_categories(db)
+        seed_turni(db)
+        seed_default_allenamenti(db)
 
         # Crea Utente Admin
         if not db.query(models.User).filter(models.User.username == "gabriele").first():

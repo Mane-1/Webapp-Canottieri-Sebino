@@ -5,9 +5,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">{{ page_title }}</h2>
-    {% if current_user.is_admin or current_user.is_allenatore %}
-    <a href="/allenamenti/nuovo" class="btn btn-primary">+ Aggiungi Allenamento</a>
-    {% endif %}
+    <div class="d-flex gap-2">
+        <a href="/calendario" class="btn btn-outline-secondary">Vai al Calendario</a>
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <a href="/allenamenti/nuovo" class="btn btn-primary">+ Aggiungi Allenamento</a>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Filtri -->
@@ -15,7 +18,7 @@
     <form method="GET" id="filterForm">
         <input type="hidden" name="filter" value="{{ current_filters.get('filter', 'future') }}" id="timeFilterInput">
         <div class="row g-3 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="category" class="form-label">Categoria</label>
                 <select class="form-select" id="category" name="category">
                     <option value="">Tutte le Categorie</option>
@@ -24,7 +27,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="tipo" class="form-label">Tipo Allenamento</label>
                 <select class="form-select" id="tipo" name="tipo">
                     <option value="">Tutti i Tipi</option>
@@ -33,7 +36,20 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4 d-flex gap-2">
+            <div class="col-md-3">
+                <label for="coach_id" class="form-label">Allenatore</label>
+                <select class="form-select" id="coach_id" name="coach_id">
+                    <option value="">Tutti</option>
+                    {% for coach in all_coaches %}
+                        <option value="{{ coach.id }}" {% if current_filters.coach_id == coach.id %}selected{% endif %}>{{ coach.first_name }} {{ coach.last_name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="unassigned" name="unassigned" value="true" {% if current_filters.unassigned %}checked{% endif %}>
+                    <label class="form-check-label" for="unassigned">Allenamenti scoperti</label>
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100">Filtra</button>
                 <a href="/allenamenti" class="btn btn-outline-secondary">Resetta</a>
             </div>
@@ -58,7 +74,9 @@
                 <th scope="col">Descrizione</th>
                 <th scope="col" style="width: 15%;">Data</th>
                 <th scope="col" style="width: 15%;">Orario</th>
+                {% if current_user.is_admin or current_user.is_allenatore %}
                 <th scope="col" class="text-end" style="width: 15%;">Azioni</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
@@ -74,15 +92,16 @@
                         data-description="{{ allenamento.descrizione or 'Nessuna descrizione.' }}"
                         data-recurrence-id="{{ allenamento.recurrence_id or '' }}"
                         data-is-recurrent="{{ 'Sì' if allenamento.recurrence_id else 'No' }}"
-                        data-categories="{{ allenamento.categories|map(attribute='nome')|join(', ') if allenamento.categories else 'Nessuna' }}">
+                        data-categories="{{ allenamento.categories|map(attribute='nome')|join(', ') if allenamento.categories else 'Nessuna' }}"
+                        data-coaches="{% for c in allenamento.coaches %}{{ c.first_name }} {{ c.last_name }}{% if not loop.last %}, {% endif %}{% endfor %}">
 
                         <td>
-                            <span class="allenamento-type-indicator" style="background-color: {{ get_color_for_type(allenamento.tipo) }}"></span>
-                            <span class="fw-bold">{{ allenamento.tipo }}</span>
+                            <span class="badge text-white allenamento-type-badge" style="background-color: {{ get_color_for_type(allenamento.tipo) }}">{{ allenamento.tipo }}</span>
                         </td>
                         <td class="text-muted">{{ allenamento.descrizione or '–' }}</td>
                         <td>{{ allenamento.data.strftime('%d-%m-%Y') }}</td>
                         <td>{{ allenamento.orario }}</td>
+                        {% if current_user.is_admin or current_user.is_allenatore %}
                         <td class="text-end">
                             <div class="allenamento-actions">
                                 <a href="/allenamenti/{{ allenamento.id }}/modifica" class="btn btn-sm btn-outline-primary me-2">Modifica</a>
@@ -95,6 +114,7 @@
                                 </button>
                             </div>
                         </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
             {% else %}
@@ -132,6 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const modalDescription = document.getElementById('modalDescription');
         const modalCategories = document.getElementById('modalCategories');
         const modalRecurrence = document.getElementById('modalRecurrence');
+        const modalCoaches = document.getElementById('modalCoaches');
         const modalEditButton = document.getElementById('modalEditButton');
         const modalDeleteButton = document.getElementById('modalDeleteButton');
 
@@ -149,10 +170,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 modalDescription.textContent = data.description;
                 modalCategories.textContent = data.categories;
                 modalRecurrence.textContent = data.isRecurrent;
+                modalCoaches.textContent = data.coaches || 'Nessuno';
 
-                modalEditButton.href = `/allenamenti/${data.id}/modifica`;
-                modalDeleteButton.setAttribute('data-allenamento-id', data.id);
-                modalDeleteButton.setAttribute('data-recurrence-id', data.recurrenceId);
+                if (modalEditButton) modalEditButton.href = `/allenamenti/${data.id}/modifica`;
+                if (modalDeleteButton) {
+                    modalDeleteButton.setAttribute('data-allenamento-id', data.id);
+                    modalDeleteButton.setAttribute('data-recurrence-id', data.recurrenceId);
+                }
 
                 eventDetailModal.show();
             });

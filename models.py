@@ -34,6 +34,12 @@ user_tags = Table(
     Column('tag_id', Integer, ForeignKey('tags.id'), primary_key=True)
 )
 
+allenamento_coach_association = Table(
+    'allenamento_coach_association', Base.metadata,
+    Column('allenamento_id', Integer, ForeignKey('allenamenti.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
+
 
 # --- MODELLI DELLE TABELLE PRINCIPALI ---
 
@@ -72,6 +78,7 @@ class User(Base):
     barche_assegnate = relationship("Barca", secondary=barca_atleti_association, back_populates="atleti_assegnati")
     schede_pesi = relationship("SchedaPesi", back_populates="atleta")
     turni = relationship("Turno", back_populates="user")
+    allenamenti_seguiti = relationship("Allenamento", secondary=allenamento_coach_association, back_populates="coaches")
 
     @property
     def age(self) -> int:
@@ -95,6 +102,10 @@ class User(Base):
     @property
     def is_atleta(self) -> bool:
         return any(role.name == "atleta" for role in self.roles)
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
 
     @property
     def _category_obj(self) -> Categoria | None:
@@ -208,6 +219,9 @@ class Allenamento(Base):
     recurrence_id = Column(String, index=True, nullable=True)
     categories = relationship(
         "Categoria", secondary=allenamento_categoria_association, back_populates="allenamenti"
+    )
+    coaches = relationship(
+        "User", secondary=allenamento_coach_association, back_populates="allenamenti_seguiti"
     )
 
 
