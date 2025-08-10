@@ -11,6 +11,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.middleware.sessions import SessionMiddleware
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+import logging
 
 # Importa i moduli del progetto
 import models
@@ -102,3 +106,12 @@ async def manifest():
 @app.get('/sw.js')
 async def service_worker():
     return FileResponse('static/sw.js', media_type='application/javascript')
+
+@app.exception_handler(500)
+async def internal_server_error(request: Request, exc: Exception):
+    logging.error(f"Errore 500: {exc}", exc_info=True)
+    return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}

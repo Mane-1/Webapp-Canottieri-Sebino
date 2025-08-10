@@ -73,7 +73,7 @@ async def list_allenamenti(
     filter: str = Query("future"),
     category: Optional[str] = Query(None),
     tipo: Optional[str] = Query(None),
-    coach_id: Optional[int] = Query(None),
+    coach_id: Optional[str] = Query(None),
     unassigned: bool = Query(False),
 ):
     today = date.today()
@@ -97,8 +97,9 @@ async def list_allenamenti(
         )
     if tipo:
         query = query.filter(models.Allenamento.tipo == tipo)
-    if coach_id:
-        query = query.join(models.Allenamento.coaches).filter(models.User.id == coach_id)
+    coach_id_int = int(coach_id) if coach_id else None
+    if coach_id_int is not None:
+        query = query.join(models.Allenamento.coaches).filter(models.User.id == coach_id_int)
     elif unassigned:
         query = query.outerjoin(models.Allenamento.coaches).filter(models.User.id == None)
     all_categories = [c.nome for c in db.query(models.Categoria).order_by(models.Categoria.nome).all()]
@@ -124,7 +125,7 @@ async def list_allenamenti(
                 "filter": filter,
                 "category": category,
                 "tipo": tipo,
-                "coach_id": coach_id,
+                "coach_id": coach_id_int,
                 "unassigned": unassigned,
             },
         },
