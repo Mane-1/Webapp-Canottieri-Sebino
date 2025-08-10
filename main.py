@@ -18,7 +18,7 @@ import security
 from database import engine, Base, SessionLocal
 from utils import get_color_for_type
 from routers import authentication, users, trainings, resources, admin
-from seed import seed_categories
+from seed import seed_categories, seed_turni, seed_default_allenamenti
 
 # Configurazione del logging
 logging.basicConfig(level=logging.INFO)
@@ -62,6 +62,8 @@ def on_startup():
 
         # Popola la tabella delle categorie se è vuota
         seed_categories(db)
+        seed_turni(db)
+        seed_default_allenamenti(db)
 
         if not db.query(models.User).filter(models.User.username == "gabriele").first():
             logger.info("Creazione utente admin...")

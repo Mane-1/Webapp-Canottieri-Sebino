@@ -71,6 +71,26 @@ async def dashboard(
                 }
             )
 
+        allenamenti_coach = (
+            db.query(models.Allenamento)
+            .join(models.Allenamento.coaches)
+            .filter(models.User.id == current_user.id, models.Allenamento.data >= today)
+            .order_by(models.Allenamento.data, models.Allenamento.orario)
+            .all()
+        )
+        for a in allenamenti_coach:
+            start_dt, end_dt = parse_orario(a.data, a.orario)
+            events.append(
+                {
+                    "type": "allenamento",
+                    "title": f"{a.tipo} - {a.descrizione}" if a.descrizione else a.tipo,
+                    "date": a.data,
+                    "start": start_dt,
+                    "end": end_dt,
+                    "color": get_color_for_type(a.tipo),
+                }
+            )
+
     events.sort(key=lambda e: e["start"])
     events = events[:5]
 

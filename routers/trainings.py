@@ -24,6 +24,7 @@ CATEGORY_GROUPS: Dict[str, List[str]] = {
 
 router = APIRouter(tags=["Allenamenti e Calendario"])
 templates = Jinja2Templates(directory="templates")
+templates.env.globals['get_color_for_type'] = get_color_for_type
 
 
 def _group_categories(db: Session) -> Dict[str, List[str]]:
@@ -39,10 +40,32 @@ def _group_categories(db: Session) -> Dict[str, List[str]]:
 
 
 @router.get("/calendario", response_class=HTMLResponse)
-async def view_calendar(request: Request, current_user: models.User = Depends(get_current_user)):
-    return templates.TemplateResponse("allenamenti/calendario.html", {"request": request, "current_user": current_user})
+async def view_calendar(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    all_categories = [c.nome for c in db.query(models.Categoria).order_by(models.Categoria.nome)]
+    all_types = [t[0] for t in db.query(models.Allenamento.tipo).distinct().order_by(models.Allenamento.tipo)]
+    all_coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .order_by(models.User.first_name, models.User.last_name)
+        .all()
+    )
+    return templates.TemplateResponse(
+        "allenamenti/calendario.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "all_categories": all_categories,
+            "all_types": all_types,
+            "all_coaches": all_coaches,
+        },
+    )
 
-@router.get("/allenamenti", response_class=HTMLResponse)
+@router.get("/allenamenti", response_class=HTMLResponse, name="list_allenamenti")
 async def list_allenamenti(
     request: Request,
     db: Session = Depends(get_db),
@@ -50,10 +73,13 @@ async def list_allenamenti(
     filter: str = Query("future"),
     category: Optional[str] = Query(None),
     tipo: Optional[str] = Query(None),
+    coach_id: Optional[int] = Query(None),
+    unassigned: bool = Query(False),
 ):
     today = date.today()
     query = db.query(models.Allenamento).options(
         joinedload(models.Allenamento.categories),
+        joinedload(models.Allenamento.coaches),
     )
     if filter == "future":
         page_title, query = "Prossimi Allenamenti", query.filter(models.Allenamento.data >= today).order_by(models.Allenamento.data.asc(), models.Allenamento.orario.asc())
@@ -71,8 +97,19 @@ async def list_allenamenti(
         )
     if tipo:
         query = query.filter(models.Allenamento.tipo == tipo)
+    if coach_id:
+        query = query.join(models.Allenamento.coaches).filter(models.User.id == coach_id)
+    elif unassigned:
+        query = query.outerjoin(models.Allenamento.coaches).filter(models.User.id == None)
     all_categories = [c.nome for c in db.query(models.Categoria).order_by(models.Categoria.nome).all()]
     all_types = [t[0] for t in db.query(models.Allenamento.tipo).distinct().all()]
+    all_coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .order_by(models.User.first_name, models.User.last_name)
+        .all()
+    )
     return templates.TemplateResponse(
         "allenamenti/allenamenti_list.html",
         {
@@ -82,10 +119,13 @@ async def list_allenamenti(
             "page_title": page_title,
             "all_categories": all_categories,
             "all_types": all_types,
+            "all_coaches": all_coaches,
             "current_filters": {
                 "filter": filter,
                 "category": category,
                 "tipo": tipo,
+                "coach_id": coach_id,
+                "unassigned": unassigned,
             },
         },
     )
@@ -97,6 +137,13 @@ async def nuovo_allenamento_form(
     staff_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
     grouped_categories = _group_categories(db)
+    available_coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .order_by(models.User.first_name, models.User.last_name)
+        .all()
+    )
     return templates.TemplateResponse(
         "allenamenti/crea_allenamento.html",
         {
@@ -104,6 +151,8 @@ async def nuovo_allenamento_form(
             "current_user": staff_user,
             "grouped_categories": grouped_categories,
             "selected_category_names": [],
+            "available_coaches": available_coaches,
+            "selected_coach_ids": [],
         },
     )
 
@@ -116,13 +165,41 @@ async def crea_allenamento(
     descrizione: Optional[str] = Form(None),
     data: date = Form(...),
     orario: str = Form(...),
-    orario_personalizzato: Optional[str] = Form(None),
+    orario_start: Optional[str] = Form(None),
+    orario_end: Optional[str] = Form(None),
     is_recurring: Optional[str] = Form(None),
     giorni: Optional[List[str]] = Form(None),
     recurrence_count: Optional[int] = Form(None),
+    recurrence_end_date: Optional[date] = Form(None),
+    coach_ids: List[int] = Form([]),
     category_names: List[str] = Form([]),
 ):
-    final_orario = orario_personalizzato if orario == "personalizzato" else orario
+    if orario == "personalizzato":
+        if not orario_start or not orario_end:
+            grouped_categories = _group_categories(db)
+            available_coaches = (
+                db.query(models.User)
+                .join(models.User.roles)
+                .filter(models.Role.name == "allenatore")
+                .order_by(models.User.first_name, models.User.last_name)
+                .all()
+            )
+            return templates.TemplateResponse(
+                "allenamenti/crea_allenamento.html",
+                {
+                    "request": request,
+                    "current_user": staff_user,
+                    "grouped_categories": grouped_categories,
+                    "selected_category_names": category_names,
+                    "available_coaches": available_coaches,
+                    "selected_coach_ids": coach_ids,
+                    "error_message": "Specifica un orario di inizio e fine valido.",
+                },
+                status_code=400,
+            )
+        final_orario = f"{orario_start}-{orario_end}"
+    else:
+        final_orario = orario
     categories = (
         db.query(models.Categoria).filter(models.Categoria.nome.in_(category_names)).all()
         if category_names
@@ -141,9 +218,23 @@ async def crea_allenamento(
             },
             status_code=400,
         )
-    if is_recurring == "true":
-        if not giorni or not recurrence_count or recurrence_count <= 0:
+    coaches = []
+    if coach_ids:
+        coaches = (
+            db.query(models.User)
+            .join(models.User.roles)
+            .filter(models.Role.name == "allenatore", models.User.id.in_(coach_ids))
+            .all()
+        )
+        if len(coaches) != len(coach_ids) or len(coach_ids) > 3:
             grouped_categories = _group_categories(db)
+            available_coaches = (
+                db.query(models.User)
+                .join(models.User.roles)
+                .filter(models.Role.name == "allenatore")
+                .order_by(models.User.first_name, models.User.last_name)
+                .all()
+            )
             return templates.TemplateResponse(
                 "allenamenti/crea_allenamento.html",
                 {
@@ -151,7 +242,33 @@ async def crea_allenamento(
                     "current_user": staff_user,
                     "grouped_categories": grouped_categories,
                     "selected_category_names": category_names,
-                    "error_message": "Per la ricorrenza, selezionare i giorni e un numero di occorrenze valido.",
+                    "available_coaches": available_coaches,
+                    "selected_coach_ids": coach_ids,
+                    "error_message": "Seleziona fino a tre allenatori validi.",
+                },
+                status_code=400,
+            )
+
+    if is_recurring == "true":
+        if not giorni or (not recurrence_count and not recurrence_end_date):
+            grouped_categories = _group_categories(db)
+            available_coaches = (
+                db.query(models.User)
+                .join(models.User.roles)
+                .filter(models.Role.name == "allenatore")
+                .order_by(models.User.first_name, models.User.last_name)
+                .all()
+            )
+            return templates.TemplateResponse(
+                "allenamenti/crea_allenamento.html",
+                {
+                    "request": request,
+                    "current_user": staff_user,
+                    "grouped_categories": grouped_categories,
+                    "selected_category_names": category_names,
+                    "available_coaches": available_coaches,
+                    "selected_coach_ids": coach_ids,
+                    "error_message": "Per la ricorrenza, selezionare i giorni e un numero di occorrenze o una data di fine.",
                 },
                 status_code=400,
             )
@@ -159,7 +276,15 @@ async def crea_allenamento(
         start_dt, end_dt = parse_orario(data, final_orario)
         duration = end_dt - start_dt
         rec_id = str(uuid.uuid4())
-        rule = rrule(WEEKLY, dtstart=start_dt, byweekday=byweekday, count=recurrence_count)
+        rule_kwargs = {
+            "dtstart": start_dt,
+            "byweekday": byweekday,
+        }
+        if recurrence_end_date:
+            rule_kwargs["until"] = datetime.combine(recurrence_end_date, start_dt.time())
+        else:
+            rule_kwargs["count"] = recurrence_count
+        rule = rrule(WEEKLY, **rule_kwargs)
         for occ_dt in rule:
             new_a = models.Allenamento(
                 tipo=tipo,
@@ -169,6 +294,7 @@ async def crea_allenamento(
                 recurrence_id=rec_id,
             )
             new_a.categories.extend(categories)
+            new_a.coaches.extend(coaches)
             db.add(new_a)
     else:
         new_a = models.Allenamento(
@@ -178,6 +304,7 @@ async def crea_allenamento(
             orario=final_orario,
         )
         new_a.categories.extend(categories)
+        new_a.coaches.extend(coaches)
         db.add(new_a)
     db.commit()
     return RedirectResponse(url="/calendario", status_code=status.HTTP_303_SEE_OTHER)
@@ -189,11 +316,22 @@ async def modifica_allenamento_form(
     db: Session = Depends(get_db),
     staff_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    allenamento = db.query(models.Allenamento).options(joinedload(models.Allenamento.categories)).get(id)
+    allenamento = db.query(models.Allenamento).options(
+        joinedload(models.Allenamento.categories),
+        joinedload(models.Allenamento.coaches),
+    ).get(id)
     if not allenamento:
         raise HTTPException(status_code=404, detail="Allenamento non trovato")
     grouped_categories = _group_categories(db)
+    available_coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .order_by(models.User.first_name, models.User.last_name)
+        .all()
+    )
     selected_category_names = [c.nome for c in allenamento.categories]
+    selected_coach_ids = [c.id for c in allenamento.coaches]
     return templates.TemplateResponse(
         "allenamenti/modifica_allenamento.html",
         {
@@ -202,6 +340,8 @@ async def modifica_allenamento_form(
             "allenamento": allenamento,
             "grouped_categories": grouped_categories,
             "selected_category_names": selected_category_names,
+            "available_coaches": available_coaches,
+            "selected_coach_ids": selected_coach_ids,
         },
     )
 
@@ -215,8 +355,10 @@ async def aggiorna_allenamento(
     descrizione: Optional[str] = Form(None),
     data: date = Form(...),
     orario: str = Form(...),
-    orario_personalizzato: Optional[str] = Form(None),
+    orario_start: Optional[str] = Form(None),
+    orario_end: Optional[str] = Form(None),
     category_names: List[str] = Form([]),
+    coach_ids: List[int] = Form([]),
 ):
     allenamento = db.query(models.Allenamento).get(id)
     if not allenamento:
@@ -240,11 +382,72 @@ async def aggiorna_allenamento(
             },
             status_code=400,
         )
+    if orario == "personalizzato":
+        if not orario_start or not orario_end:
+            grouped_categories = _group_categories(db)
+            available_coaches = (
+                db.query(models.User)
+                .join(models.User.roles)
+                .filter(models.Role.name == "allenatore")
+                .order_by(models.User.first_name, models.User.last_name)
+                .all()
+            )
+            return templates.TemplateResponse(
+                "allenamenti/modifica_allenamento.html",
+                {
+                    "request": request,
+                    "current_user": staff_user,
+                    "allenamento": allenamento,
+                    "grouped_categories": grouped_categories,
+                    "selected_category_names": category_names,
+                    "available_coaches": available_coaches,
+                    "selected_coach_ids": coach_ids,
+                    "error_message": "Specifica un orario di inizio e fine valido.",
+                },
+                status_code=400,
+            )
+        final_orario = f"{orario_start}-{orario_end}"
+    else:
+        final_orario = orario
+
+    coaches = []
+    if coach_ids:
+        coaches = (
+            db.query(models.User)
+            .join(models.User.roles)
+            .filter(models.Role.name == "allenatore", models.User.id.in_(coach_ids))
+            .all()
+        )
+        if len(coaches) != len(coach_ids) or len(coach_ids) > 3:
+            grouped_categories = _group_categories(db)
+            available_coaches = (
+                db.query(models.User)
+                .join(models.User.roles)
+                .filter(models.Role.name == "allenatore")
+                .order_by(models.User.first_name, models.User.last_name)
+                .all()
+            )
+            return templates.TemplateResponse(
+                "allenamenti/modifica_allenamento.html",
+                {
+                    "request": request,
+                    "current_user": staff_user,
+                    "allenamento": allenamento,
+                    "grouped_categories": grouped_categories,
+                    "selected_category_names": category_names,
+                    "available_coaches": available_coaches,
+                    "selected_coach_ids": coach_ids,
+                    "error_message": "Seleziona fino a tre allenatori validi.",
+                },
+                status_code=400,
+            )
+
     allenamento.tipo = tipo
     allenamento.descrizione = descrizione
     allenamento.data = data
-    allenamento.orario = orario_personalizzato if orario == "personalizzato" else orario
+    allenamento.orario = final_orario
     allenamento.categories = categories
+    allenamento.coaches = coaches
     db.commit()
     return RedirectResponse(url="/calendario", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -303,9 +506,12 @@ async def get_allenamenti_api(
     type_filter: List[str] = Query([]),
     category_filter: List[str] = Query([]),
     user_category: Optional[str] = None,
+    coach_filter: List[int] = Query([]),
+    unassigned: bool = Query(False),
 ):
     query = db.query(models.Allenamento).options(
         joinedload(models.Allenamento.categories),
+        joinedload(models.Allenamento.coaches),
     )
 
     if user_category or category_filter:
@@ -316,17 +522,23 @@ async def get_allenamenti_api(
         query = query.filter(models.Categoria.nome == user_category)
     if type_filter:
         query = query.filter(models.Allenamento.tipo.in_(type_filter))
+    if coach_filter:
+        query = query.join(models.Allenamento.coaches).filter(models.User.id.in_(coach_filter))
+    elif unassigned:
+        query = query.outerjoin(models.Allenamento.coaches).filter(models.User.id == None)
 
     events = []
     for a in query.distinct().all():
         start_dt, end_dt = parse_orario(a.data, a.orario)
         categories = ", ".join([c.nome for c in a.categories]) or "Nessuno"
+        coaches = ", ".join([f"{c.first_name} {c.last_name}" for c in a.coaches]) or "Nessuno"
         events.append(
             {
                 "id": a.id,
                 "title": f"{a.tipo} - {a.descrizione}" if a.descrizione else a.tipo,
                 "start": start_dt.isoformat(),
                 "end": end_dt.isoformat(),
+                "allDay": False,
                 "backgroundColor": get_color_for_type(a.tipo),
                 "borderColor": get_color_for_type(a.tipo),
                 "extendedProps": {
@@ -335,6 +547,7 @@ async def get_allenamenti_api(
                     "recurrence_id": a.recurrence_id,
                     "categories": categories,
                     "is_recurrent": "Sì" if a.recurrence_id else "No",
+                    "coaches": coaches,
                 },
             }
         )

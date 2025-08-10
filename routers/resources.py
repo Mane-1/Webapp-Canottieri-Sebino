@@ -63,48 +63,133 @@ async def nuova_barca_form(request: Request, db: Session = Depends(get_db),
 
 
 @router.post("/barche/nuova", response_class=RedirectResponse)
-async def crea_barca(request: Request, db: Session = Depends(get_db),
-                     admin_user: models.User = Depends(get_current_admin_user),
-                     nome: str = Form(...), tipo: str = Form(...), costruttore: Optional[str] = Form(None),
-                     anno_str: Optional[str] = Form(None),
-                     remi_assegnati: Optional[str] = Form(None), atleti_ids: List[int] = Form([]),
-                     in_manutenzione: bool = Form(False), fuori_uso: bool = Form(False),
-                     in_prestito: bool = Form(False), in_trasferta: bool = Form(False),
-                     disponibile_dal_str: Optional[str] = Form(None),
-                     lunghezza_puntapiedi: Optional[float] = Form(None), altezza_puntapiedi: Optional[float] = Form(None),
-                     apertura_totale: Optional[float] = Form(None), altezza_scalmo_sx: Optional[float] = Form(None),
-                     altezza_scalmo_dx: Optional[float] = Form(None), semiapertura_sx: Optional[float] = Form(None),
-                     semiapertura_dx: Optional[float] = Form(None), appruamento_appoppamento: Optional[float] = Form(None),
-                     gradi_attacco: Optional[float] = Form(None), gradi_finale: Optional[float] = Form(None),
-                     boccola_sx_sopra: Optional[str] = Form(None), boccola_dx_sopra: Optional[str] = Form(None),
-                     rondelle_sx: Optional[str] = Form(None), rondelle_dx: Optional[str] = Form(None),
-                     altezza_carrello: Optional[float] = Form(None), avanzamento_guide: Optional[float] = Form(None)):
+async def crea_barca(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    nome: str = Form(...),
+    tipo: str = Form(...),
+    costruttore: str = Form(...),
+    anno_str: str = Form(...),
+    remi_assegnati: Optional[str] = Form(None),
+    atleti_ids: List[int] = Form([]),
+    in_manutenzione: bool = Form(False),
+    fuori_uso: bool = Form(False),
+    in_prestito: bool = Form(False),
+    in_trasferta: bool = Form(False),
+    disponibile_dal_str: Optional[str] = Form(None),
+    lunghezza_puntapiedi: Optional[str] = Form(None),
+    altezza_puntapiedi: Optional[str] = Form(None),
+    apertura_totale: Optional[str] = Form(None),
+    altezza_scalmo_sx: Optional[str] = Form(None),
+    altezza_scalmo_dx: Optional[str] = Form(None),
+    semiapertura_sx: Optional[str] = Form(None),
+    semiapertura_dx: Optional[str] = Form(None),
+    appruamento_appoppamento: Optional[str] = Form(None),
+    gradi_attacco: Optional[str] = Form(None),
+    gradi_finale: Optional[str] = Form(None),
+    boccola_sx_sopra: Optional[str] = Form(None),
+    boccola_dx_sopra: Optional[str] = Form(None),
+    rondelle_sx: Optional[str] = Form(None),
+    rondelle_dx: Optional[str] = Form(None),
+    altezza_carrello: Optional[str] = Form(None),
+    avanzamento_guide: Optional[str] = Form(None),
+):
     if (in_manutenzione or fuori_uso) and (in_prestito or in_trasferta):
         atleti, categorie = get_atleti_e_categorie(db)
-        return templates.TemplateResponse("barche/crea_barca.html", {
-            "request": request, "current_user": admin_user, "atleti": atleti, "categorie": categorie, "barca": {},
-            "assigned_atleta_ids": [],
-            "error_message": "Stato imbarcazione non valido."
-        }, status_code=400)
+        return templates.TemplateResponse(
+            "barche/crea_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "atleti": atleti,
+                "categorie": categorie,
+                "barca": {},
+                "assigned_atleta_ids": [],
+                "error_message": "Stato imbarcazione non valido.",
+            },
+            status_code=400,
+        )
 
-    anno = int(anno_str) if anno_str and anno_str.strip() else None
-    disponibile_dal = date.fromisoformat(disponibile_dal_str) if disponibile_dal_str and disponibile_dal_str.strip() else None
+    if not (nome.strip() and tipo.strip() and costruttore.strip() and anno_str.strip()):
+        atleti, categorie = get_atleti_e_categorie(db)
+        return templates.TemplateResponse(
+            "barche/crea_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "atleti": atleti,
+                "categorie": categorie,
+                "barca": {},
+                "assigned_atleta_ids": [],
+                "error_message": "Nome, tipo, costruttore e anno sono obbligatori.",
+            },
+            status_code=400,
+        )
+
+    def to_float(value: Optional[str]) -> Optional[float]:
+        try:
+            return float(value) if value and value.strip() else None
+        except ValueError:
+            return None
+
+    try:
+        anno = int(anno_str)
+    except ValueError:
+        atleti, categorie = get_atleti_e_categorie(db)
+        return templates.TemplateResponse(
+            "barche/crea_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "atleti": atleti,
+                "categorie": categorie,
+                "barca": {},
+                "assigned_atleta_ids": [],
+                "error_message": "Anno non valido.",
+            },
+            status_code=400,
+        )
+
+    disponibile_dal = (
+        date.fromisoformat(disponibile_dal_str)
+        if disponibile_dal_str and disponibile_dal_str.strip()
+        else None
+    )
 
     nuova_barca = models.Barca(
-        nome=nome, tipo=tipo, costruttore=costruttore, anno=anno, remi_assegnati=remi_assegnati,
+        nome=nome,
+        tipo=tipo,
+        costruttore=costruttore,
+        anno=anno,
+        remi_assegnati=remi_assegnati,
         atleti_assegnati=db.query(models.User).filter(models.User.id.in_(atleti_ids)).all(),
-        in_manutenzione=in_manutenzione, fuori_uso=fuori_uso, in_prestito=in_prestito, in_trasferta=in_trasferta,
+        in_manutenzione=in_manutenzione,
+        fuori_uso=fuori_uso,
+        in_prestito=in_prestito,
+        in_trasferta=in_trasferta,
         disponibile_dal=disponibile_dal,
-        lunghezza_puntapiedi=lunghezza_puntapiedi, altezza_puntapiedi=altezza_puntapiedi,
-        apertura_totale=apertura_totale, altezza_scalmo_sx=altezza_scalmo_sx, altezza_scalmo_dx=altezza_scalmo_dx,
-        semiapertura_sx=semiapertura_sx, semiapertura_dx=semiapertura_dx,
-        appruamento_appoppamento=appruamento_appoppamento, gradi_attacco=gradi_attacco, gradi_finale=gradi_finale,
-        boccola_sx_sopra=boccola_sx_sopra, boccola_dx_sopra=boccola_dx_sopra, rondelle_sx=rondelle_sx,
-        rondelle_dx=rondelle_dx, altezza_carrello=altezza_carrello, avanzamento_guide=avanzamento_guide
+        lunghezza_puntapiedi=to_float(lunghezza_puntapiedi),
+        altezza_puntapiedi=to_float(altezza_puntapiedi),
+        apertura_totale=to_float(apertura_totale),
+        altezza_scalmo_sx=to_float(altezza_scalmo_sx),
+        altezza_scalmo_dx=to_float(altezza_scalmo_dx),
+        semiapertura_sx=to_float(semiapertura_sx),
+        semiapertura_dx=to_float(semiapertura_dx),
+        appruamento_appoppamento=to_float(appruamento_appoppamento),
+        gradi_attacco=to_float(gradi_attacco),
+        gradi_finale=to_float(gradi_finale),
+        boccola_sx_sopra=boccola_sx_sopra,
+        boccola_dx_sopra=boccola_dx_sopra,
+        rondelle_sx=rondelle_sx,
+        rondelle_dx=rondelle_dx,
+        altezza_carrello=to_float(altezza_carrello),
+        avanzamento_guide=to_float(avanzamento_guide),
     )
     db.add(nuova_barca)
     db.commit()
     return RedirectResponse(url="/risorse/barche", status_code=status.HTTP_303_SEE_OTHER)
+
 
 
 @router.get("/barche/{barca_id}/modifica", response_class=HTMLResponse, name="modifica_barca_form")
@@ -121,56 +206,131 @@ async def modifica_barca_form(barca_id: int, request: Request, db: Session = Dep
 
 
 @router.post("/barche/{barca_id}/modifica", response_class=RedirectResponse)
-async def aggiorna_barca(request: Request, barca_id: int, db: Session = Depends(get_db),
-                         admin_user: models.User = Depends(get_current_admin_user),
-                         nome: str = Form(...), tipo: str = Form(...), costruttore: Optional[str] = Form(None),
-                         anno_str: Optional[str] = Form(None),
-                         remi_assegnati: Optional[str] = Form(None), atleti_ids: List[int] = Form([]),
-                         in_manutenzione: bool = Form(False), fuori_uso: bool = Form(False),
-                         in_prestito: bool = Form(False), in_trasferta: bool = Form(False),
-                         disponibile_dal_str: Optional[str] = Form(None),
-                         lunghezza_puntapiedi: Optional[float] = Form(None), altezza_puntapiedi: Optional[float] = Form(None),
-                         apertura_totale: Optional[float] = Form(None), altezza_scalmo_sx: Optional[float] = Form(None),
-                         altezza_scalmo_dx: Optional[float] = Form(None), semiapertura_sx: Optional[float] = Form(None),
-                         semiapertura_dx: Optional[float] = Form(None),
-                         appruamento_appoppamento: Optional[float] = Form(None),
-                         gradi_attacco: Optional[float] = Form(None), gradi_finale: Optional[float] = Form(None),
-                         boccola_sx_sopra: Optional[str] = Form(None), boccola_dx_sopra: Optional[str] = Form(None),
-                         rondelle_sx: Optional[str] = Form(None), rondelle_dx: Optional[str] = Form(None),
-                         altezza_carrello: Optional[float] = Form(None), avanzamento_guide: Optional[float] = Form(None)):
+async def aggiorna_barca(
+    request: Request,
+    barca_id: int,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    nome: str = Form(...),
+    tipo: str = Form(...),
+    costruttore: str = Form(...),
+    anno_str: str = Form(...),
+    remi_assegnati: Optional[str] = Form(None),
+    atleti_ids: List[int] = Form([]),
+    in_manutenzione: bool = Form(False),
+    fuori_uso: bool = Form(False),
+    in_prestito: bool = Form(False),
+    in_trasferta: bool = Form(False),
+    disponibile_dal_str: Optional[str] = Form(None),
+      lunghezza_puntapiedi: Optional[str] = Form(None),
+      altezza_puntapiedi: Optional[str] = Form(None),
+      apertura_totale: Optional[str] = Form(None),
+      altezza_scalmo_sx: Optional[str] = Form(None),
+      altezza_scalmo_dx: Optional[str] = Form(None),
+      semiapertura_sx: Optional[str] = Form(None),
+      semiapertura_dx: Optional[str] = Form(None),
+      appruamento_appoppamento: Optional[str] = Form(None),
+      gradi_attacco: Optional[str] = Form(None),
+      gradi_finale: Optional[str] = Form(None),
+      boccola_sx_sopra: Optional[str] = Form(None),
+      boccola_dx_sopra: Optional[str] = Form(None),
+      rondelle_sx: Optional[str] = Form(None),
+      rondelle_dx: Optional[str] = Form(None),
+      altezza_carrello: Optional[str] = Form(None),
+      avanzamento_guide: Optional[str] = Form(None),
+):
     barca = db.query(models.Barca).get(barca_id)
-    if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
+    if not barca:
+        raise HTTPException(status_code=404, detail="Barca non trovata")
 
     if (in_manutenzione or fuori_uso) and (in_prestito or in_trasferta):
         atleti, categorie = get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
-        return templates.TemplateResponse("barche/modifica_barca.html", {
-            "request": request, "current_user": admin_user, "barca": barca, "atleti": atleti, "categorie": categorie,
-            "assigned_atleta_ids": assigned_atleta_ids,
-            "error_message": "Stato non valido: 'In manutenzione/Fuori uso' è incompatibile con 'In prestito/trasferta'."
-        }, status_code=400)
+        return templates.TemplateResponse(
+            "barche/modifica_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "barca": barca,
+                "atleti": atleti,
+                "categorie": categorie,
+                "assigned_atleta_ids": assigned_atleta_ids,
+                "error_message": "Stato non valido: 'In manutenzione/Fuori uso' è incompatibile con 'In prestito/trasferta'.",
+            },
+            status_code=400,
+        )
 
-    # Aggiornamento campi
+    if not (nome.strip() and tipo.strip() and costruttore.strip() and anno_str.strip()):
+        atleti, categorie = get_atleti_e_categorie(db)
+        assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
+        return templates.TemplateResponse(
+            "barche/modifica_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "barca": barca,
+                "atleti": atleti,
+                "categorie": categorie,
+                "assigned_atleta_ids": assigned_atleta_ids,
+                "error_message": "Nome, tipo, costruttore e anno sono obbligatori.",
+            },
+            status_code=400,
+        )
+
+    def to_float(value: Optional[str]) -> Optional[float]:
+        try:
+            return float(value) if value and value.strip() else None
+        except ValueError:
+            return None
+
+    try:
+        anno = int(anno_str)
+    except ValueError:
+        atleti, categorie = get_atleti_e_categorie(db)
+        assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
+        return templates.TemplateResponse(
+            "barche/modifica_barca.html",
+            {
+                "request": request,
+                "current_user": admin_user,
+                "barca": barca,
+                "atleti": atleti,
+                "categorie": categorie,
+                "assigned_atleta_ids": assigned_atleta_ids,
+                "error_message": "Anno non valido.",
+            },
+            status_code=400,
+        )
+
     barca.nome, barca.tipo, barca.costruttore = nome, tipo, costruttore
-    barca.anno = int(anno_str) if anno_str and anno_str.strip() else None
+    barca.anno = anno
     barca.remi_assegnati = remi_assegnati
     barca.atleti_assegnati = db.query(models.User).filter(models.User.id.in_(atleti_ids)).all()
-    barca.in_manutenzione, barca.fuori_uso, barca.in_prestito, barca.in_trasferta = in_manutenzione, fuori_uso, in_prestito, in_trasferta
-    barca.disponibile_dal = date.fromisoformat(disponibile_dal_str) if disponibile_dal_str and disponibile_dal_str.strip() else None
-    barca.lunghezza_puntapiedi = lunghezza_puntapiedi
-    barca.altezza_puntapiedi = altezza_puntapiedi
-    barca.apertura_totale = apertura_totale
-    barca.altezza_scalmo_sx = altezza_scalmo_sx
-    barca.altezza_scalmo_dx = altezza_scalmo_dx
-    barca.semiapertura_sx = semiapertura_sx
-    barca.semiapertura_dx = semiapertura_dx
-    barca.appruamento_appoppamento = appruamento_appoppamento
-    barca.gradi_attacco = gradi_attacco
-    barca.gradi_finale = gradi_finale
-    barca.boccola_sx_sopra, barca.boccola_dx_sopra = boccola_sx_sopra, boccola_dx_sopra
-    barca.rondelle_sx, barca.rondelle_dx = rondelle_sx, rondelle_dx
-    barca.altezza_carrello = altezza_carrello
-    barca.avanzamento_guide = avanzamento_guide
+    barca.in_manutenzione = in_manutenzione
+    barca.fuori_uso = fuori_uso
+    barca.in_prestito = in_prestito
+    barca.in_trasferta = in_trasferta
+    barca.disponibile_dal = (
+        date.fromisoformat(disponibile_dal_str)
+        if disponibile_dal_str and disponibile_dal_str.strip()
+        else None
+    )
+    barca.lunghezza_puntapiedi = to_float(lunghezza_puntapiedi)
+    barca.altezza_puntapiedi = to_float(altezza_puntapiedi)
+    barca.apertura_totale = to_float(apertura_totale)
+    barca.altezza_scalmo_sx = to_float(altezza_scalmo_sx)
+    barca.altezza_scalmo_dx = to_float(altezza_scalmo_dx)
+    barca.semiapertura_sx = to_float(semiapertura_sx)
+    barca.semiapertura_dx = to_float(semiapertura_dx)
+    barca.appruamento_appoppamento = to_float(appruamento_appoppamento)
+    barca.gradi_attacco = to_float(gradi_attacco)
+    barca.gradi_finale = to_float(gradi_finale)
+    barca.boccola_sx_sopra = boccola_sx_sopra
+    barca.boccola_dx_sopra = boccola_dx_sopra
+    barca.rondelle_sx = rondelle_sx
+    barca.rondelle_dx = rondelle_dx
+    barca.altezza_carrello = to_float(altezza_carrello)
+    barca.avanzamento_guide = to_float(avanzamento_guide)
 
     db.commit()
     return RedirectResponse(url="/risorse/barche", status_code=status.HTTP_303_SEE_OTHER)
