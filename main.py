@@ -6,10 +6,12 @@ import os
 import logging
 from datetime import date
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi import Request
 from fastapi.responses import HTMLResponse
@@ -25,8 +27,14 @@ from routers import authentication, users, trainings, resources, admin
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
 # Configurazione del logging
-logging.basicConfig(level=logging.INFO)
+LOG_LEVEL = logging.DEBUG if os.environ.get("ENV") == "test" else logging.INFO
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger(__name__)
+logging.getLogger("uvicorn.error").setLevel(LOG_LEVEL)
+logging.getLogger("uvicorn.access").setLevel(LOG_LEVEL)
 
 # Creazione dell'istanza FastAPI
 app = FastAPI(title="Gestionale Canottieri")
@@ -41,6 +49,26 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates.env.globals['get_color_for_type'] = get_color_for_type
 
 
+def is_api_request(request: Request) -> bool:
+    """Return ``True`` if the incoming request expects a JSON response."""
+    accept = request.headers.get("accept", "")
+    return "application/json" in accept or request.url.path.startswith("/api")
+
+
+def render(
+    request: Request,
+    template_name: str,
+    ctx: dict | None = None,
+    user=None,
+    status_code: int = 200,
+):
+    """Helper to render Jinja templates with a consistent context."""
+    context = {"request": request, "current_user": user}
+    if ctx:
+        context.update(ctx)
+    return templates.TemplateResponse(template_name, context, status_code=status_code)
+
+
 # Evento di startup dell'applicazione
 @app.on_event("startup")
 def on_startup():
@@ -50,8 +78,13 @@ def on_startup():
     2. Popola i dati essenziali (ruoli, utente admin) se il database è vuoto.
     """
     logger.info("Avvio dell'applicazione in corso...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Verifica tabelle completata.")
+    try:
+        # Verifica connessione al DB e crea le tabelle
+        Base.metadata.create_all(bind=engine)
+        logger.info("Verifica tabelle completata.")
+    except Exception as e:  # pragma: no cover - difficilmente simulabile
+        logger.error(f"Impossibile connettersi al database all'avvio: {e}")
+        return
 
     db = SessionLocal()
     try:
@@ -86,7 +119,9 @@ def on_startup():
             db.commit()
             logger.info("Utente admin 'gabriele' creato.")
     except Exception as e:
-        logger.error(f"Errore durante il popolamento dei dati di base all'avvio: {e}")
+        logger.warning(
+            f"Errore durante il popolamento dei dati di base all'avvio: {e}"
+        )
         db.rollback()
     finally:
         db.close()
@@ -98,6 +133,71 @@ app.include_router(users.router)
 app.include_router(trainings.router)
 app.include_router(resources.router)
 app.include_router(admin.router)
+
+
+@app.get("/health")
+@app.head("/health")
+async def health() -> dict:
+    """Semplice endpoint di health-check."""
+    return {"status": "ok"}
+
+
+@app.get("/__version__")
+async def version() -> dict:
+    return {"version": os.environ.get("GIT_COMMIT", "unknown")}
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == status.HTTP_404_NOT_FOUND:
+        if is_api_request(request):
+            return JSONResponse({"detail": "Not Found"}, status_code=exc.status_code)
+        return render(request, "errors/404.html", status_code=exc.status_code, ctx={})
+    if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+        if is_api_request(request):
+            return JSONResponse(
+                {"detail": exc.detail or "Service Unavailable"},
+                status_code=exc.status_code,
+            )
+        return render(request, "errors/503.html", status_code=exc.status_code, ctx={})
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    if is_api_request(request):
+        return JSONResponse(
+            {"detail": exc.errors()},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        )
+    return render(
+        request,
+        "errors/404.html",
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ctx={},
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled error", exc_info=exc)
+    if is_api_request(request):
+        return JSONResponse(
+            {"detail": "Internal Server Error"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+    try:
+        return render(
+            request,
+            "errors/500.html",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ctx={},
+        )
+    except Exception:
+        return PlainTextResponse(
+            "Internal Server Error",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 @app.get('/manifest.webmanifest')
 async def manifest():

@@ -11,3 +11,7 @@ python-multipart
 python-dateutil
 itsdangerous
 psycopg2-binary
+gunicorn
+pytest
+pytest-asyncio
+httpx
