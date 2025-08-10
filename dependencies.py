@@ -2,6 +2,8 @@
 # Descrizione: Contiene le dipendenze riutilizzabili per le route FastAPI,
 # in particolare per l'autenticazione e l'autorizzazione degli utenti.
 
+from typing import Optional
+
 from fastapi import Request, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
@@ -31,6 +33,28 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> m
             detail="Utente non trovato",
             headers={"Location": "/login"}
         )
+    return user
+
+
+async def get_optional_user(
+    request: Request, db: Session = Depends(get_db)
+) -> Optional[models.User]:
+    """Return the authenticated user if present, otherwise ``None``.
+
+    Non solleva eccezioni quando l'utente non è loggato, ma rimuove dalla
+    sessione eventuali riferimenti a utenti non più esistenti.
+    """
+    user_id = request.session.get("user_id")
+    if user_id is None:
+        return None
+    user = (
+        db.query(models.User)
+        .options(joinedload(models.User.roles))
+        .filter(models.User.id == user_id)
+        .first()
+    )
+    if user is None:
+        request.session.pop("user_id", None)
     return user
 
 
