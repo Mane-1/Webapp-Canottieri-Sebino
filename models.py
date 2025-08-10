@@ -44,6 +44,8 @@ class Categoria(Base):
     eta_min = Column(Integer, nullable=False)
     eta_max = Column(Integer, nullable=False)
     ordine = Column(Integer, default=0)
+    # raggruppamento logico (es. "Under 14", "Over 14", "Master")
+    macro_group = Column(String, nullable=True, index=True)
     allenamenti = relationship(
         "Allenamento", secondary=allenamento_categoria_association, back_populates="categories"
     )
