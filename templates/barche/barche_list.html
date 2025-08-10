@@ -54,10 +54,10 @@
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
-                            {% macro sort_link(field, text) %}
+                            {% macro sort_link(field, text, th_class="") %}
                                 {% set new_dir = 'asc' if sort_by == field and sort_dir == 'asc' else 'desc' %}
                                 {% if sort_by == field and sort_dir == 'desc' %}{% set new_dir = 'asc' %}{% endif %}
-                                <th scope="col">
+                                <th scope="col" class="{{ th_class }}">
                                     <a href="{{ request.url.include_query_params(sort_by=field, sort_dir=new_dir) }}" class="text-decoration-none text-dark fw-bold d-flex align-items-center">
                                         {{ text }}
                                         {% if sort_by == field %}
@@ -71,7 +71,7 @@
 
                             {{ sort_link('nome', 'Nome') }}
                             {{ sort_link('tipo', 'Tipo') }}
-                            <th class="text-center">{{ sort_link('status', 'Stato') }}</th>
+                            {{ sort_link('status', 'Stato', 'text-center') }}
                             <th>Atleti Assegnati</th>
                             {% if current_user.is_admin or current_user.is_allenatore %}
                             <th class="text-end">Azioni</th>
@@ -90,13 +90,16 @@
                             <td>{{ barca.atleti_assegnati|map(attribute='last_name')|join(', ') or '-' }}</td>
                             {% if current_user.is_admin or current_user.is_allenatore %}
                             <td class="text-end">
-                                <a href="{{ url_for('modifica_barca_form', barca_id=barca.id) }}" class="btn btn-sm btn-outline-primary">Gestisci</a>
+                                <a href="{{ url_for('modifica_barca_form', barca_id=barca.id) }}" class="btn btn-sm btn-outline-primary me-1">Modifica</a>
+                                <form action="{{ url_for('elimina_barca', barca_id=barca.id) }}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Confermi l\'eliminazione?');">Elimina</button>
+                                </form>
                             </td>
                             {% endif %}
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center p-4">Nessuna barca trovata.</td>
+                            <td colspan="{{ 5 if current_user.is_admin or current_user.is_allenatore else 4 }}" class="text-center p-4">Nessuna barca trovata.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

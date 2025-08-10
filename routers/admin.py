@@ -123,21 +123,54 @@ async def admin_edit_user_form(user_id: int, request: Request, db: Session = Dep
 
 
 @router.post("/users/{user_id}/edit", response_class=RedirectResponse)
-async def admin_edit_user(user_id: int, db: Session = Depends(get_db),
-                          admin_user: models.User = Depends(get_current_admin_user), first_name: str = Form(...),
-                          last_name: str = Form(...), email: str = Form(...), date_of_birth: date = Form(...),
-                          roles_ids: List[int] = Form([]), phone_number: Optional[str] = Form(None),
-                          tax_code: Optional[str] = Form(None), enrollment_year: Optional[int] = Form(None),
-                          membership_date: Optional[date] = Form(None),
-                          certificate_expiration: Optional[date] = Form(None), address: Optional[str] = Form(None),
-                          manual_category: Optional[str] = Form(None), password: Optional[str] = Form(None)):
+async def admin_edit_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    email: str = Form(...),
+    date_of_birth: date = Form(...),
+    roles_ids: List[int] = Form([]),
+    phone_number: Optional[str] = Form(None),
+    tax_code: Optional[str] = Form(None),
+    enrollment_year_str: Optional[str] = Form(None),
+    membership_date_str: Optional[str] = Form(None),
+    certificate_expiration_str: Optional[str] = Form(None),
+    address: Optional[str] = Form(None),
+    manual_category: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
-    if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
-    user.first_name, user.last_name, user.email, user.date_of_birth = first_name, last_name, email, date_of_birth
-    user.phone_number, user.tax_code, user.enrollment_year, user.membership_date = phone_number, tax_code, enrollment_year, membership_date
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    enrollment_year = int(enrollment_year_str) if enrollment_year_str else None
+    membership_date = (
+        date.fromisoformat(membership_date_str) if membership_date_str else None
+    )
+    certificate_expiration = (
+        date.fromisoformat(certificate_expiration_str)
+        if certificate_expiration_str
+        else None
+    )
+
+    user.first_name, user.last_name, user.email, user.date_of_birth = (
+        first_name,
+        last_name,
+        email,
+        date_of_birth,
+    )
+    user.phone_number, user.tax_code, user.enrollment_year, user.membership_date = (
+        phone_number,
+        tax_code,
+        enrollment_year,
+        membership_date,
+    )
     user.certificate_expiration, user.address = certificate_expiration, address
     user.manual_category = manual_category if manual_category else None
-    if password: user.hashed_password = security.get_password_hash(password)
+    if password:
+        user.hashed_password = security.get_password_hash(password)
     user.roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()
     db.commit()
     return RedirectResponse(url=f"/admin/users/{user_id}", status_code=status.HTTP_303_SEE_OTHER)
