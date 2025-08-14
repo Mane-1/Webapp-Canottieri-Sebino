@@ -24,18 +24,30 @@ def _parse_week(week: Optional[str]) -> tuple[int, int]:
     return int(y), int(w)
 
 @router.get("/calendar", response_class=HTMLResponse, name="calendar_view")
-def calendar_view(request: Request, week: Optional[str] = None, db: Session = Depends(get_db)):
+def calendar_view(request: Request, week: Optional[str] = None, coach_id: Optional[int] = None, db: Session = Depends(get_db)):
     year, isoweek = _parse_week(week)
     start, end = week_bounds(year, isoweek)
-    trainings = (
+    query = (
         db.query(models.Allenamento)
         .options(selectinload(models.Allenamento.barca), selectinload(models.Allenamento.coach))
         .filter(models.Allenamento.data.between(start, end))
-        .all()
     )
+    if coach_id:
+        query = query.filter(models.Allenamento.coach_id == coach_id)
+    trainings = query.all()
     occurrences = []
     for t in trainings:
-        occurrences.extend(expand_occurrences(t, (start, end)))
+        occs = expand_occurrences(t, (start, end))
+        for occ in occs:
+            occ["coach_id"] = t.coach_id
+            occ["coach_name"] = t.coach.full_name if t.coach else None
+        occurrences.extend(occs)
+    coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .all()
+    )
     return templates.TemplateResponse(
         "calendar.html",
         {
@@ -46,6 +58,8 @@ def calendar_view(request: Request, week: Optional[str] = None, db: Session = De
             "isoweek": isoweek,
             "occurrences": occurrences,
             "timedelta": timedelta,
+            "coaches": coaches,
+            "selected_coach": coach_id,
         },
     )
 

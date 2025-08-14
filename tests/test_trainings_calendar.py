@@ -17,3 +17,8 @@ async def test_create_training_ok(client):
     }
     r = await client.post("/trainings", data=payload, follow_redirects=False)
     assert r.status_code in (303, 307)
+
+@pytest.mark.anyio
+async def test_calendar_filter_by_coach(client):
+    r = await client.get("/trainings/calendar?coach_id=999")
+    assert r.status_code == 200

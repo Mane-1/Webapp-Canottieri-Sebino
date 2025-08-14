@@ -385,7 +385,7 @@ async def view_pesi(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    atleta_id: Optional[int] = None,
+    atleta_id: Optional[str] = None,
     categoria: Optional[str] = None,
 ):
     esercizi = db.query(models.EsercizioPesi).order_by(models.EsercizioPesi.ordine).all()
@@ -396,7 +396,10 @@ async def view_pesi(
     if current_user.is_atleta:
         selected_atleta = current_user
     if (current_user.is_admin or current_user.is_allenatore) and atleta_id:
-        selected_atleta = db.query(models.User).get(atleta_id)
+        try:
+            selected_atleta = db.query(models.User).get(int(atleta_id))
+        except (TypeError, ValueError):
+            selected_atleta = None
 
     scheda_data = {}
     if selected_atleta:

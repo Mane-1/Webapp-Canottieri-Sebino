@@ -1,12 +1,22 @@
 {% extends "layouts/_base.html" %}
 {% block content %}
 <h2>Calendario ({{ week_start }} → {{ week_end }})</h2>
+<form method="get" class="mb-2">
+  <input type="hidden" name="week" value="{{ year }}-W{{ '%02d'|format(isoweek) }}">
+  <label for="coach_id">Allenatore:</label>
+  <select name="coach_id" id="coach_id" onchange="this.form.submit()">
+    <option value="">Tutti</option>
+    {% for c in coaches %}
+    <option value="{{ c.id }}" {% if selected_coach == c.id %}selected{% endif %}>{{ c.full_name }}</option>
+    {% endfor %}
+  </select>
+</form>
 <nav>
   {% set prev = (week_start - timedelta(days=7)).isocalendar() %}
   {% set next = (week_start + timedelta(days=7)).isocalendar() %}
-  <a href="{{ url_for('calendar_view') }}?week={{ prev[0] }}-W{{ '%02d'|format(prev[1]) }}">← Prev</a>
-  <a href="{{ url_for('calendar_view') }}">Oggi</a>
-  <a href="{{ url_for('calendar_view') }}?week={{ next[0] }}-W{{ '%02d'|format(next[1]) }}">Next →</a>
+  <a href="{{ url_for('calendar_view') }}?week={{ prev[0] }}-W{{ '%02d'|format(prev[1]) }}{% if selected_coach %}&coach_id={{ selected_coach }}{% endif %}">← Prev</a>
+  <a href="{{ url_for('calendar_view') }}{% if selected_coach %}?coach_id={{ selected_coach }}{% endif %}">Oggi</a>
+  <a href="{{ url_for('calendar_view') }}?week={{ next[0] }}-W{{ '%02d'|format(next[1]) }}{% if selected_coach %}&coach_id={{ selected_coach }}{% endif %}">Next →</a>
 </nav>
 <div id="calendar" class="grid">
   {% set days = {} %}
@@ -22,8 +32,9 @@
         <button data-open-modal data-date="{{ d }}">+ Allenamento</button>
         <ul>
           {% for occ in days.get(d, []) %}
-            <li>
+            <li class="{% if occ.coach_id %}text-success{% else %}text-danger{% endif %}">
               <strong>{{ occ.time_start }}–{{ occ.time_end }}</strong>
+              {% if occ.coach_name %}{{ occ.coach_name }}{% else %}Scoperto{% endif %}
               <button data-open-modal data-date="{{ d }}" data-edit="{{ occ.source_id }}">Modifica</button>
             </li>
           {% endfor %}

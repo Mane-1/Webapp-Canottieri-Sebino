@@ -2,12 +2,14 @@ from __future__ import annotations
 from datetime import date, time, timedelta
 from typing import TypedDict, Optional
 
-class Occurrence(TypedDict):
+class Occurrence(TypedDict, total=False):
     date: date
     time_start: time
     time_end: time
     is_override: bool
     source_id: int
+    coach_id: Optional[int]
+    coach_name: Optional[str]
 
 def week_bounds(year: int, isoweek: int) -> tuple[date, date]:
     """Ritorna (lunedi, domenica) della settimana ISO."""
