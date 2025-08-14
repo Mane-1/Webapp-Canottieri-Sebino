@@ -1,0 +1,23 @@
+<dialog id="training-modal" aria-label="Allenamento" role="dialog">
+  <form method="post" action="/trainings">
+    <h3>Nuovo allenamento</h3>
+    <label>Tipo <input name="tipo" required></label>
+    <label>Descrizione <textarea name="descrizione"></textarea></label>
+    <label>Data <input id="training-date" type="date" name="date" required></label>
+    <label>Inizio <input type="time" name="time_start" required></label>
+    <label>Fine <input type="time" name="time_end" required></label>
+    <label>Ricorrenza
+      <select name="recurrence">
+        <option value="">Nessuna</option>
+        <option value="weekly">Settimanale</option>
+      </select>
+    </label>
+    <label>Ripeti fino al <input type="date" name="repeat_until"></label>
+    <label>Barca (ID) <input type="number" name="barca_id" min="1"></label>
+    <label>Coach (ID) <input type="number" name="coach_id" min="1"></label>
+    <div class="actions">
+      <button type="submit">Salva</button>
+      <button type="button" id="training-close">Annulla</button>
+    </div>
+  </form>
+</dialog>

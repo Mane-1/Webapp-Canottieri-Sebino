@@ -2,7 +2,7 @@
 from datetime import date
 from typing import Tuple
 from sqlalchemy import (
-    Column, Integer, String, Date, Table, ForeignKey, Float, Boolean
+    Column, Integer, String, Date, Time, Text, Table, ForeignKey, Float, Boolean, Index
 )
 from sqlalchemy.orm import relationship, object_session
 from sqlalchemy.orm.attributes import flag_modified
@@ -216,6 +216,12 @@ class Allenamento(Base):
     descrizione = Column(String)
     data = Column(Date, nullable=False)
     orario = Column(String)
+    time_start = Column(Time, nullable=True)
+    time_end = Column(Time, nullable=True)
+    recurrence = Column(String(20), nullable=True)
+    repeat_until = Column(Date, nullable=True)
+    barca_id = Column(ForeignKey('barche.id'), nullable=True)
+    coach_id = Column(ForeignKey('users.id'), nullable=True)
     recurrence_id = Column(String, index=True, nullable=True)
     categories = relationship(
         "Categoria", secondary=allenamento_categoria_association, back_populates="allenamenti"
@@ -223,6 +229,13 @@ class Allenamento(Base):
     coaches = relationship(
         "User", secondary=allenamento_coach_association, back_populates="allenamenti_seguiti"
     )
+    barca = relationship("Barca", lazy="selectin")
+    coach = relationship("User", foreign_keys=[coach_id], lazy="selectin")
+
+
+Index("idx_allenamenti_date", Allenamento.data)
+Index("idx_allenamenti_barca", Allenamento.barca_id)
+Index("idx_allenamenti_coach", Allenamento.coach_id)
 
 
 class Turno(Base):

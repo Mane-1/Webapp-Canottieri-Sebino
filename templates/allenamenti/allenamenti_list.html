@@ -20,7 +20,7 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label for="category" class="form-label">Categoria</label>
-                <select class="form-select" id="category" name="category">
+                <select class="form-select" id="category" name="category" onchange="this.form.submit()">
                     <option value="">Tutte le Categorie</option>
                     {% for cat in all_categories %}
                         <option value="{{ cat }}" {% if current_filters.category == cat %}selected{% endif %}>{{ cat }}</option>
@@ -29,7 +29,7 @@
             </div>
             <div class="col-md-3">
                 <label for="tipo" class="form-label">Tipo Allenamento</label>
-                <select class="form-select" id="tipo" name="tipo">
+                <select class="form-select" id="tipo" name="tipo" onchange="this.form.submit()">
                     <option value="">Tutti i Tipi</option>
                     {% for type in all_types %}
                         <option value="{{ type }}" {% if current_filters.tipo == type %}selected{% endif %}>{{ type }}</option>
@@ -38,20 +38,19 @@
             </div>
             <div class="col-md-3">
                 <label for="coach_id" class="form-label">Allenatore</label>
-                <select class="form-select" id="coach_id" name="coach_id">
+                <select class="form-select" id="coach_id" name="coach_id" onchange="this.form.submit()">
                     <option value="">Tutti</option>
                     {% for coach in all_coaches %}
                         <option value="{{ coach.id }}" {% if current_filters.coach_id == coach.id %}selected{% endif %}>{{ coach.first_name }} {{ coach.last_name }}</option>
                     {% endfor %}
                 </select>
                 <div class="form-check mt-2">
-                    <input class="form-check-input" type="checkbox" id="unassigned" name="unassigned" value="true" {% if current_filters.unassigned %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" id="unassigned" name="unassigned" value="true" {% if current_filters.unassigned %}checked{% endif %} onchange="this.form.submit()">
                     <label class="form-check-label" for="unassigned">Allenamenti scoperti</label>
                 </div>
             </div>
             <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary w-100">Filtra</button>
-                <a href="/allenamenti" class="btn btn-outline-secondary">Resetta</a>
+                <a href="/allenamenti" class="btn btn-outline-secondary w-100">Resetta</a>
             </div>
         </div>
     </form>
@@ -74,6 +73,7 @@
                 <th scope="col">Descrizione</th>
                 <th scope="col" style="width: 15%;">Data</th>
                 <th scope="col" style="width: 15%;">Orario</th>
+                <th scope="col" style="width: 20%;">Allenatori</th>
                 {% if current_user.is_admin or current_user.is_allenatore %}
                 <th scope="col" class="text-end" style="width: 15%;">Azioni</th>
                 {% endif %}
@@ -101,6 +101,13 @@
                         <td class="text-muted">{{ allenamento.descrizione or '–' }}</td>
                         <td>{{ allenamento.data.strftime('%d-%m-%Y') }}</td>
                         <td>{{ allenamento.orario }}</td>
+                        <td>
+                            {% for c in allenamento.coaches %}
+                                {{ c.first_name }} {{ c.last_name }}{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                -
+                            {% endfor %}
+                        </td>
                         {% if current_user.is_admin or current_user.is_allenatore %}
                         <td class="text-end">
                             <div class="allenamento-actions">
@@ -119,7 +126,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="5" class="text-center p-4">
+                    <td colspan="{{ 6 if current_user.is_admin or current_user.is_allenatore else 5 }}" class="text-center p-4">
                         <div class="alert alert-info mb-0">
                             Nessun allenamento trovato per il filtro selezionato.
                         </div>

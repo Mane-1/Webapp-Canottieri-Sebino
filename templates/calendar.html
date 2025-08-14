@@ -1,0 +1,48 @@
+{% extends "layouts/_base.html" %}
+{% block content %}
+<h2>Calendario ({{ week_start }} → {{ week_end }})</h2>
+<nav>
+  {% set prev = (week_start - timedelta(days=7)).isocalendar() %}
+  {% set next = (week_start + timedelta(days=7)).isocalendar() %}
+  <a href="{{ url_for('calendar_view') }}?week={{ prev[0] }}-W{{ '%02d'|format(prev[1]) }}">← Prev</a>
+  <a href="{{ url_for('calendar_view') }}">Oggi</a>
+  <a href="{{ url_for('calendar_view') }}?week={{ next[0] }}-W{{ '%02d'|format(next[1]) }}">Next →</a>
+</nav>
+<div id="calendar" class="grid">
+  {% set days = {} %}
+  {% for occ in occurrences %}
+    {% set d = occ.date %}
+    {% if days.setdefault(d, []).append(occ) %}{% endif %}
+  {% endfor %}
+  <div class="calendar-week">
+    {% for i in range(0,7) %}
+      {% set d = week_start + timedelta(days=i) %}
+      <section class="day">
+        <header>{{ d.strftime('%a %d/%m') }}</header>
+        <button data-open-modal data-date="{{ d }}">+ Allenamento</button>
+        <ul>
+          {% for occ in days.get(d, []) %}
+            <li>
+              <strong>{{ occ.time_start }}–{{ occ.time_end }}</strong>
+              <button data-open-modal data-date="{{ d }}" data-edit="{{ occ.source_id }}">Modifica</button>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+</div>
+{% include 'partials/training_modal.html' %}
+<script>
+document.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-open-modal]');
+  if (!btn) return;
+  document.getElementById('training-modal').showModal();
+  const dateInput = document.getElementById('training-date');
+  if (btn.dataset.date) dateInput.value = btn.dataset.date;
+});
+document.getElementById('training-close').addEventListener('click', ()=>{
+  document.getElementById('training-modal').close();
+});
+</script>
+{% endblock %}

@@ -26,6 +26,8 @@ target_metadata = None
 # ... etc.
 
 from database import SQLALCHEMY_DATABASE_URL, engine, Base
+import models
+config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
@@ -67,7 +69,7 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata, render_as_batch=True
         )
 
         with context.begin_transaction():

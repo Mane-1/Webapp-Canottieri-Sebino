@@ -23,7 +23,7 @@ import models
 import security
 from database import engine, Base, SessionLocal
 from utils import get_color_for_type
-from routers import authentication, users, trainings, resources, admin
+from routers import authentication, users, trainings, resources, admin, trainings_calendar
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
 # Configurazione del logging
@@ -131,6 +131,7 @@ def on_startup():
 app.include_router(authentication.router)
 app.include_router(users.router)
 app.include_router(trainings.router)
+app.include_router(trainings_calendar.router)
 app.include_router(resources.router)
 app.include_router(admin.router)
 

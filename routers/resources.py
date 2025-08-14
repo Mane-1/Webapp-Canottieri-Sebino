@@ -9,48 +9,81 @@ import models
 from database import get_db
 from dependencies import get_current_user, get_current_admin_user
 
+ALLOWED_PESI_CATEGORIES = [
+    "Cadetto",
+    "Ragazzo",
+    "Junior",
+    "Under 23",
+    "Senior",
+    "Master",
+]
+
 router = APIRouter(prefix="/risorse", tags=["Risorse"])
 templates = Jinja2Templates(directory="templates")
 
 
-def get_atleti_e_categorie(db: Session):
-    atleti = db.query(models.User).join(models.User.roles).filter(models.Role.name == 'atleta').order_by(
-        models.User.last_name).all()
-    categorie = sorted(list(set(atleta.category for atleta in atleti if atleta.category != "N/D")))
+def get_atleti_e_categorie(db: Session, allowed_categories: Optional[List[str]] = None):
+    atleti = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "atleta")
+        .order_by(models.User.last_name)
+        .all()
+    )
+
+    if allowed_categories:
+        atleti = [a for a in atleti if a.category in allowed_categories]
+        categorie = allowed_categories
+    else:
+        categorie = sorted({a.category for a in atleti if a.category != "N/D"})
+
     return atleti, categorie
 
 
 @router.get("/barche", response_class=HTMLResponse)
-async def list_barche(request: Request, db: Session = Depends(get_db),
-                      current_user: models.User = Depends(get_current_user),
-                      tipi_filter: List[str] = Query([]),
-                      sort_by: str = Query("nome"),
-                      sort_dir: str = Query("asc")):
+async def list_barche(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    tipi_filter: List[str] = Query([]),
+    search: str = Query(""),
+    sort_by: str = Query("nome"),
+    sort_dir: str = Query("asc"),
+):
     query = db.query(models.Barca)
 
     if tipi_filter:
         query = query.filter(models.Barca.tipo.in_(tipi_filter))
+    if search:
+        query = query.filter(models.Barca.nome.ilike(f"%{search}%"))
 
-    if sort_by != 'status':
+    if sort_by != "status":
         sort_column = getattr(models.Barca, sort_by, models.Barca.nome)
-        if sort_dir == 'desc':
+        if sort_dir == "desc":
             query = query.order_by(sort_column.desc())
         else:
             query = query.order_by(sort_column.asc())
 
     barche = query.all()
 
-    if sort_by == 'status':
-        barche.sort(key=lambda b: b.status[0], reverse=(sort_dir == 'desc'))
+    if sort_by == "status":
+        barche.sort(key=lambda b: b.status[0], reverse=(sort_dir == "desc"))
 
     tipi_barca_result = db.query(models.Barca.tipo).distinct().order_by(models.Barca.tipo).all()
     tipi_barca = [t[0] for t in tipi_barca_result]
 
-    return templates.TemplateResponse("barche/barche_list.html", {
-        "request": request, "current_user": current_user, "barche": barche,
-        "tipi_barca": tipi_barca, "current_filters": {"tipi_filter": tipi_filter},
-        "sort_by": sort_by, "sort_dir": sort_dir
-    })
+    return templates.TemplateResponse(
+        "barche/barche_list.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "barche": barche,
+            "tipi_barca": tipi_barca,
+            "current_filters": {"tipi_filter": tipi_filter, "search": search},
+            "sort_by": sort_by,
+            "sort_dir": sort_dir,
+        },
+    )
 
 
 @router.get("/barche/nuova", response_class=HTMLResponse)
@@ -348,10 +381,17 @@ async def elimina_barca(barca_id: int, db: Session = Depends(get_db),
 
 
 @router.get("/pesi", response_class=HTMLResponse)
-async def view_pesi(request: Request, db: Session = Depends(get_db),
-                    current_user: models.User = Depends(get_current_user), atleta_id: Optional[int] = None):
+async def view_pesi(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    atleta_id: Optional[int] = None,
+    categoria: Optional[str] = None,
+):
     esercizi = db.query(models.EsercizioPesi).order_by(models.EsercizioPesi.ordine).all()
-    atleti, _ = get_atleti_e_categorie(db)
+    atleti, categorie = get_atleti_e_categorie(db, ALLOWED_PESI_CATEGORIES)
+    if categoria:
+        atleti = [a for a in atleti if a.category == categoria]
     selected_atleta = None
     if current_user.is_atleta:
         selected_atleta = current_user
@@ -363,10 +403,19 @@ async def view_pesi(request: Request, db: Session = Depends(get_db),
         scheda_data = {s.esercizio_id: s for s in
                        db.query(models.SchedaPesi).filter(models.SchedaPesi.atleta_id == selected_atleta.id).all()}
 
-    return templates.TemplateResponse("pesi.html",
-                                      {"request": request, "current_user": current_user, "esercizi": esercizi,
-                                       "atleti": atleti, "selected_atleta": selected_atleta,
-                                       "scheda_data": scheda_data})
+    return templates.TemplateResponse(
+        "pesi.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "esercizi": esercizi,
+            "atleti": atleti,
+            "categorie": categorie,
+            "selected_category": categoria,
+            "selected_atleta": selected_atleta,
+            "scheda_data": scheda_data,
+        },
+    )
 
 
 @router.post("/pesi/update", response_class=RedirectResponse)

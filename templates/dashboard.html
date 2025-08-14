@@ -12,14 +12,29 @@
         {% if events %}
             {% for ev in events %}
                 {% if ev.type == 'allenamento' %}
-                <div class="p-2 mb-2 rounded text-white d-flex justify-content-between align-items-center" style="background-color: {{ ev.color }};">
+                <div class="dashboard-event p-2 mb-2 rounded text-white d-flex justify-content-between align-items-center"
+                     style="background-color: {{ ev.color }};"
+                     data-title="{{ ev.title }}"
+                     data-date="{{ ev.date.strftime('%A, %d %B %Y') }}"
+                     data-time="{{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}"
+                     data-description="{{ ev.description }}"
+                     data-categories="{{ ev.categories }}"
+                     data-coaches="{{ ev.coaches }}"
+                     data-recurrence="{{ ev.recurrence }}">
                     <span class="fw-semibold">{{ ev.title }}</span>
                     <span>{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}</span>
                 </div>
                 {% else %}
-                <div class="p-3 mb-2 border rounded d-flex justify-content-between align-items-center">
+                <div class="dashboard-event p-3 mb-2 border rounded d-flex justify-content-between align-items-center"
+                     data-title="Turno {{ ev.fascia }}"
+                     data-date="{{ ev.date.strftime('%A, %d %B %Y') }}"
+                     data-time="{{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}"
+                     data-description="Turno {{ ev.fascia }}"
+                     data-categories="-"
+                     data-coaches="-"
+                     data-recurrence="No">
                     <span class="fw-bold">{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.fascia }}</span>
-                    <span>🕒 {{ ev.start.strftime('%H:%M') }} - {{ ev.end.strftime('%H:%M') }}</span>
+                    <span>🕒 {{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}</span>
                 </div>
                 {% endif %}
             {% endfor %}
@@ -103,3 +118,39 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('eventDetailModal');
+    if (!modalEl) return;
+    const modal = new bootstrap.Modal(modalEl);
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDate = document.getElementById('modalDate');
+    const modalTime = document.getElementById('modalTime');
+    const modalDescription = document.getElementById('modalDescription');
+    const modalCategories = document.getElementById('modalCategories');
+    const modalCoaches = document.getElementById('modalCoaches');
+    const modalRecurrence = document.getElementById('modalRecurrence');
+    const editBtn = document.getElementById('modalEditButton');
+    const deleteBtn = document.getElementById('modalDeleteButton');
+
+    document.querySelectorAll('.dashboard-event').forEach(el => {
+        el.addEventListener('click', () => {
+            const data = el.dataset;
+            modalTitle.textContent = data.title;
+            modalDate.textContent = data.date;
+            modalTime.textContent = data.time;
+            modalDescription.textContent = data.description || '-';
+            modalCategories.textContent = data.categories || '-';
+            modalCoaches.textContent = data.coaches || '-';
+            modalRecurrence.textContent = data.recurrence || '-';
+            if (editBtn) editBtn.classList.add('d-none');
+            if (deleteBtn) deleteBtn.classList.add('d-none');
+            modal.show();
+        });
+    });
+});
+</script>
+{% endblock %}
+

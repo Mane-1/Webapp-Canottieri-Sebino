@@ -30,6 +30,10 @@ async def dashboard(
         allenamenti = (
             db.query(models.Allenamento)
             .join(models.Allenamento.categories)
+            .options(
+                joinedload(models.Allenamento.categories),
+                joinedload(models.Allenamento.coaches),
+            )
             .filter(
                 models.Categoria.nome == current_user.category,
                 models.Allenamento.data >= today,
@@ -47,6 +51,10 @@ async def dashboard(
                     "start": start_dt,
                     "end": end_dt,
                     "color": get_color_for_type(a.tipo),
+                    "description": a.descrizione or "Nessuna descrizione.",
+                    "categories": ", ".join(c.nome for c in a.categories) if a.categories else "Nessuna",
+                    "coaches": ", ".join(f"{c.first_name} {c.last_name}" for c in a.coaches) if a.coaches else "Nessuno",
+                    "recurrence": "Sì" if a.recurrence_id else "No",
                 }
             )
 
@@ -64,16 +72,22 @@ async def dashboard(
             events.append(
                 {
                     "type": "turno",
+                    "title": f"Turno {t.fascia_oraria}",
                     "date": t.data,
                     "start": start_dt,
                     "end": end_dt,
                     "fascia": t.fascia_oraria,
+                    "description": f"Turno {t.fascia_oraria}",
                 }
             )
 
         allenamenti_coach = (
             db.query(models.Allenamento)
             .join(models.Allenamento.coaches)
+            .options(
+                joinedload(models.Allenamento.categories),
+                joinedload(models.Allenamento.coaches),
+            )
             .filter(models.User.id == current_user.id, models.Allenamento.data >= today)
             .order_by(models.Allenamento.data, models.Allenamento.orario)
             .all()
@@ -88,6 +102,10 @@ async def dashboard(
                     "start": start_dt,
                     "end": end_dt,
                     "color": get_color_for_type(a.tipo),
+                    "description": a.descrizione or "Nessuna descrizione.",
+                    "categories": ", ".join(c.nome for c in a.categories) if a.categories else "Nessuna",
+                    "coaches": ", ".join(f"{c.first_name} {c.last_name}" for c in a.coaches) if a.coaches else "Nessuno",
+                    "recurrence": "Sì" if a.recurrence_id else "No",
                 }
             )
 
