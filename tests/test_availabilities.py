@@ -5,21 +5,33 @@ import models
 from main import app
 from dependencies import get_current_admin_or_coach_user
 from tests import factories
+from utils import MONTH_NAMES
 
 
 @pytest.mark.anyio
 async def test_export_turni(client, db_session):
     role = factories.create_role(db_session, "allenatore")
     coach = factories.create_user(db_session, roles=[role])
-    db_session.add(models.Turno(data=date.today(), fascia_oraria="8:00-10:00", user_id=coach.id))
+    today = date.today()
+    current_turno = models.Turno(data=today, fascia_oraria="8:00-10:00", user_id=coach.id)
+    # turno from previous month shouldn't appear in export
+    if today.month == 1:
+        prev_month_date = date(today.year - 1, 12, 1)
+    else:
+        prev_month_date = date(today.year, today.month - 1, 1)
+    other_turno = models.Turno(data=prev_month_date, fascia_oraria="Sera")
+    db_session.add_all([current_turno, other_turno])
     db_session.commit()
     app.dependency_overrides[get_current_admin_or_coach_user] = lambda: coach
     r_csv = await client.get("/turni/export/csv")
     assert r_csv.status_code == 200
-    assert "text/csv" in r_csv.headers["content-type"]
+    title = f"Turni aperture Canottieri {MONTH_NAMES[today.month]} {today.year}"
+    assert title in r_csv.text.splitlines()[0]
+    assert str(prev_month_date) not in r_csv.text
+    assert title.replace(" ", "%20") in r_csv.headers["content-disposition"]
     r_xlsx = await client.get("/turni/export/excel")
     assert r_xlsx.status_code == 200
-    assert r_xlsx.headers["content-type"].startswith("application/vnd")
+    assert title.replace(" ", "%20") in r_xlsx.headers["content-disposition"]
 
 
 @pytest.mark.anyio

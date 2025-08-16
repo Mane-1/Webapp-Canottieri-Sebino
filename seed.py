@@ -359,6 +359,45 @@ def main():
 
         db.commit()
         logger.info(f"{atleti_creati} atleti popolati con successo.")
+        # Aggiungi allenatori predefiniti
+        allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
+        coaches_data = [
+            {
+                'username': 'alberto.carizzoni',
+                'first_name': 'Alberto',
+                'last_name': 'Carizzoni',
+                'email': 'alberto.carizzoni@example.com',
+                'date_of_birth': date(2003, 5, 17),
+            },
+            {
+                'username': 'anna.manenti',
+                'first_name': 'Anna',
+                'last_name': 'Manenti',
+                'email': 'anna.manenti@example.com',
+                'date_of_birth': date(2007, 5, 21),
+            },
+        ]
+        for coach in coaches_data:
+            if not db.query(models.User).filter_by(username=coach['username']).first():
+                user = models.User(
+                    username=coach['username'],
+                    hashed_password=security.get_password_hash(coach['username']),
+                    first_name=coach['first_name'],
+                    last_name=coach['last_name'],
+                    email=coach['email'],
+                    date_of_birth=coach['date_of_birth'],
+                )
+                user.roles.append(allenatore_role)
+                db.add(user)
+
+        # Attribuisci ruolo allenatore a Tommaso Bigoni e Marco Cambieri
+        for nome, cognome in [("Tommaso", "Bigoni"), ("Marco", "Cambieri")]:
+            atleta = db.query(models.User).filter_by(first_name=nome, last_name=cognome).first()
+            if atleta and allenatore_role not in atleta.roles:
+                atleta.roles.append(allenatore_role)
+
+        db.commit()
+        logger.info("Allenatori aggiunti e ruoli aggiornati.")
 
         # Popola Barche
         seed_barche(db)

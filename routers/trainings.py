@@ -21,6 +21,7 @@ from utils import (
     get_color_for_type,
     export_turni_csv,
     export_turni_excel,
+    MONTH_NAMES,
 )
 
 CATEGORY_GROUPS: Dict[str, List[str]] = {
@@ -596,8 +597,20 @@ async def turni_export_csv(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    turni = db.query(models.Turno).order_by(models.Turno.data).all()
-    return export_turni_csv(turni)
+    today = date.today()
+    month_start = today.replace(day=1)
+    if today.month == 12:
+        next_month = date(today.year + 1, 1, 1)
+    else:
+        next_month = date(today.year, today.month + 1, 1)
+    month_end = next_month - timedelta(days=1)
+    turni = (
+        db.query(models.Turno)
+        .filter(models.Turno.data.between(month_start, month_end))
+        .order_by(models.Turno.data)
+        .all()
+    )
+    return export_turni_csv(turni, month_start)
 
 
 @router.get("/turni/export/excel")
@@ -605,8 +618,20 @@ async def turni_export_excel(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    turni = db.query(models.Turno).order_by(models.Turno.data).all()
-    return export_turni_excel(turni)
+    today = date.today()
+    month_start = today.replace(day=1)
+    if today.month == 12:
+        next_month = date(today.year + 1, 1, 1)
+    else:
+        next_month = date(today.year, today.month + 1, 1)
+    month_end = next_month - timedelta(days=1)
+    turni = (
+        db.query(models.Turno)
+        .filter(models.Turno.data.between(month_start, month_end))
+        .order_by(models.Turno.data)
+        .all()
+    )
+    return export_turni_excel(turni, month_start)
 
 
 @router.get("/turni/statistiche", response_class=HTMLResponse)
@@ -614,13 +639,39 @@ async def turni_stats(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
+    year: int | None = Query(None),
+    month: int | None = Query(None),
 ):
-    month_start = date.today().replace(day=1)
-    if month_start.month == 12:
-        next_month = date(month_start.year + 1, 1, 1)
+    # determine available years and months based on existing shifts
+    raw_dates = db.query(
+        extract("year", models.Turno.data).label("y"),
+        extract("month", models.Turno.data).label("m"),
+    ).distinct().all()
+    years = sorted({int(r.y) for r in raw_dates})
+    months_by_year: Dict[int, List[int]] = {}
+    for r in raw_dates:
+        months_by_year.setdefault(int(r.y), []).append(int(r.m))
+    for y in months_by_year:
+        months_by_year[y] = sorted(set(months_by_year[y]))
+
+    today = date.today()
+    if not years:
+        year = today.year
+        months = [today.month]
     else:
-        next_month = date(month_start.year, month_start.month + 1, 1)
+        if year is None or year not in years:
+            year = today.year if today.year in years else years[0]
+        months = months_by_year.get(year, [])
+        if month is None or month not in months:
+            month = today.month if today.month in months else (months[0] if months else 1)
+
+    month_start = date(year, month, 1)
+    if month == 12:
+        next_month = date(year + 1, 1, 1)
+    else:
+        next_month = date(year, month + 1, 1)
     month_end = next_month - timedelta(days=1)
+
     month_query = db.query(models.Turno).filter(
         models.Turno.data.between(month_start, month_end)
     )
@@ -629,7 +680,7 @@ async def turni_stats(
     month_covered = month_query.filter(models.Turno.user_id.isnot(None)).count()
     month_uncovered = month_query.filter(models.Turno.user_id.is_(None)).count()
 
-    season_year = date.today().year
+    season_year = year
     season_months = [6, 7, 8, 9]
     if current_user.is_admin:
         coaches = (
@@ -661,6 +712,11 @@ async def turni_stats(
             "month_covered": month_covered,
             "month_uncovered": month_uncovered,
             "season_counts": season_counts,
+            "years": years,
+            "months": months,
+            "selected_year": year,
+            "selected_month": month,
+            "month_names": MONTH_NAMES,
         },
     )
 

@@ -13,6 +13,22 @@ except ImportError:  # pragma: no cover - openpyxl is an optional dep at runtime
     Workbook = None
 from dateutil.rrule import MO, TU, WE, TH, FR, SA, SU
 
+
+MONTH_NAMES = {
+    1: "Gennaio",
+    2: "Febbraio",
+    3: "Marzo",
+    4: "Aprile",
+    5: "Maggio",
+    6: "Giugno",
+    7: "Luglio",
+    8: "Agosto",
+    9: "Settembre",
+    10: "Ottobre",
+    11: "Novembre",
+    12: "Dicembre",
+}
+
 def get_color_for_type(training_type: Optional[str]) -> str:
     """
     Restituisce un codice colore esadecimale basato sul tipo di allenamento.
@@ -68,32 +84,44 @@ def parse_orario(base_date: date, orario_str: str) -> Tuple[datetime, datetime]:
         return datetime.combine(base_date, time.min), datetime.combine(base_date, time.max)
 
 
-def export_turni_csv(turni: List["models.Turno"]) -> FileResponse:
-    """Generate a CSV report for the given ``turni`` and return it as ``FileResponse``."""
+def _build_title(month_start: date) -> str:
+    month_name = MONTH_NAMES.get(month_start.month, str(month_start.month))
+    return f"Turni aperture Canottieri {month_name} {month_start.year}"
+
+
+def export_turni_csv(turni: List["models.Turno"], month_start: date) -> FileResponse:
+    """Generate a CSV report for ``turni`` of ``month_start`` and return it."""
+    title = _build_title(month_start)
+    filename = f"{title}.csv"
     with tempfile.NamedTemporaryFile("w", delete=False, newline="", suffix=".csv") as tmp:
         writer = csv.writer(tmp)
+        writer.writerow([title])
         writer.writerow(["ID", "Data", "Fascia Oraria", "Allenatore"])
         for t in turni:
             coach = f"{t.user.first_name} {t.user.last_name}" if t.user else ""
             writer.writerow([t.id, t.data.isoformat(), t.fascia_oraria, coach])
         tmp_path = tmp.name
-    return FileResponse(tmp_path, media_type="text/csv", filename="turni.csv")
+    return FileResponse(tmp_path, media_type="text/csv", filename=filename)
 
 
-def export_turni_excel(turni: List["models.Turno"]) -> FileResponse:
-    """Generate an Excel (or CSV fallback) report for ``turni``."""
+def export_turni_excel(turni: List["models.Turno"], month_start: date) -> FileResponse:
+    """Generate an Excel (or CSV fallback) report for ``turni`` of ``month_start``."""
+    title = _build_title(month_start)
+    filename = f"{title}.xlsx"
     if Workbook is None:
         with tempfile.NamedTemporaryFile("w", delete=False, newline="", suffix=".xlsx") as tmp:
             writer = csv.writer(tmp)
+            writer.writerow([title])
             writer.writerow(["ID", "Data", "Fascia Oraria", "Allenatore"])
             for t in turni:
                 coach = f"{t.user.first_name} {t.user.last_name}" if t.user else ""
                 writer.writerow([t.id, t.data.isoformat(), t.fascia_oraria, coach])
             tmp_path = tmp.name
-        return FileResponse(tmp_path, media_type="application/vnd.ms-excel", filename="turni.xlsx")
+        return FileResponse(tmp_path, media_type="application/vnd.ms-excel", filename=filename)
     with tempfile.NamedTemporaryFile("wb", delete=False, suffix=".xlsx") as tmp:
         wb = Workbook()
         ws = wb.active
+        ws.append([title])
         ws.append(["ID", "Data", "Fascia Oraria", "Allenatore"])
         for t in turni:
             coach = f"{t.user.first_name} {t.user.last_name}" if t.user else ""
@@ -103,5 +131,5 @@ def export_turni_excel(turni: List["models.Turno"]) -> FileResponse:
     return FileResponse(
         tmp_path,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename="turni.xlsx",
+        filename=filename,
     )
