@@ -1,0 +1,51 @@
+{% extends "layouts/_base.html" %}
+
+{% block title %}Gestione Turni{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h2 mb-4">Gestione Turni</h1>
+    {% if message %}<div class="alert alert-info">{{ message }}</div>{% endif %}
+    <div class="row g-4">
+        <div class="col-md-6">
+            <h3 class="h5">Crea turni</h3>
+            <form method="post" action="/turni/gestione/create">
+                <div class="mb-3">
+                    <label class="form-label">Data inizio</label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data fine</label>
+                    <input type="date" name="end_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fasce orarie</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="fasce" value="Mattina" id="fasciaM">
+                        <label class="form-check-label" for="fasciaM">Mattina</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="fasce" value="Sera" id="fasciaS">
+                        <label class="form-check-label" for="fasciaS">Sera</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Crea</button>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <h3 class="h5">Elimina turni</h3>
+            <form method="post" action="/turni/gestione/delete">
+                <div class="mb-3">
+                    <label class="form-label">Data inizio</label>
+                    <input type="date" name="start_date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data fine</label>
+                    <input type="date" name="end_date" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-danger">Elimina</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,6 +1,6 @@
 {% extends "layouts/_base.html" %}
 
-{% block title %}Gestione Turni{% endblock %}
+{% block title %}Turni{% endblock %}
 
 {% block head_extra %}
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -9,7 +9,27 @@
 {% block content %}
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2">Gestione Turni</h1>
+        <h1 class="h2">Turni</h1>
+    </div>
+
+    <div class="mb-3">
+        <form method="get" class="row g-2 align-items-end">
+            <input type="hidden" name="week_offset" value="{{ week_offset }}">
+            <div class="col-sm-4">
+                <label for="allenatoreFilter" class="form-label">Allenatore</label>
+                <select class="form-select" id="allenatoreFilter" name="allenatore_id" onchange="this.form.submit()">
+                    <option value="">Tutti</option>
+                    {% for user in allenatori %}
+                        <option value="{{ user.id }}" {% if current_filter==user.id %}selected{% endif %}>{{ user.first_name }} {{ user.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <div class="mb-3">
+        <span class="badge bg-success">Coperti {{ month_covered }}</span>
+        <span class="badge bg-danger">Scoperti {{ month_uncovered }}</span>
     </div>
 
     <div class="row g-4">
@@ -19,8 +39,8 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">Turni Settimana</h4>
                     <div class="btn-group">
-                        <a href="/turni?week_offset={{ week_offset - 1 }}" class="btn btn-outline-secondary">&laquo;</a>
-                        <a href="/turni?week_offset={{ week_offset + 1 }}" class="btn btn-outline-secondary">&raquo;</a>
+                        <a href="/turni?week_offset={{ week_offset - 1 }}{% if current_filter %}&allenatore_id={{ current_filter }}{% endif %}" class="btn btn-outline-secondary">&laquo;</a>
+                        <a href="/turni?week_offset={{ week_offset + 1 }}{% if current_filter %}&allenatore_id={{ current_filter }}{% endif %}" class="btn btn-outline-secondary">&raquo;</a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -37,6 +57,7 @@
                             {% if turno.user %}
                                 <span class="badge rounded-pill" style="background-color: #198754;">{{ turno.user.first_name }} {{ turno.user.last_name[0] }}.</span>
                             {% else %}
+                                {% if current_user.is_admin %}
                                 <button class="btn btn-sm btn-outline-danger assign-btn"
                                         data-bs-toggle="modal"
                                         data-bs-target="#assignTurnoModal"
@@ -44,6 +65,9 @@
                                         data-turno-info="{{ turno.data.strftime('%d/%m/%Y') }} ({{ turno.fascia_oraria }})">
                                     Assegna
                                 </button>
+                                {% else %}
+                                <span class="badge bg-danger">Libero</span>
+                                {% endif %}
                             {% endif %}
                         </div>
                     {% else %}
@@ -60,6 +84,7 @@
     </div>
 </div>
 
+{% if current_user.is_admin %}
 <!-- Modale per Assegnare Turno -->
 <div class="modal fade" id="assignTurnoModal" tabindex="-1" aria-labelledby="assignTurnoModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -91,6 +116,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts_extra %}
@@ -129,7 +155,7 @@ document.addEventListener('DOMContentLoaded', function() {
         buttonText: {
             today: 'Oggi', month: 'Mese', week: 'Settimana'
         },
-        events: '/api/turni',
+        events: '/api/turni{% if current_filter %}?allenatore_id={{ current_filter }}{% endif %}',
         eventDidMount: function(info) {
             const bg = info.event.backgroundColor;
             if (bg) {
@@ -138,19 +164,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         eventClick: function(info) {
+            {% if current_user.is_admin %}
             const props = info.event.extendedProps;
             const startDate = info.event.start;
-
             const assignBtn = document.createElement('button');
             assignBtn.setAttribute('data-bs-toggle', 'modal');
             assignBtn.setAttribute('data-bs-target', '#assignTurnoModal');
             assignBtn.setAttribute('data-turno-id', info.event.id);
             assignBtn.setAttribute('data-turno-info', `${startDate.toLocaleDateString('it-IT')} (${props.fascia_oraria})`);
             assignBtn.setAttribute('data-user-id', props.user_id || '0');
-            
             document.body.appendChild(assignBtn);
             assignBtn.click();
             document.body.removeChild(assignBtn);
+            {% endif %}
         }
     });
     calendar.render();

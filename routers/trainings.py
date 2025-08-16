@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Request, Depends, Form, Query, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import extract
 from dateutil.rrule import rrule, WEEKLY
 from fastapi.templating import Jinja2Templates
 import models
@@ -468,12 +469,58 @@ async def delete_allenamento_events(
     return RedirectResponse(url="/calendario", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.get("/turni", response_class=HTMLResponse)
-async def view_turni(request: Request, db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user), week_offset: int = 0):
+async def view_turni(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+    week_offset: int = 0,
+    allenatore_id: int | None = None,
+):
     today = date.today() + timedelta(weeks=week_offset)
-    start_of_week, end_of_week = today - timedelta(days=today.weekday()), today - timedelta(days=today.weekday()) + timedelta(days=6)
-    allenatori = db.query(models.User).join(models.User.roles).filter(models.Role.name == 'allenatore').all()
-    turni = db.query(models.Turno).filter(models.Turno.data.between(start_of_week, end_of_week)).order_by(models.Turno.data, models.Turno.fascia_oraria).all()
-    return templates.TemplateResponse("turni.html", {"request": request, "current_user": admin_user, "allenatori": allenatori, "turni": turni, "week_offset": week_offset, "week_start": start_of_week, "week_end": end_of_week})
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    allenatori = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .all()
+    )
+    query = db.query(models.Turno).filter(
+        models.Turno.data.between(start_of_week, end_of_week)
+    )
+    if allenatore_id:
+        query = query.filter(models.Turno.user_id == allenatore_id)
+    turni = query.order_by(models.Turno.data, models.Turno.fascia_oraria).all()
+
+    month_start = date.today().replace(day=1)
+    if month_start.month == 12:
+        next_month = date(month_start.year + 1, 1, 1)
+    else:
+        next_month = date(month_start.year, month_start.month + 1, 1)
+    month_end = next_month - timedelta(days=1)
+    month_query = db.query(models.Turno).filter(
+        models.Turno.data.between(month_start, month_end)
+    )
+    if allenatore_id:
+        month_query = month_query.filter(models.Turno.user_id == allenatore_id)
+    month_covered = month_query.filter(models.Turno.user_id.isnot(None)).count()
+    month_uncovered = month_query.filter(models.Turno.user_id.is_(None)).count()
+
+    return templates.TemplateResponse(
+        "turni.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "allenatori": allenatori,
+            "turni": turni,
+            "week_offset": week_offset,
+            "week_start": start_of_week,
+            "week_end": end_of_week,
+            "current_filter": allenatore_id,
+            "month_covered": month_covered,
+            "month_uncovered": month_uncovered,
+        },
+    )
 
 @router.post("/turni/assegna", response_class=RedirectResponse)
 async def assegna_turno(db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user), turno_id: int = Form(...), user_id: int = Form(...), week_offset: int = Form(0)):
@@ -486,6 +533,115 @@ async def assegna_turno(db: Session = Depends(get_db), admin_user: models.User =
         turno.user_id = user_id
     db.commit()
     return RedirectResponse(url=f"/turni?week_offset={week_offset}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/turni/statistiche", response_class=HTMLResponse)
+async def turni_stats(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    month_start = date.today().replace(day=1)
+    if month_start.month == 12:
+        next_month = date(month_start.year + 1, 1, 1)
+    else:
+        next_month = date(month_start.year, month_start.month + 1, 1)
+    month_end = next_month - timedelta(days=1)
+    month_query = db.query(models.Turno).filter(
+        models.Turno.data.between(month_start, month_end)
+    )
+    if not current_user.is_admin:
+        month_query = month_query.filter(models.Turno.user_id == current_user.id)
+    month_covered = month_query.filter(models.Turno.user_id.isnot(None)).count()
+    month_uncovered = month_query.filter(models.Turno.user_id.is_(None)).count()
+
+    season_year = date.today().year
+    season_months = [6, 7, 8, 9]
+    if current_user.is_admin:
+        coaches = (
+            db.query(models.User)
+            .join(models.User.roles)
+            .filter(models.Role.name == "allenatore")
+            .all()
+        )
+    else:
+        coaches = [current_user]
+    season_counts = []
+    for coach in coaches:
+        count = (
+            db.query(models.Turno)
+            .filter(
+                models.Turno.user_id == coach.id,
+                extract("year", models.Turno.data) == season_year,
+                extract("month", models.Turno.data).in_(season_months),
+            )
+            .count()
+        )
+        season_counts.append((f"{coach.first_name} {coach.last_name}", count))
+
+    return templates.TemplateResponse(
+        "turni_statistiche.html",
+        {
+            "request": request,
+            "current_user": current_user,
+            "month_covered": month_covered,
+            "month_uncovered": month_uncovered,
+            "season_counts": season_counts,
+        },
+    )
+
+
+@router.get("/turni/gestione", response_class=HTMLResponse)
+async def turni_gestione(
+    request: Request,
+    admin_user: models.User = Depends(get_current_admin_user),
+    message: str | None = None,
+):
+    return templates.TemplateResponse(
+        "turni_gestione.html",
+        {"request": request, "current_user": admin_user, "message": message},
+    )
+
+
+@router.post("/turni/gestione/create", response_class=RedirectResponse)
+async def create_turni(
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    start_date: date = Form(...),
+    end_date: date = Form(...),
+    fasce: List[str] = Form([]),
+):
+    day = start_date
+    while day <= end_date:
+        for fascia in fasce:
+            exists = (
+                db.query(models.Turno)
+                .filter(models.Turno.data == day, models.Turno.fascia_oraria == fascia)
+                .first()
+            )
+            if not exists:
+                db.add(models.Turno(data=day, fascia_oraria=fascia))
+        day += timedelta(days=1)
+    db.commit()
+    return RedirectResponse(
+        url="/turni/gestione?message=Turni%20creati", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+@router.post("/turni/gestione/delete", response_class=RedirectResponse)
+async def delete_turni(
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    start_date: date = Form(...),
+    end_date: date = Form(...),
+):
+    db.query(models.Turno).filter(
+        models.Turno.data.between(start_date, end_date)
+    ).delete(synchronize_session=False)
+    db.commit()
+    return RedirectResponse(
+        url="/turni/gestione?message=Turni%20eliminati", status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
 @router.get("/api/training/types")
@@ -556,9 +712,12 @@ async def get_allenamenti_api(
 
 
 @router.get("/api/turni")
-async def get_turni_api(db: Session = Depends(get_db)):
+async def get_turni_api(db: Session = Depends(get_db), allenatore_id: int | None = None):
+    query = db.query(models.Turno).options(joinedload(models.Turno.user))
+    if allenatore_id:
+        query = query.filter(models.Turno.user_id == allenatore_id)
     events = []
-    for t in db.query(models.Turno).options(joinedload(models.Turno.user)).all():
+    for t in query.all():
         start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
         start_dt = datetime.combine(t.data, time(hour=start_hour))
         end_dt = datetime.combine(t.data, time(hour=end_hour))
