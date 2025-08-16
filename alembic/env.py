@@ -4,6 +4,13 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+try:  # pragma: no cover - fallback if python-dotenv missing
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover
+    def load_dotenv():
+        return False
+
+load_dotenv()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

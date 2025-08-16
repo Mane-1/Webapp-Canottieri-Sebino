@@ -2,18 +2,20 @@
 # Elenco delle dipendenze Python per il progetto.
 # Esegui `pip install -r requirements.txt` per installarle tutte.
 
-fastapi
-uvicorn
-sqlalchemy
+fastapi==0.110.0
+uvicorn[standard]==0.30.0
+sqlalchemy==2.0.30
 passlib[bcrypt]==1.7.4
 bcrypt<4
-jinja2
-python-multipart
-python-dateutil
-itsdangerous
-psycopg2-binary
-gunicorn
-pytest
-pytest-asyncio
-httpx
-alembic
+jinja2==3.1.4
+python-multipart==0.0.9
+python-dateutil==2.9.0.post0
+itsdangerous==2.1.2
+psycopg2-binary==2.9.9
+gunicorn==21.2.0
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.27.0
+alembic==1.13.1
+python-dotenv==1.0.1
+

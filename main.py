@@ -4,19 +4,23 @@
 
 import os
 import logging
+import logging.config
 from datetime import date
+try:  # pragma: no cover - fallback if python-dotenv is missing
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover
+    def load_dotenv():
+        return False
+
+load_dotenv()
 
 from fastapi import FastAPI, Request, status
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from starlette.middleware.sessions import SessionMiddleware
-from fastapi import Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-import logging
 
 # Importa i moduli del progetto
 import models
@@ -26,21 +30,35 @@ from utils import get_color_for_type
 from routers import authentication, users, trainings, resources, admin, trainings_calendar
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
-# Configurazione del logging
-LOG_LEVEL = logging.DEBUG if os.environ.get("ENV") == "test" else logging.INFO
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+# Configurazione del logging tramite dictConfig
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+logging.config.dictConfig(
+    {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "standard": {
+                "format": "%(asctime)s %(levelname)s %(name)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "standard",
+            }
+        },
+        "root": {"level": LOG_LEVEL, "handlers": ["console"]},
+    }
 )
 logger = logging.getLogger(__name__)
-logging.getLogger("uvicorn.error").setLevel(LOG_LEVEL)
-logging.getLogger("uvicorn.access").setLevel(LOG_LEVEL)
 
 # Creazione dell'istanza FastAPI
 app = FastAPI(title="Gestionale Canottieri")
 
 # Configurazione del middleware per le sessioni
-SECRET_KEY = os.environ.get('SECRET_KEY', 'un-segreto-di-default-non-sicuro')
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is required")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY)
 
 # Configurazione dei template Jinja2 e dei file statici
@@ -212,7 +230,3 @@ async def service_worker():
 async def internal_server_error(request: Request, exc: Exception):
     logging.error(f"Errore 500: {exc}", exc_info=True)
     return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok"}

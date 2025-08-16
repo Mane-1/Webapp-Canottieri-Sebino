@@ -6,6 +6,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError
 from fastapi import HTTPException, status
+try:  # pragma: no cover - fallback if python-dotenv missing
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover
+    def load_dotenv():
+        return False
+
+load_dotenv()
 
 # Configura il logger
 logger = logging.getLogger("db")

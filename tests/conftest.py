@@ -7,6 +7,7 @@ if ROOT not in sys.path:
 # Force test environment
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
 os.environ.setdefault("ENV", "test")
+os.environ.setdefault("SECRET_KEY", "test-secret")
 
 from database import Base, get_db, engine, SessionLocal
 from main import app

@@ -8,36 +8,12 @@ from fastapi.templating import Jinja2Templates
 import models
 from database import get_db
 from dependencies import get_current_user, get_current_admin_user
-
-ALLOWED_PESI_CATEGORIES = [
-    "Cadetto",
-    "Ragazzo",
-    "Junior",
-    "Under 23",
-    "Senior",
-    "Master",
-]
+from services import barche as barche_service, users as users_service
+from services.users import ALLOWED_PESI_CATEGORIES
+from utils.parsing import to_float
 
 router = APIRouter(prefix="/risorse", tags=["Risorse"])
 templates = Jinja2Templates(directory="templates")
-
-
-def get_atleti_e_categorie(db: Session, allowed_categories: Optional[List[str]] = None):
-    atleti = (
-        db.query(models.User)
-        .join(models.User.roles)
-        .filter(models.Role.name == "atleta")
-        .order_by(models.User.last_name)
-        .all()
-    )
-
-    if allowed_categories:
-        atleti = [a for a in atleti if a.category in allowed_categories]
-        categorie = allowed_categories
-    else:
-        categorie = sorted({a.category for a in atleti if a.category != "N/D"})
-
-    return atleti, categorie
 
 
 @router.get("/barche", response_class=HTMLResponse)
@@ -50,28 +26,9 @@ async def list_barche(
     sort_by: str = Query("nome"),
     sort_dir: str = Query("asc"),
 ):
-    query = db.query(models.Barca)
-
-    if tipi_filter:
-        query = query.filter(models.Barca.tipo.in_(tipi_filter))
-    if search:
-        query = query.filter(models.Barca.nome.ilike(f"%{search}%"))
-
-    if sort_by != "status":
-        sort_column = getattr(models.Barca, sort_by, models.Barca.nome)
-        if sort_dir == "desc":
-            query = query.order_by(sort_column.desc())
-        else:
-            query = query.order_by(sort_column.asc())
-
-    barche = query.all()
-
-    if sort_by == "status":
-        barche.sort(key=lambda b: b.status[0], reverse=(sort_dir == "desc"))
-
-    tipi_barca_result = db.query(models.Barca.tipo).distinct().order_by(models.Barca.tipo).all()
-    tipi_barca = [t[0] for t in tipi_barca_result]
-
+    barche, tipi_barca = barche_service.list_barche(
+        db, tipi_filter=tipi_filter, search=search, sort_by=sort_by, sort_dir=sort_dir
+    )
     return templates.TemplateResponse(
         "barche/barche_list.html",
         {
@@ -89,7 +46,7 @@ async def list_barche(
 @router.get("/barche/nuova", response_class=HTMLResponse)
 async def nuova_barca_form(request: Request, db: Session = Depends(get_db),
                            admin_user: models.User = Depends(get_current_admin_user)):
-    atleti, categorie = get_atleti_e_categorie(db)
+    atleti, categorie = users_service.get_atleti_e_categorie(db)
     return templates.TemplateResponse("barche/crea_barca.html",
                                       {"request": request, "current_user": admin_user, "atleti": atleti,
                                        "categorie": categorie, "barca": {}, "assigned_atleta_ids": []})
@@ -129,7 +86,7 @@ async def crea_barca(
     avanzamento_guide: Optional[str] = Form(None),
 ):
     if (in_manutenzione or fuori_uso) and (in_prestito or in_trasferta):
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
             "barche/crea_barca.html",
             {
@@ -145,7 +102,7 @@ async def crea_barca(
         )
 
     if not (nome.strip() and tipo.strip() and costruttore.strip() and anno_str.strip()):
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
             "barche/crea_barca.html",
             {
@@ -160,16 +117,10 @@ async def crea_barca(
             status_code=400,
         )
 
-    def to_float(value: Optional[str]) -> Optional[float]:
-        try:
-            return float(value) if value and value.strip() else None
-        except ValueError:
-            return None
-
     try:
         anno = int(anno_str)
     except ValueError:
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
             "barche/crea_barca.html",
             {
@@ -230,7 +181,7 @@ async def modifica_barca_form(barca_id: int, request: Request, db: Session = Dep
                               admin_user: models.User = Depends(get_current_admin_user)):
     barca = db.query(models.Barca).options(joinedload(models.Barca.atleti_assegnati)).get(barca_id)
     if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
-    atleti, categorie = get_atleti_e_categorie(db)
+    atleti, categorie = users_service.get_atleti_e_categorie(db)
     assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
     return templates.TemplateResponse("barche/modifica_barca.html",
                                       {"request": request, "current_user": admin_user, "barca": barca,
@@ -277,7 +228,7 @@ async def aggiorna_barca(
         raise HTTPException(status_code=404, detail="Barca non trovata")
 
     if (in_manutenzione or fuori_uso) and (in_prestito or in_trasferta):
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
             "barche/modifica_barca.html",
@@ -294,7 +245,7 @@ async def aggiorna_barca(
         )
 
     if not (nome.strip() and tipo.strip() and costruttore.strip() and anno_str.strip()):
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
             "barche/modifica_barca.html",
@@ -310,16 +261,10 @@ async def aggiorna_barca(
             status_code=400,
         )
 
-    def to_float(value: Optional[str]) -> Optional[float]:
-        try:
-            return float(value) if value and value.strip() else None
-        except ValueError:
-            return None
-
     try:
         anno = int(anno_str)
     except ValueError:
-        atleti, categorie = get_atleti_e_categorie(db)
+        atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
             "barche/modifica_barca.html",
@@ -389,7 +334,7 @@ async def view_pesi(
     categoria: Optional[str] = None,
 ):
     esercizi = db.query(models.EsercizioPesi).order_by(models.EsercizioPesi.ordine).all()
-    atleti, categorie = get_atleti_e_categorie(db, ALLOWED_PESI_CATEGORIES)
+    atleti, categorie = users_service.get_atleti_e_categorie(db, ALLOWED_PESI_CATEGORIES)
     if categoria:
         atleti = [a for a in atleti if a.category == categoria]
     selected_atleta = None
