@@ -25,7 +25,9 @@
                     <span>{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}</span>
                 </div>
                 {% else %}
-                <div class="dashboard-event p-3 mb-2 border rounded d-flex justify-content-between align-items-center"
+                <div class="dashboard-event p-3 mb-2 border border-info border-2 rounded d-flex justify-content-between align-items-center"
+                     data-link="/turni"
+                     style="cursor: pointer;"
                      data-title="Turno {{ ev.fascia }}"
                      data-date="{{ ev.date.strftime('%A, %d %B %Y') }}"
                      data-time="{{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}"
@@ -75,7 +77,7 @@
         <!-- Card Gestione Turni (Solo per Admin) -->
         {% if current_user.is_admin %}
         <div class="col-md-6 col-lg-4">
-            <div class="card h-100 shadow-sm">
+            <div class="card h-100 shadow-sm border border-info border-2" style="cursor: pointer;" onclick="window.location.href='/turni';">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title">🕒 Turni</h5>
                     <p class="card-text">Assegna gli allenatori ai turni di apertura e chiusura della società.</p>
@@ -137,6 +139,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('.dashboard-event').forEach(el => {
         el.addEventListener('click', () => {
+            if (el.dataset.link) {
+                window.location.href = el.dataset.link;
+                return;
+            }
             const data = el.dataset;
             modalTitle.textContent = data.title;
             modalDate.textContent = data.date;

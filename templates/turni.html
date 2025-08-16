@@ -130,6 +130,13 @@ document.addEventListener('DOMContentLoaded', function() {
             today: 'Oggi', month: 'Mese', week: 'Settimana'
         },
         events: '/api/turni',
+        eventDidMount: function(info) {
+            const bg = info.event.backgroundColor;
+            if (bg) {
+                info.el.style.setProperty('--fc-event-bg-color', bg);
+                info.el.style.setProperty('--fc-event-border-color', info.event.borderColor || bg);
+            }
+        },
         eventClick: function(info) {
             const props = info.event.extendedProps;
             const startDate = info.event.start;
