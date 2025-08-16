@@ -1,5 +1,5 @@
 <!-- templates/dashboard.html -->
-{% extends "layouts/_base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Dashboard{% endblock %}
 
@@ -121,7 +121,7 @@
 </div>
 {% endblock %}
 
-{% block scripts_extra %}
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const modalEl = document.getElementById('eventDetailModal');

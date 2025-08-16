@@ -1,6 +1,5 @@
-{% extends "layouts/_base.html" %}
-{% block title %}Dettaglio Utente{% endblock %}
-{% block content %}
+{% extends "layouts/_admin_layout.html" %}
+{% block admin_content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h1>Dettaglio: {{ user.first_name }} {{ user.last_name }}</h1>
@@ -39,27 +38,5 @@
             </div>
         </div>
     </div>
-    <a href="{{ url_for('admin_users_list') }}" class="btn btn-secondary mt-3">Torna all'elenco</a>
-</div>
-
-<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="deleteUserModalLabel">Conferma Eliminazione Utente</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Sei sicuro di voler eliminare definitivamente l'utente <strong>{{ user.first_name }} {{ user.last_name }}</strong>?</p>
-        <p class="text-danger">Questa azione è irreversibile e cancellerà tutti i dati associati all'utente.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-        <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="post">
-            <button type="submit" class="btn btn-danger">Conferma Eliminazione</button>
-        </form>
-      </div>
-    </div>
-  </div>
 </div>
 {% endblock %}

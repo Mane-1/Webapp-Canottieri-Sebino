@@ -1,6 +1,10 @@
-{% extends "layouts/_base.html" %}
+{% extends "layout/base.html" %}
 {% block title %}Servizio non disponibile{% endblock %}
+{% block main_class %}main--center{% endblock %}
 {% block content %}
-<h1>Servizio non disponibile</h1>
-<p>Il database non è al momento disponibile. Riprovare più tardi.</p>
+<section class="card" style="text-align:center">
+  <h1>503</h1>
+  <p>Servizio temporaneamente non disponibile.</p>
+  <a href="/" class="btn btn--primary">Torna alla home</a>
+</section>
 {% endblock %}

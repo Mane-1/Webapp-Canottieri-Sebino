@@ -1,4 +1,4 @@
-{% extends "layouts/_base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Turni{% endblock %}
 
@@ -164,7 +164,7 @@
 {% endif %}
 {% endblock %}
 
-{% block scripts_extra %}
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let calendar;

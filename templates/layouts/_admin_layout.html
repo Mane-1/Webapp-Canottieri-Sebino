@@ -1,16 +1,12 @@
-{% extends "layouts/_base.html" %}
-
+{% extends "layout/base.html" %}
 {% block title %}Gestione Utenti{% endblock %}
-
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Gestione Utenti</h1>
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item"><a class="nav-link {% if 'add' not in request.url.path %}active{% endif %}" href="{{ url_for('admin_users_list') }}">Elenco Utenti</a></li>
-        <li class="nav-item"><a class="nav-link {% if 'add' in request.url.path %}active{% endif %}" href="{{ url_for('admin_add_user_form') }}">Aggiungi Nuovo Utente</a></li>
-    </ul>
-    <div>
-        {% block admin_content %}{% endblock %}
-    </div>
+<h1 class="mb-4">Gestione Utenti</h1>
+<div class="toolbar">
+  <a href="{{ url_for('admin_users_list') }}" class="btn btn--ghost{% if 'add' not in request.url.path %} active{% endif %}">Elenco Utenti</a>
+  <a href="{{ url_for('admin_add_user_form') }}" class="btn btn--ghost{% if 'add' in request.url.path %} active{% endif %}">Aggiungi Nuovo Utente</a>
+</div>
+<div>
+  {% block admin_content %}{% endblock %}
 </div>
 {% endblock %}

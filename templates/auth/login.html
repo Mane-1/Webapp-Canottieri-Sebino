@@ -1,32 +1,40 @@
-{% extends "layouts/_base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Login{% endblock %}
+{% block main_class %}main--center{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm p-4" style="background-color: var(--club-off-white-bg);">
-            <h2 class="card-title text-center mb-4" style="color: var(--club-blue-dark);">Accedi</h2>
-            {% if error_message %}
-                <div class="alert alert-danger" role="alert">
-                    {{ error_message }}
-                </div>
-            {% endif %}
-            <form method="post" action="/login">
-                <div class="mb-3">
-                    <label for="username" class="form-label">Nome Utente</label>
-                    <input type="text" class="form-control" id="username" name="username" required>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
-                </div>
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                </div>
-            </form>
-            {# Link "Registrati qui" rimosso #}
-        </div>
+<section class="card" aria-labelledby="title">
+  <h1 id="title">Accedi</h1>
+  <p class="subtitle">Entra nella web app della Canottieri Sebino Lovere.</p>
+  <div class="error" id="errorBox" role="alert"{% if error_message %} style="display:block"{% endif %}>{{ error_message }}</div>
+  <form method="post" action="/login" novalidate>
+    <label class="field" for="username">
+      <input id="username" name="username" type="text" placeholder="Nome utente" autocomplete="username" required>
+    </label>
+    <label class="field" for="password">
+      <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" required minlength="6">
+      <button class="password-toggle" type="button" id="togglePwd" aria-label="Mostra password">👁️</button>
+    </label>
+    <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin:8px 2px 16px">
+      <label class="remember" style="display:flex; align-items:center; gap:8px; color:var(--muted); font-size:14px;">
+        <input type="checkbox" name="remember" id="remember" style="width:18px; height:18px"> Ricordami
+      </label>
+      <a class="link" href="#" aria-label="Password dimenticata">Password dimenticata?</a>
     </div>
-</div>
+    <button class="btn btn--primary" type="submit" style="width:100%">LOGIN</button>
+    <div class="links" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:14px;" aria-live="polite">
+      <span>Non hai un account?</span>
+      <a class="link" href="#" aria-label="Richiedi accesso">Richiedi accesso</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const togglePwd=document.getElementById('togglePwd');
+const pwd=document.getElementById('password');
+togglePwd.addEventListener('click',()=>{const isPwd=pwd.type==='password';pwd.type=isPwd?'text':'password';togglePwd.setAttribute('aria-label',isPwd?'Nascondi password':'Mostra password');});
+</script>
 {% endblock %}

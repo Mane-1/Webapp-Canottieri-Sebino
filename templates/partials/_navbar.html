@@ -1,0 +1,66 @@
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm" role="navigation">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="/dashboard">Canottieri Sebino</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      {% if current_user is defined and current_user %}
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link" href="/dashboard">Home</a></li>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="allenamentiDropdown" role="button" data-bs-toggle="dropdown">Allenamenti</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/calendario">Calendario Allenamenti</a></li>
+            {% if current_user.is_admin or current_user.is_allenatore %}
+            <li><a class="dropdown-item" href="{{ url_for('list_allenamenti') }}">Gestione Allenamenti</a></li>
+            {% endif %}
+          </ul>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="/rubrica">Rubrica</a></li>
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="turniDropdown" role="button" data-bs-toggle="dropdown">Turni</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/turni">Calendario</a></li>
+            <li><a class="dropdown-item" href="/turni/statistiche">Statistiche</a></li>
+            <li><a class="dropdown-item" href="/turni/disponibilita">Disponibilità</a></li>
+            {% if current_user.is_admin %}
+            <li><a class="dropdown-item" href="/turni/gestione">Gestione Turni</a></li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="risorseDropdown" role="button" data-bs-toggle="dropdown">Risorse</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="/risorse/barche">Barche</a></li>
+            <li><a class="dropdown-item" href="/risorse/pesi">Scheda Pesi</a></li>
+          </ul>
+        </li>
+        {% if current_user.is_admin %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">Utenti</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ url_for('admin_users_list') }}">Elenco Utenti</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin_add_user_form') }}">Aggiungi Utente</a></li>
+          </ul>
+        </li>
+        {% endif %}
+      </ul>
+      {% endif %}
+      <ul class="navbar-nav ms-auto">
+        {% if current_user is defined and current_user %}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown">{{ current_user.first_name or current_user.username }}</a>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/profilo">Profilo</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+          </ul>
+        </li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>

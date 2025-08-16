@@ -1,5 +1,5 @@
 <!-- templates/calendario.html -->
-{% extends "layouts/_base.html" %}
+{% extends "layout/base.html" %}
 
 {% block title %}Calendario Allenamenti{% endblock %}
 
@@ -102,7 +102,7 @@
 
 {% endblock %}
 
-{% block scripts_extra %}
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
