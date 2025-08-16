@@ -1,19 +1,28 @@
 # File: database.py
 import os
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError
 from fastapi import HTTPException, status
 
-# Cerca l'URL del database in una variabile d'ambiente.
-# Se non la trova, usa il file SQLite locale per i test.
+# Configura il logger
+logger = logging.getLogger("db")
+logger.setLevel(logging.INFO)
+
+# Recupera DATABASE_URL dall'ambiente, default SQLite se assente
 SQLALCHEMY_DATABASE_URL = os.environ.get(
     "DATABASE_URL", "sqlite:///./canottierisebino.db"
 )
 
-# Se l'URL è di PostgreSQL (come su Render), sostituisce il prefisso
-# per renderlo compatibile con SQLAlchemy.
+# Logga l'URL (ATTENZIONE: maschera la password!)
+safe_url = SQLALCHEMY_DATABASE_URL.replace(
+    SQLALCHEMY_DATABASE_URL.split("@")[0], "****"
+) if "@" in SQLALCHEMY_DATABASE_URL else SQLALCHEMY_DATABASE_URL
+logger.info(f"Sto usando il database: {safe_url}")
+
+# Correggi prefisso postgres:// → postgresql://
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
     SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace(
         "postgres://", "postgresql://"
@@ -21,7 +30,6 @@ if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    # L'argomento `connect_args` è necessario solo per SQLite
     connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
 )
 
@@ -31,17 +39,11 @@ Base = declarative_base()
 
 
 def get_db():
-    """Yield a database session and ensure proper cleanup.
-
-    In case the database connection cannot be established (for example when the
-    DB server is down), we raise an HTTP 503 error.  The global exception
-    handlers will translate this into either a JSON or HTML response depending
-    on the request type.
-    """
-
+    """Yield a database session and ensure proper cleanup."""
     try:
         db = SessionLocal()
-    except OperationalError as exc:  # pragma: no cover - exercised in tests
+    except OperationalError as exc:
+        logger.error(f"Errore di connessione al DB: {exc}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",
@@ -49,7 +51,8 @@ def get_db():
 
     try:
         yield db
-    except OperationalError as exc:  # pragma: no cover
+    except OperationalError as exc:
+        logger.error(f"Errore durante l'uso del DB: {exc}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database unavailable",
