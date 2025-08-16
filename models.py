@@ -2,7 +2,19 @@
 from datetime import date
 from typing import Tuple
 from sqlalchemy import (
-    Column, Integer, String, Date, Time, Text, Table, ForeignKey, Float, Boolean, Index
+    Column,
+    Integer,
+    String,
+    Date,
+    Time,
+    Text,
+    Table,
+    ForeignKey,
+    Float,
+    Boolean,
+    Index,
+    CheckConstraint,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, object_session
 from sqlalchemy.orm.attributes import flag_modified
@@ -78,6 +90,7 @@ class User(Base):
     barche_assegnate = relationship("Barca", secondary=barca_atleti_association, back_populates="atleti_assegnati")
     schede_pesi = relationship("SchedaPesi", back_populates="atleta")
     turni = relationship("Turno", back_populates="user")
+    availabilities = relationship("TrainerAvailability", back_populates="user")
     allenamenti_seguiti = relationship("Allenamento", secondary=allenamento_coach_association, back_populates="coaches")
 
     @property
@@ -245,4 +258,17 @@ class Turno(Base):
     fascia_oraria = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     user = relationship("User", back_populates="turni")
+
+
+class TrainerAvailability(Base):
+    __tablename__ = "trainer_availabilities"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    turno_id = Column(Integer, ForeignKey('turni.id'), nullable=False, index=True)
+    available = Column(Boolean, default=True)
+    user = relationship("User", back_populates="availabilities")
+    turno = relationship("Turno")
+    __table_args__ = (
+        UniqueConstraint('user_id', 'turno_id', name='uq_user_turno_availability'),
+    )
 

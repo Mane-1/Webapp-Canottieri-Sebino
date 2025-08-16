@@ -27,7 +27,15 @@ import models
 import security
 from database import engine, Base, SessionLocal
 from utils import get_color_for_type
-from routers import authentication, users, trainings, resources, admin, trainings_calendar
+from routers import (
+    authentication,
+    users,
+    trainings,
+    resources,
+    admin,
+    trainings_calendar,
+    availabilities,
+)
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
 # Configurazione del logging tramite dictConfig
@@ -152,6 +160,7 @@ app.include_router(trainings.router)
 app.include_router(trainings_calendar.router)
 app.include_router(resources.router)
 app.include_router(admin.router)
+app.include_router(availabilities.router)
 
 
 @app.get("/health")

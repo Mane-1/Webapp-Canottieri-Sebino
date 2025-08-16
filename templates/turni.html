@@ -28,9 +28,47 @@
     </div>
 
     <div class="mb-3">
+        <a href="/turni/export/csv" class="btn btn-outline-secondary btn-sm">Esporta CSV</a>
+        <a href="/turni/export/excel" class="btn btn-outline-secondary btn-sm">Esporta Excel</a>
+    </div>
+
+    <div class="mb-3">
         <span class="badge bg-success">Coperti {{ month_covered }}</span>
         <span class="badge bg-danger">Scoperti {{ month_uncovered }}</span>
     </div>
+
+    {% if current_user.is_admin %}
+    <div class="mb-3">
+        <button class="btn btn-sm btn-outline-primary" id="toggleQuickAssign" type="button">Assegnazione rapida</button>
+    </div>
+    <div id="quickAssignForm" class="card mb-3 d-none">
+        <div class="card-body">
+            <form method="post" action="/turni/assegna_rapida">
+                <input type="hidden" name="week_offset" value="{{ week_offset }}">
+                <div class="mb-2">
+                    <label class="form-label">Allenatore</label>
+                    <select class="form-select" name="user_id" required>
+                        {% for user in allenatori %}
+                            <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Turni</label>
+                    <div class="list-group" style="max-height: 200px; overflow:auto;">
+                        {% for turno in turni if not turno.user %}
+                        <label class="list-group-item">
+                            <input class="form-check-input me-1" type="checkbox" name="turno_ids" value="{{ turno.id }}">
+                            {{ turno.data.strftime('%A %d') }} - {{ turno.fascia_oraria }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Conferma</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="row g-4">
         <!-- Colonna Lista Prossimi Turni -->
@@ -62,7 +100,8 @@
                                         data-bs-toggle="modal"
                                         data-bs-target="#assignTurnoModal"
                                         data-turno-id="{{ turno.id }}"
-                                        data-turno-info="{{ turno.data.strftime('%d/%m/%Y') }} ({{ turno.fascia_oraria }})">
+                                        data-turno-info="{{ turno.data.strftime('%d/%m/%Y') }} ({{ turno.fascia_oraria }})"
+                                        data-available="{{ avail_map.get(turno.id, [])|join(',') }}">
                                     Assegna
                                 </button>
                                 {% else %}
@@ -99,13 +138,19 @@
             <input type="hidden" name="turno_id" id="turnoIdInput">
             <input type="hidden" name="week_offset" value="{{ week_offset }}">
             <div class="mb-3">
-                <label for="user_id" class="form-label">Allenatore</label>
-                <select class="form-select" id="user_id" name="user_id" required>
-                    <option value="0">Nessuno (Lascia libero)</option>
+                <label class="form-label">Allenatore</label>
+                <div id="coachBoxContainer" class="d-flex flex-wrap gap-2">
+                    <label class="coach-box">
+                        <input type="radio" name="user_id" value="0" class="btn-check">
+                        <span class="btn btn-outline-secondary">Nessuno</span>
+                    </label>
                     {% for user in allenatori %}
-                        <option value="{{ user.id }}">{{ user.first_name }} {{ user.last_name }}</option>
+                    <label class="coach-box" data-user-id="{{ user.id }}">
+                        <input type="radio" name="user_id" value="{{ user.id }}" class="btn-check">
+                        <span class="btn btn-light border">{{ user.first_name }} {{ user.last_name }}</span>
+                    </label>
                     {% endfor %}
-                </select>
+                </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -122,31 +167,19 @@
 {% block scripts_extra %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Gestione Modale Assegnazione
-    const assignModal = document.getElementById('assignTurnoModal');
-    if (assignModal) {
-        const turnoIdInput = document.getElementById('turnoIdInput');
-        const turnoInfoEl = document.getElementById('turnoInfo');
-        const userSelect = document.getElementById('user_id');
-
-        assignModal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const turnoId = button.getAttribute('data-turno-id');
-            const turnoInfo = button.getAttribute('data-turno-info');
-            const currentUserId = button.getAttribute('data-user-id') || '0';
-
-            turnoIdInput.value = turnoId;
-            turnoInfoEl.textContent = turnoInfo;
-            userSelect.value = currentUserId;
-        });
-    }
+    let calendar;
+    const savedView = sessionStorage.getItem('turni_view');
+    const savedDate = sessionStorage.getItem('turni_date');
+    sessionStorage.removeItem('turni_view');
+    sessionStorage.removeItem('turni_date');
 
     // Inizializzazione Calendario
     const calendarEl = document.getElementById('calendar');
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: savedView || 'dayGridMonth',
+        initialDate: savedDate ? new Date(savedDate) : undefined,
         locale: 'it',
-        firstDay: 1, // Imposta Lunedì come primo giorno della settimana
+        firstDay: 1,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -173,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             assignBtn.setAttribute('data-turno-id', info.event.id);
             assignBtn.setAttribute('data-turno-info', `${startDate.toLocaleDateString('it-IT')} (${props.fascia_oraria})`);
             assignBtn.setAttribute('data-user-id', props.user_id || '0');
+            assignBtn.setAttribute('data-available', (props.available_ids || []).join(','));
             document.body.appendChild(assignBtn);
             assignBtn.click();
             document.body.removeChild(assignBtn);
@@ -180,6 +214,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     calendar.render();
+
+    const savedScroll = sessionStorage.getItem('turni_scroll');
+    if (savedScroll) {
+        window.scrollTo(0, parseFloat(savedScroll));
+        sessionStorage.removeItem('turni_scroll');
+    }
+
+    // Gestione Modale Assegnazione
+    const assignModal = document.getElementById('assignTurnoModal');
+    if (assignModal) {
+        const turnoIdInput = document.getElementById('turnoIdInput');
+        const turnoInfoEl = document.getElementById('turnoInfo');
+        const coachBoxes = assignModal.querySelectorAll('.coach-box');
+
+        assignModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const turnoId = button.getAttribute('data-turno-id');
+            const turnoInfo = button.getAttribute('data-turno-info');
+            const currentUserId = button.getAttribute('data-user-id') || '0';
+            const availableStr = button.getAttribute('data-available') || '';
+            const availableIds = availableStr ? availableStr.split(',') : [];
+
+            turnoIdInput.value = turnoId;
+            turnoInfoEl.textContent = turnoInfo;
+            coachBoxes.forEach(box => {
+                const radio = box.querySelector('input[name="user_id"]');
+                const span = box.querySelector('span');
+                radio.checked = (radio.value === currentUserId);
+                span.classList.remove('bg-danger','text-white');
+                if (availableIds.includes(radio.value) && radio.value !== '0') {
+                    span.classList.add('bg-danger','text-white');
+                }
+            });
+        });
+
+        assignModal.querySelector('form').addEventListener('submit', function() {
+            sessionStorage.setItem('turni_scroll', window.scrollY);
+            sessionStorage.setItem('turni_view', calendar.view.type);
+            sessionStorage.setItem('turni_date', calendar.getDate().toISOString());
+        });
+    }
+
+    const quickBtn = document.getElementById('toggleQuickAssign');
+    const quickCard = document.getElementById('quickAssignForm');
+    if (quickBtn && quickCard) {
+        quickBtn.addEventListener('click', () => quickCard.classList.toggle('d-none'));
+        const quickForm = quickCard.querySelector('form');
+        quickForm.addEventListener('submit', function() {
+            sessionStorage.setItem('turni_scroll', window.scrollY);
+            sessionStorage.setItem('turni_view', calendar.view.type);
+            sessionStorage.setItem('turni_date', calendar.getDate().toISOString());
+        });
+    }
 });
 </script>
 {% endblock %}

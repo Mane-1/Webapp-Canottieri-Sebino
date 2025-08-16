@@ -15,7 +15,13 @@ from dependencies import (
     get_current_admin_user,
     get_current_admin_or_coach_user,
 )
-from utils import DAY_MAP_DATETIL, parse_orario, get_color_for_type
+from utils import (
+    DAY_MAP_DATETIL,
+    parse_orario,
+    get_color_for_type,
+    export_turni_csv,
+    export_turni_excel,
+)
 
 CATEGORY_GROUPS: Dict[str, List[str]] = {
     "Over14": ["Ragazzo", "Junior", "Under 23", "Senior"],
@@ -492,6 +498,18 @@ async def view_turni(
         query = query.filter(models.Turno.user_id == allenatore_id)
     turni = query.order_by(models.Turno.data, models.Turno.fascia_oraria).all()
 
+    availabilities = (
+        db.query(models.TrainerAvailability)
+        .filter(
+            models.TrainerAvailability.turno_id.in_([t.id for t in turni]),
+            models.TrainerAvailability.available.is_(True),
+        )
+        .all()
+    )
+    avail_map: dict[int, list[int]] = {}
+    for av in availabilities:
+        avail_map.setdefault(av.turno_id, []).append(av.user_id)
+
     month_start = date.today().replace(day=1)
     if month_start.month == 12:
         next_month = date(month_start.year + 1, 1, 1)
@@ -513,6 +531,7 @@ async def view_turni(
             "current_user": current_user,
             "allenatori": allenatori,
             "turni": turni,
+            "avail_map": avail_map,
             "week_offset": week_offset,
             "week_start": start_of_week,
             "week_end": end_of_week,
@@ -522,17 +541,72 @@ async def view_turni(
         },
     )
 
-@router.post("/turni/assegna", response_class=RedirectResponse)
-async def assegna_turno(db: Session = Depends(get_db), admin_user: models.User = Depends(get_current_admin_user), turno_id: int = Form(...), user_id: int = Form(...), week_offset: int = Form(0)):
+@router.post("/turni/assegna")
+async def assegna_turno(
+    request: Request,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    turno_id: int = Form(...),
+    user_id: int = Form(...),
+    week_offset: int = Form(0),
+):
     turno = db.query(models.Turno).get(turno_id)
-    if not turno: raise HTTPException(status_code=404, detail="Turno non trovato")
-    if user_id == 0: turno.user_id = None
+    if not turno:
+        raise HTTPException(status_code=404, detail="Turno non trovato")
+
+    assigned_user = None
+    if user_id == 0:
+        turno.user_id = None
     else:
         user = db.query(models.User).get(user_id)
-        if not user or not user.is_allenatore: raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
+        if not user or not user.is_allenatore:
+            raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
         turno.user_id = user_id
+        assigned_user = {"id": user.id, "first_name": user.first_name, "last_name": user.last_name}
+
+    db.commit()
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return {"turno_id": turno.id, "user": assigned_user}
+
+    return RedirectResponse(url=f"/turni?week_offset={week_offset}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/turni/assegna_rapida")
+async def assegnazione_rapida(
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(get_current_admin_user),
+    user_id: int = Form(...),
+    turno_ids: List[int] = Form([]),
+    week_offset: int = Form(0),
+):
+    user = db.query(models.User).get(user_id)
+    if not user or not user.is_allenatore:
+        raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
+    for t_id in turno_ids:
+        turno = db.query(models.Turno).get(int(t_id))
+        if turno:
+            turno.user_id = user_id
     db.commit()
     return RedirectResponse(url=f"/turni?week_offset={week_offset}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/turni/export/csv")
+async def turni_export_csv(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    turni = db.query(models.Turno).order_by(models.Turno.data).all()
+    return export_turni_csv(turni)
+
+
+@router.get("/turni/export/excel")
+async def turni_export_excel(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    turni = db.query(models.Turno).order_by(models.Turno.data).all()
+    return export_turni_excel(turni)
 
 
 @router.get("/turni/statistiche", response_class=HTMLResponse)
@@ -716,8 +790,20 @@ async def get_turni_api(db: Session = Depends(get_db), allenatore_id: int | None
     query = db.query(models.Turno).options(joinedload(models.Turno.user))
     if allenatore_id:
         query = query.filter(models.Turno.user_id == allenatore_id)
+    turni = query.all()
+    availabilities = (
+        db.query(models.TrainerAvailability)
+        .filter(
+            models.TrainerAvailability.turno_id.in_([t.id for t in turni]),
+            models.TrainerAvailability.available.is_(True),
+        )
+        .all()
+    )
+    avail_map: dict[int, list[int]] = {}
+    for av in availabilities:
+        avail_map.setdefault(av.turno_id, []).append(av.user_id)
     events = []
-    for t in query.all():
+    for t in turni:
         start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
         start_dt = datetime.combine(t.data, time(hour=start_hour))
         end_dt = datetime.combine(t.data, time(hour=end_hour))
@@ -729,7 +815,11 @@ async def get_turni_api(db: Session = Depends(get_db), allenatore_id: int | None
                 "end": end_dt.isoformat(),
                 "backgroundColor": "#198754" if t.user else "#dc3545",
                 "borderColor": "#198754" if t.user else "#dc3545",
-                "extendedProps": {"user_id": t.user_id, "fascia_oraria": t.fascia_oraria},
+                "extendedProps": {
+                    "user_id": t.user_id,
+                    "fascia_oraria": t.fascia_oraria,
+                    "available_ids": avail_map.get(t.id, []),
+                },
             }
         )
     return events

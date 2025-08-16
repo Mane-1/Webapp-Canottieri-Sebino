@@ -1,0 +1,66 @@
+import pytest
+from datetime import date
+
+import models
+from main import app
+from dependencies import get_current_admin_or_coach_user
+from tests import factories
+
+
+@pytest.mark.anyio
+async def test_export_turni(client, db_session):
+    role = factories.create_role(db_session, "allenatore")
+    coach = factories.create_user(db_session, roles=[role])
+    db_session.add(models.Turno(data=date.today(), fascia_oraria="8:00-10:00", user_id=coach.id))
+    db_session.commit()
+    app.dependency_overrides[get_current_admin_or_coach_user] = lambda: coach
+    r_csv = await client.get("/turni/export/csv")
+    assert r_csv.status_code == 200
+    assert "text/csv" in r_csv.headers["content-type"]
+    r_xlsx = await client.get("/turni/export/excel")
+    assert r_xlsx.status_code == 200
+    assert r_xlsx.headers["content-type"].startswith("application/vnd")
+
+
+@pytest.mark.anyio
+async def test_availability_overwrite_and_api(client, db_session):
+    coach_role = factories.create_role(db_session, "allenatore")
+    coach = factories.create_user(db_session, roles=[coach_role])
+    # create two turni for next month
+    today = date.today().replace(day=1)
+    if today.month == 12:
+        next_month = date(today.year + 1, 1, 1)
+    else:
+        next_month = date(today.year, today.month + 1, 1)
+    t1 = models.Turno(data=next_month, fascia_oraria="Mattina")
+    t2 = models.Turno(data=next_month, fascia_oraria="Sera")
+    db_session.add_all([t1, t2])
+    db_session.commit()
+    app.dependency_overrides[get_current_admin_or_coach_user] = lambda: coach
+    r = await client.post("/turni/disponibilita", data={"turno_ids": str(t1.id)}, follow_redirects=False)
+    assert r.status_code in (303, 307)
+    assert (
+        db_session.query(models.TrainerAvailability)
+        .filter_by(user_id=coach.id, turno_id=t1.id)
+        .count()
+        == 1
+    )
+    r2 = await client.post("/turni/disponibilita", data={"turno_ids": str(t2.id)}, follow_redirects=False)
+    assert r2.status_code in (303, 307)
+    assert (
+        db_session.query(models.TrainerAvailability)
+        .filter_by(user_id=coach.id, turno_id=t1.id)
+        .count()
+        == 0
+    )
+    assert (
+        db_session.query(models.TrainerAvailability)
+        .filter_by(user_id=coach.id, turno_id=t2.id)
+        .count()
+        == 1
+    )
+    events = await client.get("/api/turni")
+    assert events.status_code == 200
+    data = events.json()
+    event = next(e for e in data if e["id"] == t2.id)
+    assert coach.id in event["extendedProps"]["available_ids"]

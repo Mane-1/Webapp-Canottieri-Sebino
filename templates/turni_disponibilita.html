@@ -1,0 +1,61 @@
+{% extends "layouts/_base.html" %}
+{% block title %}Disponibilità Allenatori{% endblock %}
+{% block content %}
+<div class="container py-4">
+  {% if current_user.is_admin and not edit_user %}
+    <h1 class="h2 mb-4">Disponibilità Allenatori</h1>
+    <div class="accordion" id="coachAvailAccordion">
+      {% for coach in coaches %}
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading{{ coach.id }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ coach.id }}" aria-expanded="false" aria-controls="collapse{{ coach.id }}">
+            {{ coach.first_name }} {{ coach.last_name }} - {{ coach_map.get(coach, [])|length }} disponibilità
+          </button>
+        </h2>
+        <div id="collapse{{ coach.id }}" class="accordion-collapse collapse" data-bs-parent="#coachAvailAccordion">
+          <div class="accordion-body">
+            <ul class="mb-3">
+              {% for t in coach_map.get(coach, []) %}
+              <li>{{ t.data.strftime('%d/%m/%Y') }} - {{ t.fascia_oraria }}</li>
+              {% endfor %}
+            </ul>
+            <a class="btn btn-sm btn-primary" href="/turni/disponibilita?user_id={{ coach.id }}">Modifica</a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <form method="post" action="/turni/disponibilita/proponi" class="mt-4">
+      <button type="submit" class="btn btn-outline-success">Proponi turni automatici</button>
+    </form>
+  {% else %}
+    <h1 class="h2 mb-4">Disponibilità - {{ edit_user.first_name }} {{ edit_user.last_name }}</h1>
+    <form method="post">
+      {% if current_user.is_admin %}
+      <input type="hidden" name="user_id" value="{{ edit_user.id }}">
+      {% endif %}
+      <table class="table">
+        <thead><tr><th>Data</th><th>Mattina</th><th>Sera</th></tr></thead>
+        <tbody>
+          {% for day, fasce in turni.items() %}
+          <tr>
+            <td>{{ day.strftime('%d/%m/%Y') }}</td>
+            <td>
+              {% if fasce.get('Mattina') %}
+              <input type="checkbox" name="turno_ids" value="{{ fasce['Mattina'].id }}" {% if fasce['Mattina'].id in selected_ids %}checked{% endif %}>
+              {% endif %}
+            </td>
+            <td>
+              {% if fasce.get('Sera') %}
+              <input type="checkbox" name="turno_ids" value="{{ fasce['Sera'].id }}" {% if fasce['Sera'].id in selected_ids %}checked{% endif %}>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit" class="btn btn-primary">Salva</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
