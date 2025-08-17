@@ -85,6 +85,83 @@ def athletes_list(
     )
 
 
+@router.get("/api/athletes")
+def api_all_athletes(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    athletes = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "atleta")
+        .order_by(models.User.last_name, models.User.first_name)
+        .all()
+    )
+    return [{"id": a.id, "name": a.full_name} for a in athletes]
+
+
+@router.get("/api/athletes")
+def api_all_athletes(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    athletes = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "atleta")
+        .order_by(models.User.last_name, models.User.first_name)
+        .all()
+    )
+    return [{"id": a.id, "name": a.full_name} for a in athletes]
+
+
+@router.get("/api/categories")
+def api_all_categories(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    categories = (
+        db.query(models.Categoria)
+        .order_by(models.Categoria.ordine)
+        .all()
+    )
+    return [
+        {"id": c.id, "name": c.nome, "group": c.macro_group or ""}
+        for c in categories
+    ]
+
+
+@router.get("/api/athletes")
+def api_all_athletes(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    athletes = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "atleta")
+        .order_by(models.User.last_name, models.User.first_name)
+        .all()
+    )
+    return [{"id": a.id, "name": a.full_name} for a in athletes]
+
+
+@router.get("/api/categories")
+def api_all_categories(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    categories = (
+        db.query(models.Categoria)
+        .order_by(models.Categoria.ordine)
+        .all()
+    )
+    return [
+        {"id": c.id, "name": c.nome, "group": c.macro_group or ""}
+        for c in categories
+    ]
+
+
 @router.get("/athletes/{athlete_id}", name="athlete_detail")
 def athlete_detail(
     request: Request,

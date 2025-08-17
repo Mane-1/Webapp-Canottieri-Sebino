@@ -55,6 +55,7 @@ async def dashboard(
                     "color": get_color_for_type(a.tipo),
                     "description": a.descrizione or "Nessuna descrizione.",
                     "categories": ", ".join(c.nome for c in a.categories) if a.categories else "Nessuna",
+                    "category_names": [c.nome for c in a.categories],
                     "coaches": ", ".join(f"{c.first_name} {c.last_name}" for c in a.coaches) if a.coaches else "Nessuno",
                     "recurrence": "Sì" if a.recurrence_id else "No",
                     "status": compute_status_for_athlete(db, a.id, current_user.id).value,
@@ -109,6 +110,7 @@ async def dashboard(
                     "color": get_color_for_type(a.tipo),
                     "description": a.descrizione or "Nessuna descrizione.",
                     "categories": ", ".join(c.nome for c in a.categories) if a.categories else "Nessuna",
+                    "category_names": [c.nome for c in a.categories],
                     "coaches": ", ".join(f"{c.first_name} {c.last_name}" for c in a.coaches) if a.coaches else "Nessuno",
                     "recurrence": "Sì" if a.recurrence_id else "No",
                 }

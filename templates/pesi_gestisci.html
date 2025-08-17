@@ -1,0 +1,41 @@
+{% extends "layout/base.html" %}
+{% block title %}Gestisci Esercizi{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Gestione Esercizi</h2>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th style="width:100px">Ordine</th>
+                    <th>Nome</th>
+                    <th style="width:160px">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for esercizio in esercizi %}
+                <tr>
+                    <td>
+                        <form action="/risorse/pesi/esercizi/update" method="post" class="d-flex gap-2">
+                            <input type="hidden" name="id" value="{{ esercizio.id }}">
+                            <input type="number" name="ordine" class="form-control" value="{{ esercizio.ordine }}">
+                    </td>
+                    <td>
+                            <input type="text" name="nome" class="form-control" value="{{ esercizio.nome }}">
+                    </td>
+                    <td class="d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-primary">Salva</button>
+                        </form>
+                        <form action="/risorse/pesi/esercizi/delete" method="post" onsubmit="return confirm('Confermi eliminazione?') && confirm('L\'azione è irreversibile, procedere?');">
+                            <input type="hidden" name="id" value="{{ esercizio.id }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Elimina</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <a href="/risorse/pesi" class="btn btn-secondary mt-3">Torna alla scheda</a>
+</div>
+{% endblock %}

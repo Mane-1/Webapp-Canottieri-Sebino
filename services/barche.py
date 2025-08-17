@@ -1,19 +1,36 @@
 from __future__ import annotations
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session, selectinload
 import models
 
 def list_barche(
     db: Session,
-    tipi_filter: List[str] | None = None,
+    tipo_filter: Optional[str] = None,
+    status_filter: Optional[str] = None,
     search: str = "",
     sort_by: str = "nome",
     sort_dir: str = "asc",
 ) -> Tuple[List[models.Barca], List[str]]:
-    """Return boats filtered by type and search string with eager loading."""
+    """Return boats filtered by type, status and search string with eager loading."""
     query = db.query(models.Barca).options(selectinload(models.Barca.atleti_assegnati))
-    if tipi_filter:
-        query = query.filter(models.Barca.tipo.in_(tipi_filter))
+    if tipo_filter:
+        query = query.filter(models.Barca.tipo == tipo_filter)
+    if status_filter:
+        if status_filter == "in_uso":
+            query = query.filter(
+                models.Barca.in_manutenzione.is_(False),
+                models.Barca.fuori_uso.is_(False),
+                models.Barca.in_prestito.is_(False),
+                models.Barca.in_trasferta.is_(False),
+            )
+        elif status_filter == "in_manutenzione":
+            query = query.filter(models.Barca.in_manutenzione.is_(True))
+        elif status_filter == "fuori_uso":
+            query = query.filter(models.Barca.fuori_uso.is_(True))
+        elif status_filter == "in_prestito":
+            query = query.filter(models.Barca.in_prestito.is_(True))
+        elif status_filter == "in_trasferta":
+            query = query.filter(models.Barca.in_trasferta.is_(True))
     if search:
         query = query.filter(models.Barca.nome.ilike(f"%{search}%"))
     if sort_by != "status":

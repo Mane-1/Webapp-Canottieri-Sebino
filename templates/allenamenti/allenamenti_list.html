@@ -53,6 +53,19 @@
                 <a href="/allenamenti" class="btn btn-outline-secondary w-100">Resetta</a>
             </div>
         </div>
+        <div class="row g-3 align-items-end mt-2">
+            <div class="col-md-3">
+                <label for="startDate" class="form-label">Dal</label>
+                <input type="date" class="form-control" id="startDate" name="start_date" value="{{ current_filters.start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label for="endDate" class="form-label">Al</label>
+                <input type="date" class="form-control" id="endDate" name="end_date" value="{{ current_filters.end_date }}">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">Filtra periodo</button>
+            </div>
+        </div>
     </form>
 </div>
 
@@ -145,6 +158,8 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('timeFilterButtons').addEventListener('click', function(e) {
             if (e.target.tagName === 'BUTTON') {
                 document.getElementById('timeFilterInput').value = e.target.dataset.filter;
+                document.getElementById('startDate').value = '';
+                document.getElementById('endDate').value = '';
                 document.getElementById('filterForm').submit();
             }
         });

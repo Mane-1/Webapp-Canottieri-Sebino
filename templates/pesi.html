@@ -4,11 +4,15 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h2 class="mb-0">Scheda Pesi</h2>
-        {% if current_user.is_admin or current_user.is_allenatore %}
-        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEsercizioModal">+ Aggiungi Esercizio</button>
-        {% endif %}
+        <div class="d-flex gap-2 flex-wrap">
+            {% if current_user.is_admin or current_user.is_allenatore %}
+            <a href="/risorse/pesi/esercizi" class="btn btn-outline-secondary">Gestisci esercizi</a>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addEsercizioModal">+ Aggiungi Esercizio</button>
+            {% endif %}
+            <a href="/risorse/pesi/statistiche" class="btn btn-primary">Statistiche</a>
+        </div>
     </div>
 
     {% if current_user.is_admin or current_user.is_allenatore %}

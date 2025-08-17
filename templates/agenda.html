@@ -1,0 +1,52 @@
+{% extends "layout/base.html" %}
+{% block title %}Agenda{% endblock %}
+{% block head_extra %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/core/locales/it.js'></script>
+{% endblock %}
+{% block content %}
+<div class="container p-3">
+  <h1 class="h2 mb-4">Agenda</h1>
+  <div class="d-flex justify-content-end mb-3">
+    <a id="icsLinkBtn" class="btn btn-sm btn-outline-secondary" href="#">Link calendario</a>
+  </div>
+  <div id="calendar" class="bg-white p-3 rounded shadow-sm"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async function(){
+  const calendarEl = document.getElementById('calendar');
+  const linkBtn = document.getElementById('icsLinkBtn');
+  const initialView = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
+  const aspectRatio = window.innerWidth < 768 ? 0.85 : 1.5;
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: initialView,
+    locale: 'it',
+    aspectRatio: aspectRatio,
+    height: 'auto',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,listWeek'
+    },
+    buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda' },
+    events: '/api/agenda',
+    eventDidMount: function(info){
+      const bg = info.event.backgroundColor;
+      if(bg){
+        info.el.style.setProperty('--fc-event-bg-color', bg);
+        info.el.style.setProperty('--fc-event-border-color', info.event.borderColor || bg);
+      }
+    }
+  });
+  calendar.render();
+  try {
+    const r = await fetch('/api/calendar/link');
+    const { ics_url } = await r.json();
+    linkBtn.href = location.origin + ics_url;
+    linkBtn.target = '_blank';
+  } catch (e) {}
+});
+</script>
+{% endblock %}

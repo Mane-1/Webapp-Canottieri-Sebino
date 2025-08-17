@@ -9,13 +9,13 @@ class ToggleAttendanceIn(BaseModel):
 
 
 class SetAttendanceIn(BaseModel):
-    status: Literal["present", "absent"]
+    status: Literal["present", "absent", "maybe"]
     reason: Optional[str] = None
 
 
 class AttendanceBulkItem(BaseModel):
     athlete_id: int
-    status: Literal["present", "absent"]
+    status: Literal["present", "absent", "maybe"]
 
 
 class AttendanceBulkIn(BaseModel):

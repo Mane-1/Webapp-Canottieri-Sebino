@@ -88,18 +88,27 @@ async def list_allenamenti(
     tipo: Optional[str] = Query(None),
     coach_id: Optional[str] = Query(None),
     unassigned: bool = Query(False),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
 ):
     today = date.today()
     query = db.query(models.Allenamento).options(
         joinedload(models.Allenamento.categories),
         joinedload(models.Allenamento.coaches),
     )
-    if filter == "future":
+    if start_date:
+        query = query.filter(models.Allenamento.data >= start_date)
+    if end_date:
+        query = query.filter(models.Allenamento.data <= end_date)
+    if start_date or end_date:
+        page_title = "Allenamenti filtrati"
+        query = query.order_by(models.Allenamento.data.asc(), models.Allenamento.orario.asc())
+    elif filter == "future":
         page_title, query = "Prossimi Allenamenti", query.filter(models.Allenamento.data >= today).order_by(models.Allenamento.data.asc(), models.Allenamento.orario.asc())
     elif filter == "past":
         page_title, query = "Allenamenti Passati", query.filter(models.Allenamento.data < today).order_by(models.Allenamento.data.desc(), models.Allenamento.orario.desc())
     else:
-        page_title, query = "Tutti gli Allenamenti", query.order_by(models.Allenamento.data.desc())
+        page_title, query = "Tutti gli Allenamenti", query.order_by(models.Allenamento.data.asc(), models.Allenamento.orario.asc())
     if current_user.is_atleta and not (current_user.is_admin or current_user.is_allenatore):
         query = query.join(models.Allenamento.categories).filter(
             models.Categoria.nome == current_user.category
@@ -140,6 +149,8 @@ async def list_allenamenti(
                 "tipo": tipo,
                 "coach_id": coach_id_int,
                 "unassigned": unassigned,
+                "start_date": start_date.isoformat() if start_date else "",
+                "end_date": end_date.isoformat() if end_date else "",
             },
         },
     )
@@ -647,28 +658,16 @@ async def turni_stats(
     year: int | None = Query(None),
     month: int | None = Query(None),
 ):
-    # determine available years and months based on existing shifts
-    raw_dates = db.query(
-        extract("year", models.Turno.data).label("y"),
-        extract("month", models.Turno.data).label("m"),
-    ).distinct().all()
-    years = sorted({int(r.y) for r in raw_dates})
-    months_by_year: Dict[int, List[int]] = {}
-    for r in raw_dates:
-        months_by_year.setdefault(int(r.y), []).append(int(r.m))
-    for y in months_by_year:
-        months_by_year[y] = sorted(set(months_by_year[y]))
-
-    today = date.today()
-    if not years:
-        year = today.year
-        months = [today.month]
-    else:
-        if year is None or year not in years:
-            year = today.year if today.year in years else years[0]
-        months = months_by_year.get(year, [])
-        if month is None or month not in months:
-            month = today.month if today.month in months else (months[0] if months else 1)
+    raw_years = db.query(extract("year", models.Turno.data).label("y")).distinct().all()
+    years = sorted({int(r.y) for r in raw_years}, reverse=True)
+    current_year = date.today().year
+    if current_year not in years:
+        years.insert(0, current_year)
+    if year is None or year not in years:
+        year = current_year
+    months = list(range(1, 13))
+    if month is None or month not in months:
+        month = date.today().month
 
     month_start = date(year, month, 1)
     if month == 12:

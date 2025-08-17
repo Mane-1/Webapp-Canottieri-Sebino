@@ -26,3 +26,7 @@ async def test_stats_filtering(client, db_session):
     assert r.status_code == 200
     assert "Coperti 1" in r.text
     assert "Scoperti 1" in r.text
+    r2 = await client.get(f"/turni/statistiche?year={year}&month=1")
+    assert r2.status_code == 200
+    assert "Coperti 0" in r2.text
+    assert "Scoperti 0" in r2.text

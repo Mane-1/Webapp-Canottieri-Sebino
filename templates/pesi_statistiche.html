@@ -1,0 +1,54 @@
+{% extends "layout/base.html" %}
+{% block title %}Statistiche Pesi{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-3">Statistiche Pesi</h2>
+    {% if current_user.is_admin or current_user.is_allenatore %}
+    <form method="GET" class="row g-2 mb-3">
+        <div class="col-12 col-md-4">
+            <label for="categoria" class="form-label">Categoria</label>
+            <select id="categoria" name="categoria" class="form-select" onchange="this.form.submit()">
+                <option value="">Tutte</option>
+                {% for cat in categorie %}
+                <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label for="atleta_id" class="form-label">Atleta</label>
+            <select id="atleta_id" name="atleta_id" class="form-select" onchange="this.form.submit()">
+                <option value="">Seleziona...</option>
+                {% for atleta in atleti %}
+                <option value="{{ atleta.id }}" {% if selected_atleta and selected_atleta.id == atleta.id %}selected{% endif %}>{{ atleta.first_name }} {{ atleta.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label for="esercizio_id" class="form-label">Esercizio</label>
+            <select id="esercizio_id" name="esercizio_id" class="form-select">
+                {% for esercizio in esercizi %}
+                <option value="{{ esercizio.id }}">{{ esercizio.nome }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+    {% else %}
+    <form method="GET" class="mb-3">
+        <label for="esercizio_id" class="form-label">Esercizio</label>
+        <select id="esercizio_id" name="esercizio_id" class="form-select">
+            {% for esercizio in esercizi %}
+            <option value="{{ esercizio.id }}">{{ esercizio.nome }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    {% endif %}
+    <div style="max-width:100%;">
+        <canvas id="statsChart"></canvas>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('statsChart').getContext('2d');
+new Chart(ctx, {type:'line', data:{labels:[], datasets:[{label:'Pesi', data:[]}]}});
+</script>
+{% endblock %}

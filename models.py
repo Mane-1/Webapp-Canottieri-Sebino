@@ -90,6 +90,7 @@ class User(Base):
     certificate_expiration = Column(Date)
     address = Column(String)
     manual_category = Column(String, nullable=True)
+    calendar_token = Column(String(64), unique=True, index=True, nullable=True)
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     tags = relationship("Tag", secondary=user_tags, back_populates="users")
     barche_assegnate = relationship("Barca", secondary=barca_atleti_association, back_populates="atleti_assegnati")

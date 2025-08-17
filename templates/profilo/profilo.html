@@ -43,5 +43,41 @@
             </div>
         </div>
     </div>
+    <div class="card mt-3">
+        <div class="card-body">
+            <h5 class="card-title">Calendario personale</h5>
+            <p class="card-text">Sottoscrivi questo link in Google/Apple/Outlook:</p>
+            <div class="input-group mb-2">
+                <input id="icsLink" class="form-control" readonly>
+                <button id="copyIcs" class="btn btn-outline-secondary" type="button">Copia</button>
+            </div>
+            <button id="regenIcs" class="btn btn-sm btn-warning">Rigenera link</button>
+            <small class="text-muted d-block mt-2">NB: rigenerando il link, i client collegati smetteranno di aggiornarsi finché non risottoscrivi il nuovo URL.</small>
+        </div>
+    </div>
 </div>
+<script>
+(async function(){
+  const linkInput = document.getElementById('icsLink');
+  const copyBtn = document.getElementById('copyIcs');
+  const regenBtn = document.getElementById('regenIcs');
+  async function loadLink(){
+    const r = await fetch('/api/calendar/link');
+    const { ics_url } = await r.json();
+    linkInput.value = location.origin + ics_url;
+  }
+  copyBtn?.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(linkInput.value);
+    copyBtn.innerText = 'Copiato!';
+    setTimeout(()=> copyBtn.innerText='Copia', 1200);
+  });
+  regenBtn?.addEventListener('click', async () => {
+    if (!confirm('Rigenerare il link? I client dovranno essere aggiornati.')) return;
+    const r = await fetch('/api/calendar/regenerate', { method: 'POST' });
+    const { ics_url } = await r.json();
+    linkInput.value = location.origin + ics_url;
+  });
+  loadLink();
+})();
+</script>
 {% endblock %}
