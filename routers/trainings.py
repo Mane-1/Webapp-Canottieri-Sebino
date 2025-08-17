@@ -395,18 +395,27 @@ async def aggiorna_allenamento(
     )
     if not categories or len(categories) != len(category_names):
         grouped_categories = _group_categories(db)
-    return templates.TemplateResponse(
-        "allenamenti/modifica_allenamento.html",
-        {
-            "request": request,
-            "current_user": staff_user,
-            "allenamento": allenamento,
-            "grouped_categories": grouped_categories,
-            "selected_category_names": category_names,
-            "error_message": "Seleziona almeno una categoria valida.",
-        },
-        status_code=400,
-    )
+        available_coaches = (
+            db.query(models.User)
+            .join(models.User.roles)
+            .filter(models.Role.name == "allenatore")
+            .order_by(models.User.first_name, models.User.last_name)
+            .all()
+        )
+        return templates.TemplateResponse(
+            "allenamenti/modifica_allenamento.html",
+            {
+                "request": request,
+                "current_user": staff_user,
+                "allenamento": allenamento,
+                "grouped_categories": grouped_categories,
+                "selected_category_names": category_names,
+                "available_coaches": available_coaches,
+                "selected_coach_ids": coach_ids,
+                "error_message": "Seleziona almeno una categoria valida.",
+            },
+            status_code=400,
+        )
     if orario == "personalizzato":
         if not orario_start or not orario_end:
             grouped_categories = _group_categories(db)

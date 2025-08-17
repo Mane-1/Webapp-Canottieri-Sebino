@@ -1,2 +1,6 @@
 .venv/
 .env
+backups/
+*.dump
+*.sqlite
+*.tar.gz

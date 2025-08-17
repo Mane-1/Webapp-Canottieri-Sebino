@@ -76,15 +76,14 @@ def calendar_ics(token: str, db: Session = Depends(get_db)):
             start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
             start_dt = datetime.combine(t.data, time(start_hour), tzinfo=TZ)
             end_dt = datetime.combine(t.data, time(end_hour), tzinfo=TZ)
-            fascia = "Mattina" if t.fascia_oraria == "Mattina" else "Sera"
-            summary = f"APERTURA CANOTTIERI - {fascia}"
+            summary = "APERTURA CANOTTIERI"
             events.append(
                 _event(
                     f"turno-{t.id}@sebino",
                     start_dt,
                     end_dt,
                     summary,
-                    summary,
+                    "",
                 )
             )
 
@@ -119,7 +118,7 @@ def calendar_ics(token: str, db: Session = Depends(get_db)):
             cat_parts.extend(
                 f"{u.first_name} {u.last_name}" for u in a.barca.atleti_assegnati
             )
-        desc_lines = ["Note evento:"]
+        desc_lines = []
         desc_lines.append(
             "Categorie assegnate: " + ", ".join(cat_parts)
             if cat_parts
@@ -129,21 +128,6 @@ def calendar_ics(token: str, db: Session = Depends(get_db)):
         desc_lines.append(
             "Allenatori: " + coach_names if coach_names else "Allenatori:"
         )
-        if user.is_atleta:
-            attendance = (
-                db.query(models.Attendance)
-                .filter_by(training_id=a.id, athlete_id=user.id)
-                .first()
-            )
-            if attendance:
-                status_map = {
-                    models.AttendanceStatus.present: "Presente",
-                    models.AttendanceStatus.absent: "Assente",
-                    models.AttendanceStatus.maybe: "Da definire",
-                }
-                desc_lines.append(
-                    f"Presenza: {status_map.get(attendance.status, '')}"
-                )
         description = "\n".join(desc_lines)
         events.append(
             _event(
@@ -190,10 +174,20 @@ def api_calendar_regenerate(
 @router.get("/agenda", response_class=HTMLResponse)
 def agenda_page(
     request: Request,
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
 ):
+    coaches = []
+    if current_user.is_admin:
+        coaches = (
+            db.query(models.User)
+            .join(models.User.roles)
+            .filter(models.Role.name == "allenatore")
+            .all()
+        )
     return templates.TemplateResponse(
-        "agenda.html", {"request": request, "current_user": current_user}
+        "agenda.html",
+        {"request": request, "current_user": current_user, "allenatori": coaches},
     )
 
 
@@ -217,18 +211,33 @@ def agenda_events(
             )
             .all()
         )
+        availabilities = (
+            db.query(models.TrainerAvailability)
+            .filter(
+                models.TrainerAvailability.turno_id.in_([t.id for t in turni]),
+                models.TrainerAvailability.available.is_(True),
+            )
+            .all()
+        )
+        avail_map: dict[int, list[int]] = {}
+        for av in availabilities:
+            avail_map.setdefault(av.turno_id, []).append(av.user_id)
         for t in turni:
             start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
             start_dt = datetime.combine(t.data, time(start_hour), tzinfo=TZ)
             end_dt = datetime.combine(t.data, time(end_hour), tzinfo=TZ)
-            fascia = "Mattina" if t.fascia_oraria == "Mattina" else "Sera"
             events.append(
                 {
                     "id": f"turno-{t.id}",
-                    "title": f"APERTURA CANOTTIERI - {fascia}",
+                    "title": "APERTURA CANOTTIERI",
                     "start": start_dt.isoformat(),
                     "end": end_dt.isoformat(),
                     "backgroundColor": "#0d6efd",
+                    "extendedProps": {
+                        "user_id": t.user_id,
+                        "fascia_oraria": t.fascia_oraria,
+                        "available_ids": avail_map.get(t.id, []),
+                    },
                 }
             )
 
@@ -256,6 +265,10 @@ def agenda_events(
         start_dt = start_dt.replace(tzinfo=TZ)
         end_dt = end_dt.replace(tzinfo=TZ)
         title = a.tipo if not a.descrizione else f"{a.tipo} - {a.descrizione}"
+        categories = ", ".join([c.nome for c in a.categories]) or "Nessuno"
+        coaches = ", ".join(
+            [f"{c.first_name} {c.last_name}" for c in a.coaches]
+        ) or "Nessuno"
         events.append(
             {
                 "id": f"training-{a.id}",
@@ -263,6 +276,13 @@ def agenda_events(
                 "start": start_dt.isoformat(),
                 "end": end_dt.isoformat(),
                 "backgroundColor": get_color_for_type(a.tipo),
+                "extendedProps": {
+                    "descrizione": a.descrizione,
+                    "orario": a.orario,
+                    "recurrence_id": a.recurrence_id,
+                    "categories": categories,
+                    "coaches": coaches,
+                },
             }
         )
     return events

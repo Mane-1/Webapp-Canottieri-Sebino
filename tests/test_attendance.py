@@ -165,16 +165,27 @@ async def test_toggle_training_category(client, db_session):
     training = models.Allenamento(tipo="Test", data=date.today() + timedelta(days=1), orario="08:00")
     db_session.add(training)
     db_session.commit()
+    athlete = factories.create_user(db_session, username="ath1", date_of_birth=date.today() - timedelta(days=365*15))
+    attend = models.Attendance(training_id=training.id, athlete_id=athlete.id, status=models.AttendanceStatus.present)
+    db_session.add(attend)
+    db_session.commit()
 
     await client.post("/login", data={"username": "coach3", "password": "password"}, follow_redirects=True)
     r = await client.post(f"/trainings/{training.id}/categories/{cat.nome}")
     assert r.status_code == 200
     db_session.refresh(training)
     assert cat in training.categories
+    # removing category should also drop attendance for its athletes
     r = await client.post(f"/trainings/{training.id}/categories/{cat.nome}")
     assert r.status_code == 200
     db_session.refresh(training)
     assert cat not in training.categories
+    assert (
+        db_session.query(models.Attendance)
+        .filter_by(training_id=training.id, athlete_id=athlete.id)
+        .count()
+        == 0
+    )
 
 
 @pytest.mark.anyio
@@ -193,3 +204,36 @@ async def test_api_categories(client, db_session):
     data = resp.json()
     assert any(c["name"] == "Junior" and c["group"] == "Over 14" for c in data)
     assert any(c["name"] == "Master" and c["group"] == "Master" for c in data)
+
+
+@pytest.mark.anyio
+async def test_update_training_categories(client, db_session):
+    coach_role = factories.create_role(db_session, "allenatore")
+    coach = factories.create_user(db_session, username="coach_upd", roles=[coach_role])
+    cat1 = factories.create_categoria(db_session, nome="Junior", macro_group="Over 14", ordine=1)
+    cat2 = factories.create_categoria(db_session, nome="Senior", macro_group="Over 14", ordine=2)
+    training = models.Allenamento(tipo="Test", data=date.today() + timedelta(days=1), orario="08:00")
+    training.categories.append(cat1)
+    training.coaches.append(coach)
+    db_session.add(training)
+    db_session.commit()
+
+    await client.post("/login", data={"username": "coach_upd", "password": "password"}, follow_redirects=True)
+    new_date = date.today() + timedelta(days=2)
+    r = await client.post(
+        f"/allenamenti/{training.id}/modifica",
+        data={
+            "tipo": "Updated",
+            "descrizione": "desc",
+            "data": new_date.isoformat(),
+            "orario": "09:00",
+            "category_names": [cat1.nome, cat2.nome],
+            "coach_ids": [str(coach.id)],
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    db_session.refresh(training)
+    assert training.tipo == "Updated"
+    assert training.data == new_date
+    assert cat2 in training.categories

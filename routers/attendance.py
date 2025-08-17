@@ -259,6 +259,16 @@ async def toggle_training_category(
     if category in training.categories:
         training.categories.remove(category)
         assigned = False
+        # remove attendance records for athletes no longer matching any category
+        remaining_ids = {a.id for a in get_roster_for_training(db, training)}
+        (
+            db.query(models.Attendance)
+            .filter(
+                models.Attendance.training_id == training_id,
+                ~models.Attendance.athlete_id.in_(remaining_ids),
+            )
+            .delete(synchronize_session=False)
+        )
     else:
         training.categories.append(category)
         assigned = True

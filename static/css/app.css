@@ -122,3 +122,39 @@ body{
   width:auto;
   opacity:.95;
 }
+
+
+
+.navbar .brand-mark{
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  background: transparent !important;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.navbar-dark .navbar-brand img.brand-mark{
+  filter: none !important;
+}
+
+
+.navbar .brand-mark{
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  background: transparent !important;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.navbar-dark .navbar-brand img.brand-mark{
+  filter: none !important;
+}
+
+
+.brand-mark{
+  width:28px;
+  height:28px;
+  vertical-align:middle;
+}

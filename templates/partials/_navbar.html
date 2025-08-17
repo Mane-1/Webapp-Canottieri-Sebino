@@ -1,6 +1,10 @@
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" role="navigation">
   <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="/dashboard">Canottieri Sebino</a>
+    <a class="navbar-brand fw-bold" href="/dashboard">
+      <img src="{{ url_for('static', path='img/logo-mark.svg') }}?v=2"
+           alt="" width="28" height="28" class="brand-mark me-2" />
+      Canottieri Sebino
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="navbarNav">
       {% if current_user is defined and current_user %}
