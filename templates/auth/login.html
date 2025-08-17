@@ -2,11 +2,18 @@
 
 {% block title %}Login{% endblock %}
 {% block main_class %}main--center{% endblock %}
+{% block navbar %}{% endblock %}
 
 {% block content %}
 <section class="card" aria-labelledby="title">
+  <div class="text-center mb-3">
+    <img
+      src="{{ url_for('static', path='img/app-logo.png') }}"
+      alt="Logo Canottieri Sebino"
+      class="app-logo"
+    />
+  </div>
   <h1 id="title">Accedi</h1>
-  <p class="subtitle">Entra nella web app della Canottieri Sebino Lovere.</p>
   <div class="error" id="errorBox" role="alert"{% if error_message %} style="display:block"{% endif %}>{{ error_message }}</div>
   <form method="post" action="/login" novalidate>
     <label class="field" for="username">

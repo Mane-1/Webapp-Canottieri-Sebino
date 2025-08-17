@@ -98,3 +98,27 @@ body{
 @media (prefers-reduced-motion: reduce){
   *{animation:none; transition:none}
 }
+
+.app-logo{
+  height:128px;
+  width:auto;
+  opacity:.95;
+}
+
+.app-logo{
+  height:128px;
+  width:auto;
+  opacity:.95;
+}
+
+.app-logo{
+  height:128px;
+  width:auto;
+  opacity:.95;
+}
+
+.app-logo{
+  height:88px;
+  width:auto;
+  opacity:.95;
+}

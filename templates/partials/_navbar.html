@@ -12,6 +12,7 @@
             <li><a class="dropdown-item" href="/calendario">Calendario Allenamenti</a></li>
             {% if current_user.is_admin or current_user.is_allenatore %}
             <li><a class="dropdown-item" href="{{ url_for('list_allenamenti') }}">Gestione Allenamenti</a></li>
+            <li><a class="dropdown-item" href="/trainings/stats">Statistiche</a></li>
             {% endif %}
           </ul>
         </li>
@@ -28,6 +29,9 @@
             {% endif %}
           </ul>
         </li>
+        {% endif %}
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <li class="nav-item"><a class="nav-link" href="/athletes">Atleti</a></li>
         {% endif %}
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="risorseDropdown" role="button" data-bs-toggle="dropdown">Risorse</a>

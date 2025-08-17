@@ -1,0 +1,89 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+  <h1 class="me-3 mb-0">{{ athlete.full_name }}</h1>
+  {% if category %}<span class="badge bg-secondary">{{ category }}</span>{% endif %}
+  <a id="attendance-csv" class="btn btn-sm btn-outline-secondary ms-auto" href="#">Esporta presenze CSV</a>
+</div>
+
+<ul class="nav nav-tabs" id="athleteTabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="tab-data-tab" data-bs-toggle="tab" data-bs-target="#tab-data" type="button" role="tab">Dati</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-measurements-tab" data-bs-toggle="tab" data-bs-target="#tab-measurements" type="button" role="tab">Misure</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-attendance-tab" data-bs-toggle="tab" data-bs-target="#tab-attendance" type="button" role="tab">Statistica presenze</button>
+  </li>
+</ul>
+<div class="tab-content mt-3">
+  <div class="tab-pane fade show active" id="tab-data" role="tabpanel">
+    <dl class="row">
+      <dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ athlete.email }}</dd>
+      <dt class="col-sm-3">Data di nascita</dt><dd class="col-sm-9">{{ athlete.date_of_birth }}</dd>
+      <dt class="col-sm-3">Codice fiscale</dt><dd class="col-sm-9">{{ athlete.tax_code }}</dd>
+      <dt class="col-sm-3">Indirizzo</dt><dd class="col-sm-9">{{ athlete.address }}</dd>
+    </dl>
+  </div>
+  <div class="tab-pane fade" id="tab-measurements" role="tabpanel">
+    <form id="measurement-form" data-athlete-id="{{ athlete.id }}" class="row g-2">
+      <div class="col-md-2"><input type="number" step="0.01" name="height_cm" class="form-control" placeholder="Altezza (cm)"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="weight_kg" class="form-control" placeholder="Peso (kg)"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="leg_length_cm" class="form-control" placeholder="Lung. gambe"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="tibia_length_cm" class="form-control" placeholder="Lung. tibia"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="arm_length_cm" class="form-control" placeholder="Lung. braccia"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="torso_height_cm" class="form-control" placeholder="Alt. busto"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="wingspan_cm" class="form-control" placeholder="Apertura alare"></div>
+      <div class="col-md-3"><input type="date" name="measured_at" class="form-control"></div>
+      <div class="col-md-5"><input type="text" name="notes" class="form-control" placeholder="Note"></div>
+      <div class="col-auto"><button class="btn btn-primary" type="submit">Salva</button></div>
+    </form>
+    <div class="mt-3">
+      <select id="measurement-year" class="form-select w-auto mb-2">
+        {% for y in measurement_years %}
+        <option value="{{ y }}" {% if y == measurement_years|last %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <canvas id="weightChart" height="100"></canvas>
+    </div>
+    <table class="table mt-3" id="measurements-table">
+      <thead><tr><th>Data</th><th>Peso</th><th>Altezza</th></tr></thead>
+      <tbody>
+      {% for m in measurements %}
+        <tr><td>{{ m.measured_at }}</td><td>{{ m.weight_kg or '' }}</td><td>{{ m.height_cm or '' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="tab-pane fade" id="tab-attendance" role="tabpanel">
+    <div class="row g-2 mb-3">
+      <div class="col-auto"><select id="stats-year" class="form-select">
+        {% for y in years %}<option value="{{ y }}" {% if y==years[0] %}selected{% endif %}>{{ y }}</option>{% endfor %}
+      </select></div>
+      <div class="col-auto"><select id="stats-month" class="form-select">
+        <option value="">Tutti i mesi</option>
+        {% for m in range(1,13) %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select></div>
+      <div class="col-auto"><select id="stats-type" class="form-select" multiple>
+        {% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select></div>
+      <div class="col-auto"><button id="attendance-export" class="btn btn-secondary btn-sm">Esporta CSV</button></div>
+    </div>
+    <div class="row text-center mb-3">
+      <div class="col"><strong id="kpi-sessions">0</strong><div>Sedute</div></div>
+      <div class="col"><strong id="kpi-present">0</strong><div>Presenti</div></div>
+      <div class="col"><strong id="kpi-absent">0</strong><div>Assenti</div></div>
+      <div class="col"><strong id="kpi-rate">0%</strong><div>% Presenza</div></div>
+    </div>
+    <canvas id="monthlyChart" height="100"></canvas>
+    <canvas id="byTypeChart" class="mt-3" height="100"></canvas>
+    <table class="table mt-3" id="sessions-table">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Categorie</th><th>Stato</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="/static/js/athlete_detail.js"></script>
+{% endblock %}

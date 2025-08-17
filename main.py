@@ -35,6 +35,9 @@ from routers import (
     admin,
     trainings_calendar,
     availabilities,
+    attendance,
+    athletes,
+    trainings_stats,
 )
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
@@ -161,6 +164,9 @@ app.include_router(trainings_calendar.router)
 app.include_router(resources.router)
 app.include_router(admin.router)
 app.include_router(availabilities.router)
+app.include_router(attendance.router)
+app.include_router(athletes.router)
+app.include_router(trainings_stats.router)
 
 
 @app.get("/health")

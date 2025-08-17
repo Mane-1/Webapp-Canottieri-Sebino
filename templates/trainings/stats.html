@@ -1,0 +1,44 @@
+{% extends "layout/base.html" %}
+{% block content %}
+<h1>Statistiche Allenamenti</h1>
+
+<div class="row g-2 mb-3">
+  <div class="col-auto">
+    <select id="year" class="form-select">
+      {% for y in years %}<option value="{{ y }}" {% if y==current_year %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select id="month" class="form-select">
+      <option value="">Tutti i mesi</option>
+      {% for m in range(1,13) %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select id="category" class="form-select" multiple>
+      {% for c in categories %}<option value="{{ c.nome }}">{{ c.nome }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select id="type" class="form-select" multiple>
+      {% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <a id="export-csv" class="btn btn-secondary btn-sm" href="#">Esporta CSV</a>
+  </div>
+</div>
+
+<div class="row text-center mb-3">
+  <div class="col"><strong id="kpi-trainings">0</strong><div>Allenamenti</div></div>
+  <div class="col"><strong id="kpi-hours">0</strong><div>Ore</div></div>
+  <div class="col"><strong id="kpi-present">0</strong><div>Presenti</div></div>
+  <div class="col"><strong id="kpi-absent">0</strong><div>Assenti</div></div>
+</div>
+
+<canvas id="monthlyChart" height="100"></canvas>
+<canvas id="byTypeTrainingsChart" class="mt-3" height="100"></canvas>
+<canvas id="byTypeHoursChart" class="mt-3" height="100"></canvas>
+
+<script src="/static/js/trainings_stats.js"></script>
+{% endblock %}

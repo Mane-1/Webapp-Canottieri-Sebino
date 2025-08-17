@@ -1,6 +1,9 @@
-# File: models.py
-from datetime import date
+"""SQLAlchemy models for the application."""
+
+from datetime import date, datetime
 from typing import Tuple
+import enum
+
 from sqlalchemy import (
     Column,
     Integer,
@@ -15,8 +18,10 @@ from sqlalchemy import (
     Index,
     CheckConstraint,
     UniqueConstraint,
+    Enum,
+    DateTime,
 )
-from sqlalchemy.orm import relationship, object_session
+from sqlalchemy.orm import relationship, object_session, backref
 from sqlalchemy.orm.attributes import flag_modified
 from database import Base
 
@@ -270,5 +275,87 @@ class TrainerAvailability(Base):
     turno = relationship("Turno")
     __table_args__ = (
         UniqueConstraint('user_id', 'turno_id', name='uq_user_turno_availability'),
+    )
+
+
+class AttendanceStatus(enum.Enum):
+    present = "present"
+    absent = "absent"
+
+
+class AttendanceSource(enum.Enum):
+    system = "system"
+    athlete = "athlete"
+    coach = "coach"
+
+
+class Attendance(Base):
+    __tablename__ = "attendances"
+
+    id = Column(Integer, primary_key=True)
+    training_id = Column(Integer, ForeignKey("allenamenti.id", ondelete="CASCADE"), nullable=False)
+    athlete_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = Column(Enum(AttendanceStatus), nullable=False, default=AttendanceStatus.present)
+    source = Column(Enum(AttendanceSource), nullable=False, default=AttendanceSource.system)
+    change_count = Column(Integer, nullable=False, default=0)
+    last_changed_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("training_id", "athlete_id", name="uq_attendance_training_athlete"),
+        Index("ix_attendance_training_id", "training_id"),
+        Index("ix_attendance_athlete_id", "athlete_id"),
+    )
+
+    training = relationship(
+        "Allenamento",
+        backref=backref("attendances", cascade="all,delete-orphan"),
+    )
+    athlete = relationship("User")
+
+
+class AttendanceChangeLog(Base):
+    __tablename__ = "attendance_change_logs"
+
+    id = Column(Integer, primary_key=True)
+    attendance_id = Column(Integer, ForeignKey("attendances.id", ondelete="CASCADE"), nullable=False)
+    changed_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    old_status = Column(Enum(AttendanceStatus), nullable=True)
+    new_status = Column(Enum(AttendanceStatus), nullable=False)
+    source = Column(Enum(AttendanceSource), nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    reason = Column(String, nullable=True)
+
+    attendance = relationship(
+        "Attendance", backref=backref("changes", cascade="all,delete-orphan")
+    )
+    changed_by_user = relationship("User")
+
+
+class AthleteMeasurement(Base):
+    __tablename__ = "athlete_measurements"
+
+    id = Column(Integer, primary_key=True)
+    athlete_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    measured_at = Column(Date, nullable=False, default=date.today)
+    # GENERALI
+    height_cm = Column(Float, nullable=True)
+    weight_kg = Column(Float, nullable=True)
+    # SPECIFICHE
+    leg_length_cm = Column(Float, nullable=True)
+    tibia_length_cm = Column(Float, nullable=True)
+    arm_length_cm = Column(Float, nullable=True)
+    torso_height_cm = Column(Float, nullable=True)
+    wingspan_cm = Column(Float, nullable=True)
+    # NOTE
+    notes = Column(Text, nullable=True)
+
+    recorded_by_user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    recorded_by = relationship("User", foreign_keys=[recorded_by_user_id])
+    athlete = relationship(
+        "User",
+        foreign_keys=[athlete_id],
+        backref=backref("measurements", cascade="all,delete-orphan"),
     )
 
