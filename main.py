@@ -30,6 +30,7 @@ from utils import get_color_for_type
 from routers import (
     authentication,
     users,
+    trainings_stats,
     trainings,
     resources,
     admin,
@@ -37,7 +38,6 @@ from routers import (
     availabilities,
     attendance,
     athletes,
-    trainings_stats,
 )
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
@@ -159,6 +159,7 @@ def on_startup():
 # Ogni router gestisce una sezione specifica dell'applicazione
 app.include_router(authentication.router)
 app.include_router(users.router)
+app.include_router(trainings_stats.router)
 app.include_router(trainings.router)
 app.include_router(trainings_calendar.router)
 app.include_router(resources.router)
@@ -166,7 +167,6 @@ app.include_router(admin.router)
 app.include_router(availabilities.router)
 app.include_router(attendance.router)
 app.include_router(athletes.router)
-app.include_router(trainings_stats.router)
 
 
 @app.get("/health")

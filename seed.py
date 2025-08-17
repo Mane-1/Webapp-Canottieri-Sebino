@@ -3,6 +3,7 @@ import os
 import sys
 from datetime import date, datetime, timedelta
 import logging
+import random
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -180,16 +181,20 @@ atleti_data = [
 
 # --- DATI BARCHE INTEGRATI ---
 barche_data = [
-    {'nome': 'ELPIS', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2022},
-    {'nome': 'ZEUS', 'tipo': '2x', 'costruttore': 'Filippi', 'anno': 2019},
-    {'nome': 'KRONOS', 'tipo': '4x', 'costruttore': 'Salani', 'anno': 2021},
-    {'nome': 'EROS', 'tipo': '2-', 'costruttore': 'Salani', 'anno': 2023},
-    {'nome': 'POSEIDONE', 'tipo': '8+', 'costruttore': 'Filippi', 'anno': 2018},
-    {'nome': 'ARES', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2022},
-    {'nome': 'ARTEMIDE', 'tipo': '4-', 'costruttore': 'Filippi', 'anno': 2020},
-    {'nome': 'APOLLO', 'tipo': '2x', 'costruttore': 'Salani', 'anno': 2021},
-    {'nome': 'PEGASO', 'tipo': '4x', 'costruttore': 'Filippi', 'anno': 2019},
-    {'nome': 'ORIONE', 'tipo': '1x', 'costruttore': 'Salani', 'anno': 2023},
+    {"nome": "Gemma", "tipo": "1x", "costruttore": "Filippi", "anno": 2006},
+    {"nome": "Nuovo", "tipo": "1x", "costruttore": "Filippi", "anno": 2007},
+    {"nome": "Baba", "tipo": "1x", "costruttore": "Filippi", "anno": 2009},
+    {"nome": "Betty", "tipo": "1x", "costruttore": "Filippi", "anno": 2007},
+    {"nome": "6", "tipo": "1x", "costruttore": "Filippi", "anno": 2003},
+    {"nome": "5", "tipo": "1x", "costruttore": "Filippi", "anno": 2002},
+    {"nome": "7", "tipo": "1x", "costruttore": "Filippi", "anno": 2004},
+    {"nome": "Forza e Costanza", "tipo": "2x", "costruttore": "Filippi", "anno": 2008},
+    {"nome": "Tiziana Ciro", "tipo": "2x", "costruttore": "Filippi", "anno": 2010},
+    {"nome": "Maria Luisa", "tipo": "2x", "costruttore": "Filippi", "anno": 2008},
+    {"nome": "Felice", "tipo": "2x-", "costruttore": "Filippi", "anno": 2011},
+    {"nome": "Macon", "tipo": "4x", "costruttore": "Filippi", "anno": 2002},
+    {"nome": "Edo", "tipo": "4x-", "costruttore": "Filippi", "anno": 2007},
+    {"nome": "OTTO", "tipo": "8+", "costruttore": "Filippi", "anno": 2015},
 ]
 
 
@@ -207,6 +212,24 @@ def seed_barche(db: Session):
         logger.error(f"Errore durante il popolamento delle barche: {e}")
         db.rollback()
 
+
+def seed_pesi(db: Session):
+    """Popola gli esercizi della scheda pesi."""
+    logger.info("Popolamento esercizi pesi...")
+    if db.query(models.EsercizioPesi).count() > 0:
+        logger.info("Tabella esercizi pesi già popolata. Skippo.")
+        return
+    esercizi = [
+        {"ordine": 1, "nome": "Trazioni"},
+        {"ordine": 2, "nome": "Pressa orizzontale"},
+        {"ordine": 3, "nome": "Pulley"},
+        {"ordine": 4, "nome": "Squat"},
+        {"ordine": 5, "nome": "Leg extension"},
+        {"ordine": 6, "nome": "Panca piana"},
+        {"ordine": 7, "nome": "Pressa 45°"},
+    ]
+    db.add_all([models.EsercizioPesi(**e) for e in esercizi])
+    db.commit()
 
 def seed_categories(db: Session):
     logger.info("Popolamento categorie...")
@@ -239,12 +262,29 @@ def seed_turni(db: Session):
     end = date(2025, 9, 15)
     day = start
     while day <= end:
-        # Salta il lunedì (weekday 0)
         if day.weekday() != 0:
             db.add(models.Turno(data=day, fascia_oraria="Mattina"))
             db.add(models.Turno(data=day, fascia_oraria="Sera"))
         day += timedelta(days=1)
     db.commit()
+
+    # Assegna casualmente gli allenatori ai turni fino al 17 agosto 2025
+    allenatori = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .all()
+    )
+    if allenatori:
+        limite = date(2025, 8, 17)
+        turni_da_assegnare = (
+            db.query(models.Turno)
+            .filter(models.Turno.data <= limite)
+            .all()
+        )
+        for turno in turni_da_assegnare:
+            turno.user = random.choice(allenatori)
+        db.commit()
 
 
 def seed_default_allenamenti(db: Session):
@@ -277,6 +317,63 @@ def seed_default_allenamenti(db: Session):
     db.commit()
 
 
+def seed_test_allenamenti(db: Session):
+    """Genera 300 allenamenti di test dal 18 agosto 2025 in poi."""
+    if db.query(models.Allenamento).count() >= 300:
+        logger.info("Allenamenti di test già presenti. Skippo.")
+        return
+    logger.info("Generazione di 300 allenamenti di test...")
+    descrizioni = [
+        ("Barca", "Fondo 16 km"),
+        ("Barca", "Colpi 30-10"),
+        ("Barca", "Colpi 20-10"),
+        ("Circuito", "Circuito 4x15es"),
+        ("Pesi", "Pesi 6x8 rip"),
+        ("Barca", "Interval 5x5 min"),
+        ("Barca", "Tecnica in singolo 10 km"),
+        ("Remoergometro", "Remoergometro 3x20 min"),
+        ("Corsa", "Corsa 10 km"),
+        ("Barca", "Fartlek 45 min"),
+    ]
+    orari = ["06:00-08:00", "08:30-10:30", "15:00-17:00", "17:30-19:30"]
+    categories = db.query(models.Categoria).all()
+    coaches = (
+        db.query(models.User)
+        .join(models.User.roles)
+        .filter(models.Role.name == "allenatore")
+        .all()
+    )
+    day = date(2025, 8, 18)
+    created = 0
+    while created < 300:
+        sessions_today = random.randint(1, 2)
+        for _ in range(sessions_today):
+            if created >= 300:
+                break
+            tipo, descr = random.choice(descrizioni)
+            allen = models.Allenamento(
+                tipo=tipo,
+                descrizione=descr,
+                data=day,
+                orario=random.choice(orari),
+            )
+            cats = random.sample(
+                categories,
+                k=min(len(categories), random.randint(1, 3)),
+            )
+            for c in cats:
+                allen.categories.append(c)
+            if coaches:
+                for coach in random.sample(
+                    coaches, k=random.randint(1, min(2, len(coaches)))
+                ):
+                    allen.coaches.append(coach)
+            db.add(allen)
+            created += 1
+        day += timedelta(days=1)
+    db.commit()
+
+
 def main():
     logger.info("Avvio script di seeding completo...")
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
@@ -295,10 +392,9 @@ def main():
         db.commit()
         logger.info("Ruoli popolati.")
 
-        # Popola Categorie
+        # Popola categorie e dati base
         seed_categories(db)
-        seed_turni(db)
-        seed_default_allenamenti(db)
+        seed_pesi(db)
 
         # Crea Utente Admin
         if not db.query(models.User).filter(models.User.username == "gabriele").first():
@@ -398,6 +494,10 @@ def main():
 
         db.commit()
         logger.info("Allenatori aggiunti e ruoli aggiornati.")
+
+        # Popola turni e allenamenti di test (richiedono allenatori)
+        seed_turni(db)
+        seed_test_allenamenti(db)
 
         # Popola Barche
         seed_barche(db)
