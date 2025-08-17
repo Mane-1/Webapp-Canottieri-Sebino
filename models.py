@@ -281,6 +281,7 @@ class TrainerAvailability(Base):
 class AttendanceStatus(enum.Enum):
     present = "present"
     absent = "absent"
+    maybe = "maybe"
 
 
 class AttendanceSource(enum.Enum):
@@ -295,7 +296,7 @@ class Attendance(Base):
     id = Column(Integer, primary_key=True)
     training_id = Column(Integer, ForeignKey("allenamenti.id", ondelete="CASCADE"), nullable=False)
     athlete_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    status = Column(Enum(AttendanceStatus), nullable=False, default=AttendanceStatus.present)
+    status = Column(Enum(AttendanceStatus), nullable=False, default=AttendanceStatus.maybe)
     source = Column(Enum(AttendanceSource), nullable=False, default=AttendanceSource.system)
     change_count = Column(Integer, nullable=False, default=0)
     last_changed_at = Column(DateTime, nullable=True)

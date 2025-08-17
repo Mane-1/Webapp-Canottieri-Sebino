@@ -4,44 +4,34 @@
 {% block main_class %}main--center{% endblock %}
 {% block navbar %}{% endblock %}
 
+{% block head_extra %}
+<style>
+  body { background: #fff; }
+  .footer { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-<section class="card" aria-labelledby="title">
-  <div class="text-center mb-3">
-    <img
-      src="{{ url_for('static', path='img/app-logo.png') }}"
-      alt="Logo Canottieri Sebino"
-      class="app-logo"
-    />
-  </div>
-  <h1 id="title">Accedi</h1>
+<section class="text-center" aria-labelledby="title">
+  <img
+    src="{{ url_for('static', path='img/app-logo.png') }}"
+    alt="Logo Canottieri Sebino"
+    class="app-logo mb-3"
+    style="height: 150px"
+  />
+  <h1 id="title" class="mb-4">Accedi</h1>
   <div class="error" id="errorBox" role="alert"{% if error_message %} style="display:block"{% endif %}>{{ error_message }}</div>
-  <form method="post" action="/login" novalidate>
+  <form method="post" action="/login" novalidate style="max-width:300px;margin:auto;">
     <label class="field" for="username">
-      <input id="username" name="username" type="text" placeholder="Nome utente" autocomplete="username" required>
+      <input id="username" name="username" type="text" placeholder="Utente" autocomplete="username" required>
     </label>
     <label class="field" for="password">
       <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password" required minlength="6">
-      <button class="password-toggle" type="button" id="togglePwd" aria-label="Mostra password">👁️</button>
     </label>
-    <div class="row" style="display:flex; justify-content:space-between; align-items:center; margin:8px 2px 16px">
-      <label class="remember" style="display:flex; align-items:center; gap:8px; color:var(--muted); font-size:14px;">
-        <input type="checkbox" name="remember" id="remember" style="width:18px; height:18px"> Ricordami
-      </label>
-      <a class="link" href="#" aria-label="Password dimenticata">Password dimenticata?</a>
-    </div>
-    <button class="btn btn--primary" type="submit" style="width:100%">LOGIN</button>
-    <div class="links" style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:14px;" aria-live="polite">
-      <span>Non hai un account?</span>
-      <a class="link" href="#" aria-label="Richiedi accesso">Richiedi accesso</a>
-    </div>
+    <button class="btn btn--primary w-100" type="submit">Accedi</button>
   </form>
+  <div class="mt-4">Canottieri Sebino Lovere</div>
 </section>
 {% endblock %}
 
-{% block scripts %}
-<script>
-const togglePwd=document.getElementById('togglePwd');
-const pwd=document.getElementById('password');
-togglePwd.addEventListener('click',()=>{const isPwd=pwd.type==='password';pwd.type=isPwd?'text':'password';togglePwd.setAttribute('aria-label',isPwd?'Nascondi password':'Mostra password');});
-</script>
-{% endblock %}
+{% block scripts %}{% endblock %}

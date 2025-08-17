@@ -9,6 +9,7 @@ import models, security
 from database import get_db
 from dependencies import get_current_user
 from utils import parse_orario, get_color_for_type
+from services.attendance_service import compute_status_for_athlete
 
 router = APIRouter(tags=["Utenti e Pagine Principali"])
 templates = Jinja2Templates(directory="templates")
@@ -45,6 +46,7 @@ async def dashboard(
             start_dt, end_dt = parse_orario(a.data, a.orario)
             events.append(
                 {
+                    "id": a.id,
                     "type": "allenamento",
                     "title": f"{a.tipo} - {a.descrizione}" if a.descrizione else a.tipo,
                     "date": a.data,
@@ -55,6 +57,7 @@ async def dashboard(
                     "categories": ", ".join(c.nome for c in a.categories) if a.categories else "Nessuna",
                     "coaches": ", ".join(f"{c.first_name} {c.last_name}" for c in a.coaches) if a.coaches else "Nessuno",
                     "recurrence": "Sì" if a.recurrence_id else "No",
+                    "status": compute_status_for_athlete(db, a.id, current_user.id).value,
                 }
             )
 
@@ -71,6 +74,7 @@ async def dashboard(
             end_dt = datetime.combine(t.data, time(hour=end_hour))
             events.append(
                 {
+                    "id": t.id,
                     "type": "turno",
                     "title": f"Turno {t.fascia_oraria}",
                     "date": t.data,
@@ -96,6 +100,7 @@ async def dashboard(
             start_dt, end_dt = parse_orario(a.data, a.orario)
             events.append(
                 {
+                    "id": a.id,
                     "type": "allenamento",
                     "title": f"{a.tipo} - {a.descrizione}" if a.descrizione else a.tipo,
                     "date": a.data,

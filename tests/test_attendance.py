@@ -19,7 +19,7 @@ async def test_compute_status_for_athlete(db_session):
     db_session.commit()
 
     status = compute_status_for_athlete(db_session, training.id, athlete.id)
-    assert status == models.AttendanceStatus.present
+    assert status == models.AttendanceStatus.maybe
 
     att = models.Attendance(training_id=training.id, athlete_id=athlete.id, status=models.AttendanceStatus.absent)
     db_session.add(att)
@@ -35,7 +35,7 @@ async def test_athlete_toggle_limit(client, db_session):
     athlete = factories.create_user(
         db_session, username="athlete", roles=[atleta_role], date_of_birth=date.today() - timedelta(days=15*365)
     )
-    training = models.Allenamento(tipo="Test", data=date.today(), orario="08:00")
+    training = models.Allenamento(tipo="Test", data=date.today() + timedelta(days=1), orario="08:00")
     training.categories.append(categoria)
     db_session.add(training)
     db_session.commit()
@@ -58,7 +58,7 @@ async def test_coach_can_set_status(client, db_session):
     athlete = factories.create_user(
         db_session, username="athlete", roles=[atleta_role], date_of_birth=date.today() - timedelta(days=15*365)
     )
-    training = models.Allenamento(tipo="Test", data=date.today(), orario="08:00")
+    training = models.Allenamento(tipo="Test", data=date.today() + timedelta(days=1), orario="08:00")
     training.categories.append(categoria)
     db_session.add(training)
     db_session.commit()

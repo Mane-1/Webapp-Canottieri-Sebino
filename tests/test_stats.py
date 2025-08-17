@@ -30,8 +30,8 @@ async def test_athlete_attendance_stats_default_present(client, db_session):
     assert resp.status_code == 200
     data = resp.json()
     assert data["kpi"]["sessions"] == 1
-    assert data["kpi"]["present"] == 1
-    assert data["kpi"]["absent"] == 0
+    assert data["kpi"]["present"] == 0
+    assert data["kpi"]["absent"] == 1
 
 
 @pytest.mark.anyio

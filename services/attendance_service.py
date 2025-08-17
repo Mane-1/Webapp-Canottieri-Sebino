@@ -41,8 +41,8 @@ def get_roster_for_training(db: Session, training: models.Allenamento) -> List[m
 def compute_status_for_athlete(db: Session, training_id: int, athlete_id: int) -> models.AttendanceStatus:
     """Return the attendance status for the athlete in the training.
 
-    If no record exists in ``Attendance`` the athlete is considered present
-    by default.
+    If no record exists in ``Attendance`` the athlete is considered maybe
+    (i.e. not yet confirmed) by default.
     """
     attendance = (
         db.query(models.Attendance)
@@ -51,4 +51,4 @@ def compute_status_for_athlete(db: Session, training_id: int, athlete_id: int) -
     )
     if attendance:
         return attendance.status
-    return models.AttendanceStatus.present
+    return models.AttendanceStatus.maybe

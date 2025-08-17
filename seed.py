@@ -268,7 +268,7 @@ def seed_turni(db: Session):
         day += timedelta(days=1)
     db.commit()
 
-    # Assegna casualmente gli allenatori ai turni fino al 17 agosto 2025
+    # Assegna casualmente gli allenatori a tutti i turni fino al 15 settembre 2025
     allenatori = (
         db.query(models.User)
         .join(models.User.roles)
@@ -276,7 +276,7 @@ def seed_turni(db: Session):
         .all()
     )
     if allenatori:
-        limite = date(2025, 8, 17)
+        limite = end
         turni_da_assegnare = (
             db.query(models.Turno)
             .filter(models.Turno.data <= limite)

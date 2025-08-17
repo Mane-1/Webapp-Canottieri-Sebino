@@ -14,13 +14,17 @@
                 {% if ev.type == 'allenamento' %}
                 <div class="dashboard-event p-2 mb-2 rounded text-white d-flex justify-content-between align-items-center"
                      style="background-color: {{ ev.color }};"
+                     data-type="allenamento"
+                     data-id="{{ ev.id }}"
                      data-title="{{ ev.title }}"
-                     data-date="{{ ev.date.strftime('%A, %d %B %Y') }}"
+                     data-date="{{ ev.date.strftime('%A %d/%m') }}"
                      data-time="{{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}"
+                     data-start="{{ ev.start.isoformat() }}"
                      data-description="{{ ev.description }}"
                      data-categories="{{ ev.categories }}"
                      data-coaches="{{ ev.coaches }}"
-                     data-recurrence="{{ ev.recurrence }}">
+                     data-recurrence="{{ ev.recurrence }}"
+                     data-status="{{ ev.status }}">
                     <span class="fw-semibold">{{ ev.title }}</span>
                     <span>{{ ev.date.strftime('%d/%m/%Y') }} - {{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}</span>
                 </div>
@@ -28,9 +32,12 @@
                 <div class="dashboard-event p-3 mb-2 border border-info border-2 rounded d-flex justify-content-between align-items-center"
                      data-link="/turni"
                      style="cursor: pointer;"
+                     data-type="turno"
+                     data-id="{{ ev.id }}"
                      data-title="Turno {{ ev.fascia }}"
-                     data-date="{{ ev.date.strftime('%A, %d %B %Y') }}"
+                     data-date="{{ ev.date.strftime('%A %d/%m') }}"
                      data-time="{{ ev.start.strftime('%H:%M') }}{% if ev.end %} - {{ ev.end.strftime('%H:%M') }}{% endif %}"
+                     data-start="{{ ev.start.isoformat() }}"
                      data-description="Turno {{ ev.fascia }}"
                      data-categories="-"
                      data-coaches="-"
@@ -43,6 +50,36 @@
         {% else %}
         <p class="text-muted">Nessun evento in programma.</p>
         {% endif %}
+    </div>
+
+    <!-- Modale Dettaglio Evento -->
+    <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header d-flex">
+                    <div>
+                        <h5 class="modal-title" id="modalTitle"></h5>
+                    </div>
+                    <div class="ms-auto text-end">
+                        <div id="modalDate" class="fw-semibold"></div>
+                        <div id="modalTime" class="small"></div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Categorie:</strong> <span id="modalCategories"></span></p>
+                    <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
+                    <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
+                </div>
+                <div class="modal-footer d-flex">
+                    <div id="attendanceActions" class="me-auto d-none">
+                        <button type="button" class="btn btn-sm btn-outline-success" id="btnPresent">Presente</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="btnAbsent">Assente</button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <hr class="my-4">
@@ -122,20 +159,58 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', path='js/attendance_self.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const isAtleta = {{ current_user.is_atleta | tojson }};
     const modalEl = document.getElementById('eventDetailModal');
     if (!modalEl) return;
     const modal = new bootstrap.Modal(modalEl);
     const modalTitle = document.getElementById('modalTitle');
     const modalDate = document.getElementById('modalDate');
     const modalTime = document.getElementById('modalTime');
-    const modalDescription = document.getElementById('modalDescription');
     const modalCategories = document.getElementById('modalCategories');
     const modalCoaches = document.getElementById('modalCoaches');
     const modalRecurrence = document.getElementById('modalRecurrence');
-    const editBtn = document.getElementById('modalEditButton');
-    const deleteBtn = document.getElementById('modalDeleteButton');
+    const attendanceActions = document.getElementById('attendanceActions');
+    const btnPresent = document.getElementById('btnPresent');
+    const btnAbsent = document.getElementById('btnAbsent');
+    let currentTrainingId = null;
+    let currentEventEl = null;
+
+    function updateButtons(status) {
+        btnPresent.classList.remove('btn-success','btn-outline-success','active');
+        btnAbsent.classList.remove('btn-danger','btn-outline-danger','active');
+        if (status === 'present') {
+            btnPresent.classList.add('btn-success','active');
+            btnAbsent.classList.add('btn-outline-danger');
+        } else if (status === 'absent') {
+            btnAbsent.classList.add('btn-danger','active');
+            btnPresent.classList.add('btn-outline-success');
+        } else {
+            btnPresent.classList.add('btn-outline-success');
+            btnAbsent.classList.add('btn-outline-danger');
+        }
+    }
+
+    btnPresent.addEventListener('click', async () => {
+        try {
+            await toggleAttendance(currentTrainingId, 'present');
+            updateButtons('present');
+            if (currentEventEl) currentEventEl.dataset.status = 'present';
+        } catch (err) {
+            alert(err.message);
+        }
+    });
+    btnAbsent.addEventListener('click', async () => {
+        try {
+            await toggleAttendance(currentTrainingId, 'absent');
+            updateButtons('absent');
+            if (currentEventEl) currentEventEl.dataset.status = 'absent';
+        } catch (err) {
+            alert(err.message);
+        }
+    });
 
     document.querySelectorAll('.dashboard-event').forEach(el => {
         el.addEventListener('click', () => {
@@ -144,15 +219,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             const data = el.dataset;
+            currentEventEl = el;
             modalTitle.textContent = data.title;
             modalDate.textContent = data.date;
             modalTime.textContent = data.time;
-            modalDescription.textContent = data.description || '-';
             modalCategories.textContent = data.categories || '-';
             modalCoaches.textContent = data.coaches || '-';
             modalRecurrence.textContent = data.recurrence || '-';
-            if (editBtn) editBtn.classList.add('d-none');
-            if (deleteBtn) deleteBtn.classList.add('d-none');
+            if (isAtleta && data.type === 'allenamento') {
+                attendanceActions.classList.remove('d-none');
+                currentTrainingId = data.id;
+                updateButtons(data.status);
+                const disable = new Date() >= new Date(data.start);
+                btnPresent.disabled = disable;
+                btnAbsent.disabled = disable;
+            } else {
+                attendanceActions.classList.add('d-none');
+            }
             modal.show();
         });
     });
