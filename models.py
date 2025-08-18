@@ -79,6 +79,8 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
+    failed_login_attempts = Column(Integer, nullable=False, default=0)
+    is_suspended = Column(Boolean, nullable=False, default=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True)

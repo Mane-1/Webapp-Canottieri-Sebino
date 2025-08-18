@@ -1,208 +1,28 @@
-<!-- templates/calendario.html -->
 {% extends "layout/base.html" %}
 
 {% block title %}Calendario Allenamenti{% endblock %}
 
 {% block head_extra %}
-    <!-- Dipendenza di FullCalendar -->
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/core/locales/it.js'></script>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
-<div class="container p-3">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h1 class="h2 mb-0">Calendario Allenamenti</h1>
-        <div class="d-flex gap-2">
-            <a href="/allenamenti" class="btn btn-outline-secondary">
-                <i class="bi bi-list-ul me-1"></i> Vai alla Lista
-            </a>
-            {% if current_user.is_admin or current_user.is_allenatore %}
-            <a href="/allenamenti/nuovo" class="btn btn-success">
-                <i class="bi bi-plus-lg me-1"></i> Aggiungi Allenamento
-            </a>
-            {% endif %}
-        </div>
+<div class="container-fluid py-3">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="h2 mb-0">Calendario Allenamenti</h1>
+    <div class="d-flex gap-2">
+      <a href="/allenamenti" class="btn btn-outline-secondary">Vai alla Lista</a>
+      {% if current_user.is_admin or current_user.is_allenatore %}
+      <a href="/allenamenti/nuovo" class="btn btn-success">Aggiungi Allenamento</a>
+      {% endif %}
     </div>
-
-    <div class="card card-body shadow-sm mb-4">
-        <form id="filterForm">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="category" class="form-label">Categoria</label>
-                    <select class="form-select" id="category" name="category" onchange="this.form.dispatchEvent(new Event('change'))">
-                        <option value="">Tutte le Categorie</option>
-                        {% for cat in all_categories %}
-                        <option value="{{ cat }}">{{ cat }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="tipo" class="form-label">Tipo Allenamento</label>
-                    <select class="form-select" id="tipo" name="tipo" onchange="this.form.dispatchEvent(new Event('change'))">
-                        <option value="">Tutti i Tipi</option>
-                        {% for type in all_types %}
-                        <option value="{{ type }}">{{ type }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="coach_id" class="form-label">Allenatore</label>
-                    <select class="form-select" id="coach_id" name="coach_id" onchange="this.form.dispatchEvent(new Event('change'))">
-                        <option value="">Tutti</option>
-                        {% for coach in all_coaches %}
-                        <option value="{{ coach.id }}">{{ coach.first_name }} {{ coach.last_name }}</option>
-                        {% endfor %}
-                    </select>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="unassigned" name="unassigned" value="true" onchange="this.form.dispatchEvent(new Event('change'))">
-                        <label class="form-check-label" for="unassigned">Allenamenti scoperti</label>
-                    </div>
-                </div>
-                <div class="col-md-3 d-flex gap-2">
-                    <button type="button" id="resetFilters" class="btn btn-outline-secondary">Resetta</button>
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Calendario -->
-    <div id="calendar" class="bg-white p-3 rounded shadow-sm"></div>
+  </div>
+  <div id="calendar"></div>
 </div>
-
-<!-- Modale Dettagli Evento -->
-<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">Dettagli Allenamento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Data:</strong> <span id="modalDate"></span></p>
-                <p><strong>Orario:</strong> <span id="modalTime"></span></p>
-                <p><strong>Descrizione:</strong> <span id="modalDescription"></span></p>
-                <p><strong>Categorie Assegnate:</strong> <span id="modalCategories" class="badge bg-info text-dark"></span></p>
-                <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
-                <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
-                {% if current_user.is_admin or current_user.is_allenatore %}
-                <a href="#" id="modalEditButton" class="btn btn-primary">Modifica</a>
-                <button type="button" id="modalDeleteButton" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal">Elimina</button>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modale Conferma Eliminazione (necessaria se non già presente in _base.html) -->
-<!-- ... -->
-
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const calendarEl = document.getElementById('calendar');
-    const filterForm = document.getElementById('filterForm');
-
-    // --- Variabili Utente dal Backend ---
-    const isAtleta = {{ current_user.is_atleta | tojson }};
-    const userCategory = "{{ current_user.category }}";
-
-    // --- Gestione Modale Dettagli ---
-    const eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
-    const modalTitle = document.getElementById('modalTitle');
-    const modalHeader = document.querySelector('#eventDetailModal .modal-header');
-    const modalDate = document.getElementById('modalDate');
-    const modalTime = document.getElementById('modalTime');
-    const modalDescription = document.getElementById('modalDescription');
-    const modalCategories = document.getElementById('modalCategories');
-    const modalCoaches = document.getElementById('modalCoaches');
-    const modalRecurrence = document.getElementById('modalRecurrence');
-    const modalEditButton = document.getElementById('modalEditButton');
-    const modalDeleteButton = document.getElementById('modalDeleteButton');
-
-    // --- Funzione per costruire l'URL degli eventi ---
-    function buildEventsUrl() {
-        const params = new URLSearchParams();
-        const categoryVal = document.getElementById('category').value;
-        const typeVal = document.getElementById('tipo').value;
-        const coachVal = document.getElementById('coach_id').value;
-        const unassigned = document.getElementById('unassigned').checked;
-        if (categoryVal) params.append('category_filter', categoryVal);
-        if (typeVal) params.append('type_filter', typeVal);
-        if (coachVal) params.append('coach_filter', coachVal);
-        if (unassigned) params.append('unassigned', 'true');
-        if (isAtleta && userCategory !== 'N/D') params.append('user_category', userCategory);
-        return `/api/allenamenti${params.toString() ? '?' + params.toString() : ''}`;
-    }
-
-    // --- Inizializzazione Calendario ---
-    const initialView = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
-    const aspectRatio = window.innerWidth < 768 ? 0.85 : 1.5;
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: initialView,
-        locale: 'it',
-        aspectRatio: aspectRatio,
-        height: 'auto',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,listWeek'
-        },
-        buttonText: {
-            today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda'
-        },
-        events: (fetchInfo, successCallback, failureCallback) => {
-            fetch(buildEventsUrl())
-                .then(response => response.json())
-                .then(data => successCallback(data))
-                .catch(error => failureCallback(error));
-        },
-        eventDidMount: function(info) {
-            const bg = info.event.backgroundColor;
-            if (bg) {
-                info.el.style.setProperty('--fc-event-bg-color', bg);
-                info.el.style.setProperty('--fc-event-border-color', info.event.borderColor || bg);
-            }
-        },
-        eventClick: function(info) {
-            info.jsEvent.preventDefault();
-            const props = info.event.extendedProps;
-            modalTitle.textContent = info.event.title;
-            if (modalHeader) {
-                modalHeader.style.backgroundColor = info.event.backgroundColor || '#000080';
-            }
-            modalDate.textContent = info.event.start.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            modalTime.textContent = props.orario || 'Non specificato';
-            modalDescription.textContent = props.descrizione || 'Nessuna descrizione.';
-            modalCategories.textContent = props.categories || 'Nessuna';
-            modalCoaches.textContent = props.coaches || 'Nessuno';
-            modalRecurrence.textContent = props.recurrence_id ? 'Sì' : 'No';
-
-            if (modalEditButton) {
-                modalEditButton.href = `/allenamenti/${info.event.id}/modifica`;
-            }
-            if (modalDeleteButton) {
-                modalDeleteButton.setAttribute('data-allenamento-id', info.event.id);
-                modalDeleteButton.setAttribute('data-recurrence-id', props.recurrence_id || '');
-            }
-            eventDetailModal.show();
-        }
-    });
-
-    calendar.render();
-
-    filterForm.addEventListener('change', function(){
-        calendar.refetchEvents();
-    });
-    document.getElementById('resetFilters').addEventListener('click', function(){
-        filterForm.reset();
-        calendar.refetchEvents();
-    });
-});
-</script>
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="{{ url_for('static', path='js/calendar.js') }}"></script>
 {% endblock %}

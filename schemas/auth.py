@@ -9,7 +9,7 @@ class LoginInput(BaseModel):
     @classmethod
     def as_form(
         cls,
-        username: str = Form(...),
-        password: str = Form(...),
+        username: str = Form(""),
+        password: str = Form(""),
     ) -> "LoginInput":
         return cls(username=username, password=password)

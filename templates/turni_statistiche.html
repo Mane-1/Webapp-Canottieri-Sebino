@@ -29,13 +29,15 @@
         <span class="badge bg-danger">Scoperti {{ month_uncovered }}</span>
     </div>
     <h3 class="h5 mt-4">Turni assegnati nella stagione</h3>
-    <table class="table table-striped mt-2">
-        <thead><tr><th>Allenatore</th><th>Turni</th></tr></thead>
-        <tbody>
-        {% for name, count in season_counts %}
-            <tr><td>{{ name }}</td><td>{{ count }}</td></tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-responsive">
+        <table class="table table-striped mt-2">
+            <thead><tr><th>Allenatore</th><th>Turni</th></tr></thead>
+            <tbody>
+            {% for name, count in season_counts %}
+                <tr><td>{{ name }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

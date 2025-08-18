@@ -171,6 +171,8 @@ async def admin_edit_user(
     user.manual_category = manual_category if manual_category else None
     if password:
         user.hashed_password = security.get_password_hash(password)
+        user.failed_login_attempts = 0
+        user.is_suspended = False
     user.roles = db.query(models.Role).filter(models.Role.id.in_(roles_ids)).all()
     db.commit()
     return RedirectResponse(url=f"/admin/users/{user_id}", status_code=status.HTTP_303_SEE_OTHER)

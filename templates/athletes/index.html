@@ -21,21 +21,23 @@
 
 <p class="text-muted">Risultati: {{ total_rows }}. Pagina {{ page }} di {{ total_pages }}.</p>
 
-<table class="table">
-  <thead>
-    <tr><th>Nome</th><th>Email</th><th>Categoria</th><th>Età</th></tr>
-  </thead>
-  <tbody>
-  {% for row in rows %}
-    <tr>
-      <td><a href="/athletes/{{ row.user.id }}">{{ row.user.full_name }}</a></td>
-      <td>{{ row.user.email or '' }}</td>
-      <td>{{ row.category or '' }}</td>
-      <td>{{ row.age or '' }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr><th>Nome</th><th>Email</th><th>Categoria</th><th>Età</th></tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td><a href="/athletes/{{ row.user.id }}">{{ row.user.full_name }}</a></td>
+        <td>{{ row.user.email or '' }}</td>
+        <td>{{ row.category or '' }}</td>
+        <td>{{ row.age or '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
 
 <nav>
   <ul class="pagination">

@@ -34,26 +34,28 @@
       {% if current_user.is_admin %}
       <input type="hidden" name="user_id" value="{{ edit_user.id }}">
       {% endif %}
-      <table class="table">
-        <thead><tr><th>Data</th><th>Mattina</th><th>Sera</th></tr></thead>
-        <tbody>
-          {% for day, fasce in turni.items() %}
-          <tr>
-            <td>{{ day.strftime('%d/%m/%Y') }}</td>
-            <td>
-              {% if fasce.get('Mattina') %}
-              <input type="checkbox" name="turno_ids" value="{{ fasce['Mattina'].id }}" {% if fasce['Mattina'].id in selected_ids %}checked{% endif %}>
-              {% endif %}
-            </td>
-            <td>
-              {% if fasce.get('Sera') %}
-              <input type="checkbox" name="turno_ids" value="{{ fasce['Sera'].id }}" {% if fasce['Sera'].id in selected_ids %}checked{% endif %}>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Data</th><th>Mattina</th><th>Sera</th></tr></thead>
+          <tbody>
+            {% for day, fasce in turni.items() %}
+            <tr>
+              <td>{{ day.strftime('%d/%m/%Y') }}</td>
+              <td>
+                {% if fasce.get('Mattina') %}
+                <input type="checkbox" name="turno_ids" value="{{ fasce['Mattina'].id }}" {% if fasce['Mattina'].id in selected_ids %}checked{% endif %}>
+                {% endif %}
+              </td>
+              <td>
+                {% if fasce.get('Sera') %}
+                <input type="checkbox" name="turno_ids" value="{{ fasce['Sera'].id }}" {% if fasce['Sera'].id in selected_ids %}checked{% endif %}>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
       <button type="submit" class="btn btn-primary">Salva</button>
     </form>
   {% endif %}

@@ -158,3 +158,15 @@ body{
   height:28px;
   vertical-align:middle;
 }
+
+@media (max-width: 575.98px) {
+  .navbar-brand { font-size: 1rem; }
+  .btn, .btn-sm { padding-top: .5rem; padding-bottom: .5rem; }
+  .table td, .table th { white-space: nowrap; }
+}
+
+@media (max-width: 575.98px) {
+  .navbar-brand { font-size: 1rem; }
+  .btn, .btn-sm { padding-top: .5rem; padding-bottom: .5rem; }
+  .table td, .table th { white-space: nowrap; }
+}

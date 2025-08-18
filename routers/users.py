@@ -136,7 +136,10 @@ async def edit_profile_form(request: Request, current_user: models.User = Depend
 async def update_profile(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), email: Optional[str] = Form(None), phone_number: Optional[str] = Form(None), new_password: Optional[str] = Form(None)):
     current_user.email = email
     current_user.phone_number = phone_number
-    if new_password: current_user.hashed_password = security.get_password_hash(new_password)
+    if new_password:
+        current_user.hashed_password = security.get_password_hash(new_password)
+        current_user.failed_login_attempts = 0
+        current_user.is_suspended = False
     db.commit()
     return RedirectResponse(url="/profilo?message=Profilo aggiornato con successo", status_code=303)
 

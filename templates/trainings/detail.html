@@ -21,20 +21,22 @@
     </form>
   </div>
   <div class="tab-pane fade" id="attendance" role="tabpanel">
-    <table class="table">
-      <thead><tr><th>Nome</th><th>Stato</th><th>Azioni</th></tr></thead>
-      <tbody>
-      {% for row in roster %}
-        <tr data-athlete-id="{{ row.athlete_id }}">
-          <td>{{ row.name }}</td>
-          <td class="status">{{ row.status }}</td>
-          <td>
-            <button type="button" class="btn btn-sm btn-secondary" onclick="quickToggle({{ training.id }}, {{ row.athlete_id }})">Toggle</button>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="table">
+        <thead><tr><th>Nome</th><th>Stato</th><th>Azioni</th></tr></thead>
+        <tbody>
+        {% for row in roster %}
+          <tr data-athlete-id="{{ row.athlete_id }}">
+            <td>{{ row.name }}</td>
+            <td class="status">{{ row.status }}</td>
+            <td>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="quickToggle({{ training.id }}, {{ row.athlete_id }})">Toggle</button>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 {% endblock %}
