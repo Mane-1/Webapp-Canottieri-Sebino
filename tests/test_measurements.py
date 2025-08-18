@@ -14,11 +14,11 @@ async def test_measurements_insert_and_series(client, db_session):
 
     await client.post("/login", data={"username": "coach", "password": "password"}, follow_redirects=True)
     await client.post(
-        f"/athletes/{athlete.id}/measurements",
+        f"/risorse/athletes/{athlete.id}/measurements",
         json={"measured_at": date(2023,1,1).isoformat(), "weight_kg": 70},
     )
     await client.post(
-        f"/athletes/{athlete.id}/measurements",
+        f"/risorse/athletes/{athlete.id}/measurements",
         json={"measured_at": date(2023,2,1).isoformat(), "weight_kg": 71},
     )
 

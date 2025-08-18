@@ -23,13 +23,11 @@ router = APIRouter(tags=["Atleti"])
 templates = Jinja2Templates(directory="templates")
 
 
-@router.get("/athletes", name="athletes_list")
+@router.get("/risorse/athletes", name="athletes_list")
 def athletes_list(
     request: Request,
     q: Optional[str] = Query(None),
     categoria: Optional[str] = Query(None),
-    page: int = 1,
-    page_size: int = 20,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
@@ -51,24 +49,12 @@ def athletes_list(
         )
     today = date.today()
     users = query.order_by(models.User.last_name, models.User.first_name).all()
-    rows_all = []
+    rows = []
     for u in users:
         cat = current_category_for_user(db, u, today)
         if categoria and (not cat or cat.nome != categoria):
             continue
-        age = (
-            today.year
-            - u.date_of_birth.year
-            - ((today.month, today.day) < (u.date_of_birth.month, u.date_of_birth.day))
-            if u.date_of_birth
-            else None
-        )
-        rows_all.append({"user": u, "category": cat.nome if cat else None, "age": age})
-    total_rows = len(rows_all)
-    total_pages = max(1, (total_rows + page_size - 1) // page_size)
-    start = (page - 1) * page_size
-    end = start + page_size
-    rows = rows_all[start:end]
+        rows.append({"user": u, "category": cat.nome if cat else None})
     return templates.TemplateResponse(
         "athletes/index.html",
         {
@@ -78,9 +64,7 @@ def athletes_list(
             "q": q,
             "categoria": categoria,
             "categories": categories,
-            "page": page,
-            "total_rows": total_rows,
-            "total_pages": total_pages,
+            "today": today,
         },
     )
 
@@ -286,7 +270,7 @@ def api_all_categories(
     ]
 
 
-@router.get("/athletes/{athlete_id}", name="athlete_detail")
+@router.get("/risorse/athletes/{athlete_id}", name="athlete_detail")
 def athlete_detail(
     request: Request,
     athlete_id: int,
@@ -301,11 +285,23 @@ def athlete_detail(
         db.query(models.AthleteMeasurement)
         .filter_by(athlete_id=athlete_id)
         .order_by(models.AthleteMeasurement.measured_at.desc())
+        .limit(51)
         .all()
     )
-    measurement_years = sorted(
-        {m.measured_at.year for m in measurements} | {date.today().year}
-    )
+    measurement_rows = []
+    for idx, m in enumerate(measurements[:50]):
+        prev = measurements[idx + 1] if idx + 1 < len(measurements) else None
+        diff_w = (
+            m.weight_kg - prev.weight_kg
+            if prev and m.weight_kg is not None and prev.weight_kg is not None
+            else None
+        )
+        diff_h = (
+            m.height_cm - prev.height_cm
+            if prev and m.height_cm is not None and prev.height_cm is not None
+            else None
+        )
+        measurement_rows.append({"m": m, "diff_weight": diff_w, "diff_height": diff_h})
     types = [
         t[0]
         for t in db.query(models.Allenamento.tipo)
@@ -320,15 +316,14 @@ def athlete_detail(
             "current_user": current_user,
             "athlete": athlete,
             "category": category.nome if category else None,
-            "measurements": measurements,
-            "measurement_years": measurement_years,
+            "measurement_rows": measurement_rows,
             "types": types,
             "years": years,
         },
     )
 
 
-@router.post("/athletes/{athlete_id}/measurements")
+@router.post("/risorse/athletes/{athlete_id}/measurements")
 async def add_measurement(
     athlete_id: int,
     payload: MeasurementIn,

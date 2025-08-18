@@ -10,8 +10,8 @@ async def test_access_control_requires_staff(client, db_session):
     role = create_role(db_session, "atleta")
     user = create_user(db_session, roles=[role])
     await client.post("/login", data={"username": user.username, "password": "password"}, follow_redirects=True)
-    assert (await client.get("/athletes")).status_code == 403
-    assert (await client.get("/athletes/1")).status_code == 403
+    assert (await client.get("/risorse/athletes")).status_code == 403
+    assert (await client.get("/risorse/athletes/1")).status_code == 403
     assert (await client.get("/trainings/stats")).status_code == 403
 
 

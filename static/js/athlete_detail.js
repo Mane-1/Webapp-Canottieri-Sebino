@@ -3,48 +3,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!form) return;
   const athleteId = form.dataset.athleteId;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-    const payload = {};
-    for (const [k, v] of fd.entries()) {
-      if (v) payload[k] = v;
-    }
-    const resp = await fetch(`/athletes/${athleteId}/measurements`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {};
+      for (const [k, v] of fd.entries()) {
+        if (v) payload[k] = v;
+      }
+      const resp = await fetch(`/risorse/athletes/${athleteId}/measurements`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (resp.ok) {
+        location.reload();
+      }
     });
-    if (resp.ok) {
-      location.reload();
-    }
-  });
-
-  // weight chart
-  let weightChart;
-  async function loadWeightChart() {
-    const yearSel = document.getElementById('measurement-year');
-    if (!yearSel) return;
-    const year = yearSel.value;
-    const resp = await fetch(`/api/athletes/${athleteId}/measurements?metric=weight&year=${year}`);
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (weightChart) weightChart.destroy();
-    const ctx = document.getElementById('weightChart');
-    weightChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: data.labels,
-        datasets: [{ label: 'Peso', data: data.data, spanGaps: true }]
-      },
-      options: {}
-    });
-  }
-  const yearSelect = document.getElementById('measurement-year');
-  if (yearSelect) {
-    yearSelect.addEventListener('change', loadWeightChart);
-    loadWeightChart();
-  }
 
   // attendance stats
   let monthlyChart; let byTypeChart;

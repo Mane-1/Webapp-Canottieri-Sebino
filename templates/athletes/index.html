@@ -1,53 +1,58 @@
 {% extends "layout/base.html" %}
+{% block title %}Atleti{% endblock %}
 {% block content %}
 <h1>Atleti</h1>
 
 <form method="get" class="row g-2 mb-3">
   <div class="col-auto">
-    <input type="text" class="form-control" name="q" placeholder="Cerca" value="{{ q or '' }}">
+    <input type="text" class="form-control" name="q" placeholder="Ricerca" value="{{ q or '' }}">
   </div>
   <div class="col-auto">
-    <select name="categoria" class="form-select">
+    <button class="btn btn-primary" type="submit">Cerca</button>
+  </div>
+  <div class="col-auto">
+    <select name="categoria" class="form-select" onchange="this.form.submit()">
       <option value="">Tutte le categorie</option>
       {% for c in categories %}
       <option value="{{ c.nome }}" {% if c.nome == categoria %}selected{% endif %}>{{ c.nome }}</option>
       {% endfor %}
     </select>
   </div>
-  <div class="col-auto">
-    <button class="btn btn-primary" type="submit">Filtra</button>
-  </div>
 </form>
 
-<p class="text-muted">Risultati: {{ total_rows }}. Pagina {{ page }} di {{ total_pages }}.</p>
-
-<div class="table-responsive">
-  <table class="table">
-    <thead>
-      <tr><th>Nome</th><th>Email</th><th>Categoria</th><th>Età</th></tr>
-    </thead>
-    <tbody>
-    {% for row in rows %}
-      <tr>
-        <td><a href="/athletes/{{ row.user.id }}">{{ row.user.full_name }}</a></td>
-        <td>{{ row.user.email or '' }}</td>
-        <td>{{ row.category or '' }}</td>
-        <td>{{ row.age or '' }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<nav>
-  <ul class="pagination">
-    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-      <a class="page-link" href="?q={{ q }}&categoria={{ categoria }}&page={{ page-1 }}" tabindex="-1">Precedente</a>
-    </li>
-    <li class="page-item disabled"><span class="page-link">Pagina {{ page }} / {{ total_pages }}</span></li>
-    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-      <a class="page-link" href="?q={{ q }}&categoria={{ categoria }}&page={{ page+1 }}">Successiva</a>
-    </li>
-  </ul>
-</nav>
+<table class="table table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>Nome e Cognome</th>
+      <th>Categoria</th>
+      <th>Scadenza Cert. Medico</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr onclick="window.location='/risorse/athletes/{{ row.user.id }}';" style="cursor:pointer;">
+      <td class="fw-bold">{{ row.user.last_name }} {{ row.user.first_name }}</td>
+      <td>{{ row.category or '' }}</td>
+      <td class="text-center">
+        {% if row.user.certificate_expiration %}
+          {% set days_left = (row.user.certificate_expiration - today).days %}
+          {% set badge_class = 'text-dark' %}
+          {% if days_left <= 0 %}
+            {% set badge_class = 'bg-dark text-white' %}
+          {% elif days_left <= 30 %}
+            {% set badge_class = 'bg-danger text-white' %}
+          {% elif days_left <= 90 %}
+            {% set badge_class = 'bg-warning text-dark' %}
+          {% else %}
+            {% set badge_class = 'bg-success text-white' %}
+          {% endif %}
+          <span class="badge rounded-pill {{ badge_class }}">{{ row.user.certificate_expiration.strftime('%d/%m/%Y') }}</span>
+        {% else %}
+          <span class="badge rounded-pill bg-secondary">N/D</span>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
 {% endblock %}

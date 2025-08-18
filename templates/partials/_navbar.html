@@ -1,10 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-dark shadow-sm" role="navigation">
   <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="/dashboard">
-      <img src="{{ url_for('static', path='img/logo-mark.svg') }}?v=2"
-           alt="" width="28" height="28" class="brand-mark me-2" />
-      Canottieri Sebino
-    </a>
+      <a class="navbar-brand fw-bold" href="/dashboard">Canottieri Sebino</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="navbarNav">
       {% if current_user is defined and current_user %}
@@ -21,30 +17,29 @@
             {% endif %}
           </ul>
         </li>
-        <li class="nav-item"><a class="nav-link" href="/rubrica">Rubrica</a></li>
-        {% if current_user.is_admin or current_user.is_allenatore %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="turniDropdown" role="button" data-bs-toggle="dropdown">Turni</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/turni">Calendario</a></li>
-            <li><a class="dropdown-item" href="/turni/statistiche">Statistiche</a></li>
-            <li><a class="dropdown-item" href="/turni/disponibilita">Disponibilità</a></li>
-            {% if current_user.is_admin %}
-            <li><a class="dropdown-item" href="/turni/gestione">Gestione Turni</a></li>
-            {% endif %}
-          </ul>
-        </li>
-        {% endif %}
-        {% if current_user.is_admin or current_user.is_allenatore %}
-        <li class="nav-item"><a class="nav-link" href="/athletes">Atleti</a></li>
-        {% endif %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="risorseDropdown" role="button" data-bs-toggle="dropdown">Risorse</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/risorse/barche">Barche</a></li>
-            <li><a class="dropdown-item" href="/risorse/pesi">Scheda Pesi</a></li>
-          </ul>
-        </li>
+          {% if current_user.is_admin or current_user.is_allenatore %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="turniDropdown" role="button" data-bs-toggle="dropdown">Turni</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/turni">Calendario</a></li>
+              <li><a class="dropdown-item" href="/turni/statistiche">Statistiche</a></li>
+              <li><a class="dropdown-item" href="/turni/disponibilita">Disponibilità</a></li>
+              {% if current_user.is_admin %}
+              <li><a class="dropdown-item" href="/turni/gestione">Gestione Turni</a></li>
+              {% endif %}
+            </ul>
+          </li>
+          {% endif %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="risorseDropdown" role="button" data-bs-toggle="dropdown">Risorse</a>
+            <ul class="dropdown-menu">
+              {% if current_user.is_admin or current_user.is_allenatore %}
+              <li><a class="dropdown-item" href="/risorse/athletes">Atleti</a></li>
+              {% endif %}
+              <li><a class="dropdown-item" href="/risorse/barche">Barche</a></li>
+              <li><a class="dropdown-item" href="/risorse/pesi">Scheda Pesi</a></li>
+            </ul>
+          </li>
         {% if current_user.is_admin %}
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown">Utenti</a>

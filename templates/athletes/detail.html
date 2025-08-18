@@ -1,4 +1,5 @@
 {% extends "layout/base.html" %}
+{% block title %}Dettaglio Atleta{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center mb-3">
   <h1 class="me-3 mb-0">{{ athlete.full_name }}</h1>
@@ -28,31 +29,52 @@
   </div>
   <div class="tab-pane fade" id="tab-measurements" role="tabpanel">
     <form id="measurement-form" data-athlete-id="{{ athlete.id }}" class="row g-2">
-      <div class="col-md-2"><input type="number" step="0.01" name="height_cm" class="form-control" placeholder="Altezza (cm)"></div>
+      <div class="col-12"><strong class="d-block border-bottom pb-1 mb-2">GENERALI</strong></div>
       <div class="col-md-2"><input type="number" step="0.01" name="weight_kg" class="form-control" placeholder="Peso (kg)"></div>
+      <div class="col-md-2"><input type="number" step="0.01" name="height_cm" class="form-control" placeholder="Altezza (cm)"></div>
+      <div class="col-12 mt-3"><strong class="d-block border-bottom pb-1 mb-2">SPECIFICHE</strong></div>
       <div class="col-md-2"><input type="number" step="0.01" name="leg_length_cm" class="form-control" placeholder="Lung. gambe"></div>
       <div class="col-md-2"><input type="number" step="0.01" name="tibia_length_cm" class="form-control" placeholder="Lung. tibia"></div>
       <div class="col-md-2"><input type="number" step="0.01" name="arm_length_cm" class="form-control" placeholder="Lung. braccia"></div>
       <div class="col-md-2"><input type="number" step="0.01" name="torso_height_cm" class="form-control" placeholder="Alt. busto"></div>
       <div class="col-md-2"><input type="number" step="0.01" name="wingspan_cm" class="form-control" placeholder="Apertura alare"></div>
       <div class="col-md-3"><input type="date" name="measured_at" class="form-control"></div>
+      <div class="col-12 mt-3"><strong class="d-block border-bottom pb-1 mb-2">NOTE</strong></div>
       <div class="col-md-5"><input type="text" name="notes" class="form-control" placeholder="Note"></div>
       <div class="col-auto"><button class="btn btn-primary" type="submit">Salva</button></div>
     </form>
     <div class="mt-3">
-      <select id="measurement-year" class="form-select w-auto mb-2">
-        {% for y in measurement_years %}
-        <option value="{{ y }}" {% if y == measurement_years|last %}selected{% endif %}>{{ y }}</option>
-        {% endfor %}
-      </select>
-      <canvas id="weightChart" height="100"></canvas>
-    </div>
-    <div class="table-responsive">
-      <table class="table mt-3" id="measurements-table">
+      <table class="table" id="measurements-table">
         <thead><tr><th>Data</th><th>Peso</th><th>Altezza</th></tr></thead>
         <tbody>
-        {% for m in measurements %}
-          <tr><td>{{ m.measured_at }}</td><td>{{ m.weight_kg or '' }}</td><td>{{ m.height_cm or '' }}</td></tr>
+        {% for row in measurement_rows %}
+          <tr>
+            <td>{{ row.m.measured_at }}</td>
+            <td>
+              {{ row.m.weight_kg or '' }}
+              {% if row.diff_weight is not none %}
+                {% set badge_class = 'bg-secondary' %}
+                {% if row.diff_weight > 0 %}
+                  {% set badge_class = 'bg-success' %}
+                {% elif row.diff_weight < 0 %}
+                  {% set badge_class = 'bg-danger' %}
+                {% endif %}
+                <span class="badge {{ badge_class }}">{{ '%+.2f'|format(row.diff_weight) }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ row.m.height_cm or '' }}
+              {% if row.diff_height is not none %}
+                {% set badge_class = 'bg-secondary' %}
+                {% if row.diff_height > 0 %}
+                  {% set badge_class = 'bg-success' %}
+                {% elif row.diff_height < 0 %}
+                  {% set badge_class = 'bg-danger' %}
+                {% endif %}
+                <span class="badge {{ badge_class }}">{{ '%+.2f'|format(row.diff_height) }}</span>
+              {% endif %}
+            </td>
+          </tr>
         {% endfor %}
         </tbody>
       </table>
@@ -80,12 +102,10 @@
     </div>
     <canvas id="monthlyChart" height="100"></canvas>
     <canvas id="byTypeChart" class="mt-3" height="100"></canvas>
-    <div class="table-responsive">
-      <table class="table mt-3" id="sessions-table">
-        <thead><tr><th>Data</th><th>Tipo</th><th>Categorie</th><th>Stato</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <table class="table mt-3" id="sessions-table">
+      <thead><tr><th>Data</th><th>Tipo</th><th>Categorie</th><th>Stato</th></tr></thead>
+      <tbody></tbody>
+    </table>
   </div>
 </div>
 

@@ -143,10 +143,3 @@ async def update_profile(db: Session = Depends(get_db), current_user: models.Use
     db.commit()
     return RedirectResponse(url="/profilo?message=Profilo aggiornato con successo", status_code=303)
 
-@router.get("/rubrica", response_class=HTMLResponse)
-async def view_rubrica(request: Request, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), role_filter: Optional[str] = None):
-    query = db.query(models.User).options(joinedload(models.User.roles))
-    if role_filter: query = query.join(models.User.roles).filter(models.Role.name == role_filter)
-    users = query.order_by(models.User.last_name, models.User.first_name).all()
-    all_roles = db.query(models.Role).all()
-    return templates.TemplateResponse("rubrica.html", {"request": request, "current_user": current_user, "users": users, "all_roles": all_roles, "current_filter": role_filter})
