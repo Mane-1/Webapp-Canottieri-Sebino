@@ -1,0 +1,24 @@
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">Dettagli Allenamento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Data:</strong> <span id="modalDate"></span></p>
+        <p><strong>Orario:</strong> <span id="modalTime"></span></p>
+        <p><strong>Descrizione:</strong> <span id="modalDescription"></span></p>
+        <p><strong>Categorie Assegnate:</strong> <span id="modalCategories" class="badge bg-info text-dark"></span></p>
+        <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
+        <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+        {% if current_user.is_admin or current_user.is_allenatore %}
+        <a href="#" id="modalEditButton" class="btn btn-primary">Modifica</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

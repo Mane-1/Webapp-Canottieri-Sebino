@@ -95,9 +95,8 @@
         <tbody>
             {% if allenamenti %}
                 {% for allenamento in allenamenti %}
+                    {% set start_time = allenamento.orario.split('-')[0] %}
                     <tr class="list-item-clickable"
-                        data-bs-toggle="modal"
-                        data-bs-target="#eventDetailModal"
                         data-id="{{ allenamento.id }}"
                         data-title="{{ allenamento.tipo }}{% if allenamento.descrizione %} - {{ allenamento.descrizione }}{% endif %}"
                         data-date="{{ allenamento.data.strftime('%A, %d %B %Y') }}"
@@ -106,14 +105,16 @@
                         data-recurrence-id="{{ allenamento.recurrence_id or '' }}"
                         data-is-recurrent="{{ 'Sì' if allenamento.recurrence_id else 'No' }}"
                         data-categories="{{ allenamento.categories|map(attribute='nome')|join(', ') if allenamento.categories else 'Nessuna' }}"
-                        data-coaches="{% for c in allenamento.coaches %}{{ c.first_name }} {{ c.last_name }}{% if not loop.last %}, {% endif %}{% endfor %}">
+                        data-catlist='{{ allenamento.categories|map(attribute="nome")|list|tojson|safe }}'
+                        data-coaches="{% for c in allenamento.coaches %}{{ c.first_name }} {{ c.last_name }}{% if not loop.last %}, {% endif %}{% endfor %}"
+                        data-start="{{ allenamento.data.isoformat() }}T{{ start_time }}">
 
                         <td>
-                            <span class="badge text-white allenamento-type-badge" style="background-color: {{ get_color_for_type(allenamento.tipo) }}">{{ allenamento.tipo }}</span>
+                            <span class="badge text-white allenamento-type-badge fs-6 py-2 px-3" style="background-color: {{ get_color_for_type(allenamento.tipo) }}">{{ allenamento.tipo }}</span>
                         </td>
-                        <td class="text-muted">{{ allenamento.descrizione or '–' }}</td>
-                        <td>{{ allenamento.data.strftime('%d-%m-%Y') }}</td>
-                        <td>{{ allenamento.orario }}</td>
+                        <td>{{ allenamento.descrizione or '–' }}</td>
+                        <td class="text-nowrap">{{ allenamento.data.strftime('%d-%m-%Y') }}</td>
+                        <td class="text-nowrap">{{ allenamento.orario }}</td>
                         <td>
                             {% for c in allenamento.coaches %}
                                 {{ c.first_name }} {{ c.last_name }}{% if not loop.last %}, {% endif %}
@@ -149,9 +150,15 @@
         </tbody>
     </table>
 </div>
+{% include 'partials/event_modal.html' %}
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', path='js/attendance_self.js') }}"></script>
+{% if current_user.is_allenatore or current_user.is_admin %}
+<script src="{{ url_for('static', path='js/attendance_admin.js') }}"></script>
+{% endif %}
+<script src="{{ url_for('static', path='js/event_modal.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
         // Gestione bottoni filtro temporale
@@ -165,45 +172,25 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
     // --- Gestione Modale Dettagli ---
-    const eventDetailModalEl = document.getElementById('eventDetailModal');
-    if (eventDetailModalEl) {
-        const eventDetailModal = new bootstrap.Modal(eventDetailModalEl);
-        const modalTitle = document.getElementById('modalTitle');
-        const modalDate = document.getElementById('modalDate');
-        const modalTime = document.getElementById('modalTime');
-        const modalDescription = document.getElementById('modalDescription');
-        const modalCategories = document.getElementById('modalCategories');
-        const modalRecurrence = document.getElementById('modalRecurrence');
-        const modalCoaches = document.getElementById('modalCoaches');
-        const modalEditButton = document.getElementById('modalEditButton');
-        const modalDeleteButton = document.getElementById('modalDeleteButton');
-
-        document.querySelectorAll('.list-item-clickable').forEach(item => {
-            item.addEventListener('click', function (event) {
-                if (event.target.closest('a, button')) {
-                    return;
-                }
-                event.preventDefault();
-
-                const data = this.dataset;
-                modalTitle.textContent = data.title;
-                modalDate.textContent = data.date;
-                modalTime.textContent = data.time;
-                modalDescription.textContent = data.description;
-                modalCategories.textContent = data.categories;
-                modalRecurrence.textContent = data.isRecurrent;
-                modalCoaches.textContent = data.coaches || 'Nessuno';
-
-                if (modalEditButton) modalEditButton.href = `/allenamenti/${data.id}/modifica`;
-                if (modalDeleteButton) {
-                    modalDeleteButton.setAttribute('data-allenamento-id', data.id);
-                    modalDeleteButton.setAttribute('data-recurrence-id', data.recurrenceId);
-                }
-
-                eventDetailModal.show();
-            });
+    const rows = document.querySelectorAll('.list-item-clickable');
+    rows.forEach(item => {
+        item.addEventListener('click', function (event) {
+            if (event.target.closest('a, button')) return;
+            const data = this.dataset;
+            showEventModal({
+                id: data.id,
+                title: data.title,
+                date: data.date,
+                time: data.time,
+                categories: data.categories,
+                catlist: data.catlist,
+                coaches: data.coaches || 'Nessuno',
+                recurrence: data.isRecurrent,
+                start: data.start,
+                type: 'allenamento'
+            }, this);
         });
-    }
+    });
 
     // --- Gestione Modale Eliminazione ---
     const deleteModalEl = document.getElementById('deleteConfirmationModal');

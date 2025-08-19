@@ -1,8 +1,8 @@
 {% extends "layout/base.html" %}
 {% block title %}Agenda{% endblock %}
 {% block head_extra %}
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/core/locales/it.js'></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 {% endblock %}
 {% block content %}
 <div class="container p-3">
@@ -10,190 +10,30 @@
   <div class="d-flex justify-content-end mb-3">
     <a id="icsLinkBtn" class="btn btn-sm btn-outline-secondary" href="#">Link calendario</a>
   </div>
-  <div id="calendar" class="bg-white p-3 rounded shadow-sm"></div>
-
-  <!-- Modale Dettagli Allenamento -->
-  <div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalTitle">Dettagli Allenamento</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <p><strong>Data:</strong> <span id="modalDate"></span></p>
-          <p><strong>Orario:</strong> <span id="modalTime"></span></p>
-          <p><strong>Descrizione:</strong> <span id="modalDescription"></span></p>
-          <p><strong>Categorie Assegnate:</strong> <span id="modalCategories" class="badge bg-info text-dark"></span></p>
-          <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
-          <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
-          {% if current_user.is_admin or current_user.is_allenatore %}
-          <a href="#" id="modalEditButton" class="btn btn-primary">Modifica</a>
-          <button type="button" id="modalDeleteButton" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal">Elimina</button>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {% if current_user.is_admin %}
-  <!-- Modale Assegna Turno -->
-  <div class="modal fade" id="assignTurnoModal" tabindex="-1" aria-labelledby="assignTurnoModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="assignTurnoModalLabel">Assegna Turno</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form action="/turni/assegna" method="post">
-          <div class="modal-body">
-            <p>Stai assegnando il turno del <strong id="turnoInfo"></strong>.</p>
-            <input type="hidden" name="turno_id" id="turnoIdInput">
-            <div class="mb-3">
-              <label class="form-label">Allenatore</label>
-              <div id="coachBoxContainer" class="d-flex flex-wrap gap-2">
-                <label class="coach-box">
-                  <input type="radio" name="user_id" value="0" class="btn-check">
-                  <span class="btn btn-outline-secondary">Nessuno</span>
-                </label>
-                {% for user in allenatori %}
-                <label class="coach-box" data-user-id="{{ user.id }}">
-                  <input type="radio" name="user_id" value="{{ user.id }}" class="btn-check">
-                  <span class="btn btn-light border">{{ user.first_name }} {{ user.last_name }}</span>
-                </label>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-            <button type="submit" class="btn btn-primary">Salva Assegnazione</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-  {% endif %}
+  <div id="agenda-calendar" data-src="/api/allenamenti"></div>
 </div>
 {% endblock %}
 {% block scripts %}
+<script src="{{ url_for('static', path='js/calendar_responsive.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', async function(){
-  const calendarEl = document.getElementById('calendar');
-  const linkBtn = document.getElementById('icsLinkBtn');
-  const initialView = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
-  const aspectRatio = window.innerWidth < 768 ? 0.85 : 1.5;
-
-  const eventDetailModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
-  const modalTitle = document.getElementById('modalTitle');
-  const modalHeader = document.querySelector('#eventDetailModal .modal-header');
-  const modalDate = document.getElementById('modalDate');
-  const modalTime = document.getElementById('modalTime');
-  const modalDescription = document.getElementById('modalDescription');
-  const modalCategories = document.getElementById('modalCategories');
-  const modalCoaches = document.getElementById('modalCoaches');
-  const modalRecurrence = document.getElementById('modalRecurrence');
-  const modalEditButton = document.getElementById('modalEditButton');
-  const modalDeleteButton = document.getElementById('modalDeleteButton');
-
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: initialView,
-    locale: 'it',
-    aspectRatio: aspectRatio,
-    height: 'auto',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,listWeek'
-    },
-    buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda' },
-    events: '/api/agenda',
-    eventDidMount: function(info){
-      const bg = info.event.backgroundColor;
-      if(bg){
-        info.el.style.setProperty('--fc-event-bg-color', bg);
-        info.el.style.setProperty('--fc-event-border-color', info.event.borderColor || bg);
-      }
-    },
-    eventClick: function(info){
-      info.jsEvent.preventDefault();
-      const id = info.event.id;
-      if(id.startsWith('training-')){
-        const trainingId = id.replace('training-','');
-        const props = info.event.extendedProps;
-        modalTitle.textContent = info.event.title;
-        if(modalHeader){
-          modalHeader.style.backgroundColor = info.event.backgroundColor || '#000080';
-        }
-        modalDate.textContent = info.event.start.toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        modalTime.textContent = props.orario || 'Non specificato';
-        modalDescription.textContent = props.descrizione || 'Nessuna descrizione.';
-        modalCategories.textContent = props.categories || 'Nessuna';
-        modalCoaches.textContent = props.coaches || 'Nessuno';
-        modalRecurrence.textContent = props.recurrence_id ? 'Sì' : 'No';
-        if(modalEditButton){ modalEditButton.href = `/allenamenti/${trainingId}/modifica`; }
-        if(modalDeleteButton){
-          modalDeleteButton.setAttribute('data-allenamento-id', trainingId);
-          modalDeleteButton.setAttribute('data-recurrence-id', props.recurrence_id || '');
-        }
-        eventDetailModal.show();
-      } else if(id.startsWith('turno-')){
-        {% if current_user.is_admin %}
-        const props = info.event.extendedProps;
-        const startDate = info.event.start;
-        const assignBtn = document.createElement('button');
-        assignBtn.setAttribute('data-bs-toggle', 'modal');
-        assignBtn.setAttribute('data-bs-target', '#assignTurnoModal');
-        assignBtn.setAttribute('data-turno-id', id.replace('turno-',''));
-        assignBtn.setAttribute('data-turno-info', `${startDate.toLocaleDateString('it-IT')} (${props.fascia_oraria})`);
-        assignBtn.setAttribute('data-user-id', props.user_id || '0');
-        assignBtn.setAttribute('data-available', (props.available_ids || []).join(','));
-        document.body.appendChild(assignBtn);
-        assignBtn.click();
-        document.body.removeChild(assignBtn);
-        {% endif %}
-      }
-    }
-  });
-  calendar.render();
-
-  {% if current_user.is_admin %}
-  const assignModal = document.getElementById('assignTurnoModal');
-  if(assignModal){
-    const turnoIdInput = document.getElementById('turnoIdInput');
-    const turnoInfoEl = document.getElementById('turnoInfo');
-    const coachBoxes = assignModal.querySelectorAll('.coach-box');
-    assignModal.addEventListener('show.bs.modal', function(event){
-      const button = event.relatedTarget;
-      const turnoId = button.getAttribute('data-turno-id');
-      const turnoInfo = button.getAttribute('data-turno-info');
-      const currentUserId = button.getAttribute('data-user-id') || '0';
-      const availableStr = button.getAttribute('data-available') || '';
-      const availableIds = availableStr ? availableStr.split(',') : [];
-      turnoIdInput.value = turnoId;
-      turnoInfoEl.textContent = turnoInfo;
-      coachBoxes.forEach(box => {
-        const radio = box.querySelector('input[name="user_id"]');
-        const span = box.querySelector('span');
-        radio.checked = (radio.value === currentUserId);
-        span.classList.remove('bg-danger','text-white');
-        if (availableIds.includes(radio.value) && radio.value !== '0') {
-          span.classList.add('bg-danger','text-white');
-        }
-      });
+  document.addEventListener('DOMContentLoaded', async () => {
+    const el = document.getElementById('agenda-calendar');
+    window.initResponsiveCalendar(el, {
+      eventSource: el.dataset.src,
+      initialDesktop: 'timeGridWeek',
+      initialMobile: 'listWeek',
+      rightDesktop: 'dayGridMonth,timeGridWeek,listWeek',
+      rightMobile: 'listDay,listWeek',
+      locale: 'it'
     });
-  }
-  {% endif %}
 
-  try {
-    const r = await fetch('/api/calendar/link');
-    const { ics_url } = await r.json();
-    linkBtn.href = location.origin + ics_url;
-    linkBtn.target = '_blank';
-  } catch (e) {}
-});
+    try {
+      const r = await fetch('/api/calendar/link');
+      const { ics_url } = await r.json();
+      const btn = document.getElementById('icsLinkBtn');
+      btn.href = location.origin + ics_url;
+      btn.target = '_blank';
+    } catch (e) {}
+  });
 </script>
 {% endblock %}

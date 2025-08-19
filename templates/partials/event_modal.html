@@ -1,0 +1,72 @@
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header align-items-center">
+                <h5 class="modal-title" id="modalTitle"></h5>
+                <div class="ms-auto me-3 text-end">
+                    <span id="modalDate" class="fw-semibold me-2"></span>
+                    <span id="modalTime" class="small"></span>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            {% if current_user.is_allenatore or current_user.is_admin %}
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs" id="eventTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-general" data-bs-toggle="tab" data-bs-target="#pane-general" type="button" role="tab">Generalità</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-attendance" data-bs-toggle="tab" data-bs-target="#pane-attendance" type="button" role="tab">Presenze</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-categories" data-bs-toggle="tab" data-bs-target="#pane-categories" type="button" role="tab">Categorie</button>
+                    </li>
+                </ul>
+                <div class="tab-content p-3" id="eventTabsContent">
+                    <div class="tab-pane fade show active" id="pane-general" role="tabpanel">
+                        <p><strong>Categorie:</strong> <span id="modalCategories"></span></p>
+                        <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
+                        <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
+                    </div>
+                    <div class="tab-pane fade" id="pane-attendance" role="tabpanel">
+                        <div class="mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-success me-2" id="btnBulkPresent">Segna Presenti</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="btnBulkAbsent">Segna Assenti</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle table-striped" id="attendanceTable">
+                                <thead><tr><th><input type="checkbox" id="selectAll"></th><th>Atleta</th><th>Stato</th></tr></thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="pane-categories" role="tabpanel">
+                        <div id="categoriesContainer" class="mb-3"></div>
+                        <div class="input-group">
+                            <select id="addAthleteSelect" class="form-select">
+                                <option value="">Seleziona atleta</option>
+                            </select>
+                            <button class="btn btn-outline-primary" id="btnAddAthlete" type="button">Aggiungi</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="modal-body">
+                <p><strong>Categorie:</strong> <span id="modalCategories"></span></p>
+                <p><strong>Allenatori:</strong> <span id="modalCoaches"></span></p>
+                <p><strong>Ricorrente:</strong> <span id="modalRecurrence"></span></p>
+            </div>
+            {% endif %}
+            <div class="modal-footer d-flex">
+                <div id="attendanceActions" class="me-auto d-none">
+                    <button type="button" class="btn btn-sm btn-outline-success" id="btnPresent">Presente</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="btnAbsent">Assente</button>
+                </div>
+                <a id="btnEditTraining" class="btn btn-primary me-2 d-none" href="#">Modifica allenamento</a>
+                <button type="button" class="btn btn-success me-2 d-none" id="btnSaveChanges">Salva</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>

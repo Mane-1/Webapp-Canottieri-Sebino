@@ -14,7 +14,7 @@
   <meta name="theme-color" content="#0b4b73" />
   {% block head_extra %}{% endblock %}
 </head>
-<body>
+<body data-is-atleta="{{ 'true' if current_user and current_user.is_atleta else 'false' }}" data-is-staff="{{ 'true' if current_user and (current_user.is_allenatore or current_user.is_admin) else 'false' }}">
   {% block navbar %}
     {% include 'partials/_navbar.html' %}
   {% endblock %}
@@ -22,7 +22,6 @@
     {% include 'partials/_flash.html' %}
     {% block content %}{% endblock %}
   </main>
-  {% include 'partials/_footer.html' %}
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   {% block scripts %}{% endblock %}

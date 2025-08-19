@@ -18,11 +18,17 @@
     </div>
   </div>
   <div id="calendar"></div>
+  {% include 'partials/event_modal.html' %}
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="{{ url_for('static', path='js/attendance_self.js') }}"></script>
+{% if current_user.is_allenatore or current_user.is_admin %}
+<script src="{{ url_for('static', path='js/attendance_admin.js') }}"></script>
+{% endif %}
+<script src="{{ url_for('static', path='js/event_modal.js') }}"></script>
 <script src="{{ url_for('static', path='js/calendar.js') }}"></script>
 {% endblock %}

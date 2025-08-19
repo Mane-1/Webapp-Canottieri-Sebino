@@ -12,7 +12,6 @@ async def test_access_control_requires_staff(client, db_session):
     await client.post("/login", data={"username": user.username, "password": "password"}, follow_redirects=True)
     assert (await client.get("/risorse/athletes")).status_code == 403
     assert (await client.get("/risorse/athletes/1")).status_code == 403
-    assert (await client.get("/trainings/stats")).status_code == 403
 
 
 @pytest.mark.anyio
@@ -55,6 +54,33 @@ async def test_trainings_stats_hours_and_monthly(client, db_session):
     assert data["kpi"]["total_hours"] == 2.0
     assert data["kpi"]["absent"] == 1
     assert data["monthly"][0]["month"] == 2
+
+
+@pytest.mark.anyio
+async def test_trainings_stats_single_start(client, db_session):
+    """Ensure trainings with only a start time are handled."""
+    cat = create_categoria(db_session, nome="Junior", eta_min=0, eta_max=30)
+    role_c = create_role(db_session, "allenatore")
+    coach = create_user(db_session, username="coach_single", roles=[role_c])
+    training = models.Allenamento(
+        tipo="Barca",
+        data=date(2025, 4, 10),
+        orario="08:00",
+        categories=[cat],
+        coaches=[coach],
+    )
+    db_session.add(training)
+    db_session.commit()
+    await client.post(
+        "/login",
+        data={"username": coach.username, "password": "password"},
+        follow_redirects=True,
+    )
+    resp = await client.get("/api/trainings/stats", params={"year": 2025})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["kpi"]["trainings"] == 1
+    assert data["kpi"]["total_hours"] == 1.0
 
 
 @pytest.mark.anyio

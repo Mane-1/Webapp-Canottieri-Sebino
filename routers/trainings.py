@@ -15,10 +15,7 @@ from dependencies import (
     get_current_admin_user,
     get_current_admin_or_coach_user,
 )
-from services.attendance_service import (
-    get_roster_for_training,
-    compute_status_for_athlete,
-)
+from services.attendance_service import get_roster_for_training
 from utils import (
     DAY_MAP_DATETIL,
     parse_orario,
@@ -27,7 +24,6 @@ from utils import (
     export_turni_excel,
     MONTH_NAMES,
 )
-from services.attendance_service import get_roster_for_training
 
 CATEGORY_GROUPS: Dict[str, List[str]] = {
     "Over14": ["Ragazzo", "Junior", "Under 23", "Senior"],
@@ -88,19 +84,21 @@ async def list_allenamenti(
     tipo: Optional[str] = Query(None),
     coach_id: Optional[str] = Query(None),
     unassigned: bool = Query(False),
-    start_date: Optional[date] = Query(None),
-    end_date: Optional[date] = Query(None),
+    start_date: Optional[str] = Query(None),
+    end_date: Optional[str] = Query(None),
 ):
     today = date.today()
+    start_dt = date.fromisoformat(start_date) if start_date else None
+    end_dt = date.fromisoformat(end_date) if end_date else None
     query = db.query(models.Allenamento).options(
         joinedload(models.Allenamento.categories),
         joinedload(models.Allenamento.coaches),
     )
-    if start_date:
-        query = query.filter(models.Allenamento.data >= start_date)
-    if end_date:
-        query = query.filter(models.Allenamento.data <= end_date)
-    if start_date or end_date:
+    if start_dt:
+        query = query.filter(models.Allenamento.data >= start_dt)
+    if end_dt:
+        query = query.filter(models.Allenamento.data <= end_dt)
+    if start_dt or end_dt:
         page_title = "Allenamenti filtrati"
         query = query.order_by(models.Allenamento.data.asc(), models.Allenamento.orario.asc())
     elif filter == "future":
@@ -149,8 +147,8 @@ async def list_allenamenti(
                 "tipo": tipo,
                 "coach_id": coach_id_int,
                 "unassigned": unassigned,
-                "start_date": start_date.isoformat() if start_date else "",
-                "end_date": end_date.isoformat() if end_date else "",
+                "start_date": start_dt.isoformat() if start_dt else "",
+                "end_date": end_dt.isoformat() if end_dt else "",
             },
         },
     )
@@ -830,7 +828,10 @@ async def get_allenamenti_api(
     events = []
     for a in query.distinct().all():
         start_dt, end_dt = parse_orario(a.data, a.orario)
-        categories = ", ".join([c.nome for c in a.categories]) or "Nessuno"
+        if not end_dt or end_dt <= start_dt:
+            end_dt = start_dt + timedelta(hours=1)
+        cat_names = [c.nome for c in a.categories]
+        categories = ", ".join(cat_names) or "Nessuno"
         coaches = ", ".join([f"{c.first_name} {c.last_name}" for c in a.coaches]) or "Nessuno"
         events.append(
             {
@@ -846,64 +847,13 @@ async def get_allenamenti_api(
                     "orario": a.orario,
                     "recurrence_id": a.recurrence_id,
                     "categories": categories,
+                    "catlist": cat_names,
                     "is_recurrent": "Sì" if a.recurrence_id else "No",
                     "coaches": coaches,
                 },
             }
         )
     return events
-
-
-@router.get("/trainings/{training_id}/manage", response_class=HTMLResponse, name="manage_training")
-async def manage_training(
-    training_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-    staff_user: models.User = Depends(get_current_admin_or_coach_user),
-):
-    training = db.query(models.Allenamento).get(training_id)
-    if not training:
-        raise HTTPException(status_code=404, detail="Allenamento non trovato")
-    roster_users = get_roster_for_training(db, training)
-    roster = [
-        {
-            "athlete_id": a.id,
-            "name": a.full_name,
-            "status": compute_status_for_athlete(db, training.id, a.id).value,
-        }
-        for a in roster_users
-    ]
-    return templates.TemplateResponse(
-        "trainings/detail.html",
-        {
-            "request": request,
-            "training": training,
-            "roster": roster,
-            "current_user": staff_user,
-        },
-    )
-
-
-@router.post("/trainings/{training_id}/update", response_class=RedirectResponse, name="update_training")
-async def update_training(
-    training_id: int,
-    request: Request,
-    db: Session = Depends(get_db),
-    staff_user: models.User = Depends(get_current_admin_or_coach_user),
-    tipo: str = Form(...),
-    data: date = Form(...),
-):
-    training = db.query(models.Allenamento).get(training_id)
-    if not training:
-        raise HTTPException(status_code=404, detail="Allenamento non trovato")
-    training.tipo = tipo
-    training.data = data
-    db.commit()
-    return RedirectResponse(
-        url=f"/trainings/{training_id}/manage", status_code=status.HTTP_303_SEE_OTHER
-    )
-
-
 @router.get("/api/turni")
 async def get_turni_api(db: Session = Depends(get_db), allenatore_id: int | None = None):
     query = db.query(models.Turno).options(joinedload(models.Turno.user))
@@ -944,41 +894,3 @@ async def get_turni_api(db: Session = Depends(get_db), allenatore_id: int | None
     return events
 
 
-@router.get("/api/trainings/stats")
-async def trainings_stats(
-    year: int,
-    categoria: List[str] | None = Query(None),
-    tipo: List[str] | None = Query(None),
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin_or_coach_user),
-):
-    query = db.query(models.Allenamento).options(joinedload(models.Allenamento.categories))
-    query = query.filter(extract('year', models.Allenamento.data) == year)
-    if categoria:
-        query = query.join(models.Allenamento.categories).filter(
-            models.Categoria.nome.in_(categoria)
-        )
-    if tipo:
-        query = query.filter(models.Allenamento.tipo.in_(tipo))
-    trainings = query.distinct().all()
-    total_trainings = len(trainings)
-    total_presences = 0
-    total_absences = 0
-    for training in trainings:
-        roster = get_roster_for_training(db, training)
-        roster_count = len(roster)
-        absences = (
-            db.query(models.Attendance)
-            .filter(
-                models.Attendance.training_id == training.id,
-                models.Attendance.status == models.AttendanceStatus.absent,
-            )
-            .count()
-        )
-        total_absences += absences
-        total_presences += max(roster_count - absences, 0)
-    return {
-        "trainings": total_trainings,
-        "presences": total_presences,
-        "absences": total_absences,
-    }

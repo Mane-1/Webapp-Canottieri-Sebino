@@ -1,6 +1,6 @@
 {% extends "layout/base.html" %}
 
-{% block title %}Turni{% endblock %}
+{% block title %}Calendario Turni{% endblock %}
 
 {% block head_extra %}
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
@@ -9,7 +9,7 @@
 {% block content %}
 <div class="container-fluid p-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h2">Turni</h1>
+        <h1 class="h2">Calendario Turni</h1>
     </div>
 
     <div class="mb-3">
@@ -176,17 +176,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inizializzazione Calendario
     const calendarEl = document.getElementById('calendar');
     calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: savedView || 'dayGridMonth',
+        initialView: savedView || 'listWeek',
         initialDate: savedDate ? new Date(savedDate) : undefined,
         locale: 'it',
         firstDay: 1,
         headerToolbar: {
             left: 'prev,next today',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek'
+            right: 'listWeek,dayGridMonth,timeGridWeek'
         },
         buttonText: {
-            today: 'Oggi', month: 'Mese', week: 'Settimana'
+            today: 'Oggi', month: 'Mese', week: 'Settimana', list: 'Agenda'
         },
         events: '/api/turni{% if current_filter %}?allenatore_id={{ current_filter }}{% endif %}',
         eventDidMount: function(info) {

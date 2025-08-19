@@ -302,13 +302,36 @@ def athlete_detail(
             else None
         )
         measurement_rows.append({"m": m, "diff_weight": diff_w, "diff_height": diff_h})
-    types = [
-        t[0]
-        for t in db.query(models.Allenamento.tipo)
-        .distinct()
-        .order_by(models.Allenamento.tipo)
-    ]
-    years = list(range(date.today().year, date.today().year - 5, -1))
+
+    trainings = (
+        db.query(models.Allenamento)
+        .order_by(models.Allenamento.data.desc(), models.Allenamento.id.desc())
+        .limit(200)
+        .all()
+    )
+    attendance_rows = []
+    assigned = present = 0
+    for t in trainings:
+        roster = get_roster_for_training(db, t)
+        if athlete not in roster:
+            continue
+        assigned += 1
+        status = compute_status_for_athlete(db, t.id, athlete.id).value
+        if status == 'present':
+            present += 1
+        attendance_rows.append(
+            {
+                "date": t.data,
+                "orario": t.orario,
+                "tipo": t.tipo,
+                "descrizione": t.descrizione,
+                "status": status,
+            }
+        )
+        if len(attendance_rows) >= 50:
+            break
+    rate = present / assigned if assigned else 0
+
     return templates.TemplateResponse(
         "athletes/detail.html",
         {
@@ -317,8 +340,9 @@ def athlete_detail(
             "athlete": athlete,
             "category": category.nome if category else None,
             "measurement_rows": measurement_rows,
-            "types": types,
-            "years": years,
+            "attendance_rows": attendance_rows,
+            "att_stats": {"assigned": assigned, "present": present, "rate": rate},
+            "today": date.today(),
         },
     )
 

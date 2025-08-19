@@ -70,15 +70,28 @@ def parse_orario(base_date: date, orario_str: str) -> Tuple[datetime, datetime]:
         return datetime.combine(base_date, time.min), datetime.combine(base_date, time.max)
     try:
         if '-' in orario_str:
-            start_part, end_part = orario_str.split('-')
-            start_time_obj = parse_time_string(start_part.strip())
-            end_time_obj = parse_time_string(end_part.strip())
+            parts = orario_str.split('-', 1)
+            start_part = parts[0].strip()
+            end_part = parts[1].strip() if len(parts) > 1 else ""
+            start_time_obj = parse_time_string(start_part)
+            if end_part:
+                end_time_obj = parse_time_string(end_part)
+            else:
+                # default duration 60 minutes when end is missing
+                start_dt = datetime.combine(base_date, start_time_obj)
+                end_dt = start_dt + timedelta(hours=1)
+                return start_dt, end_dt
         else:
             start_time_obj = parse_time_string(orario_str.strip())
-            end_time_obj = (datetime.combine(base_date, start_time_obj) + timedelta(hours=1)).time()
+            start_dt = datetime.combine(base_date, start_time_obj)
+            end_dt = start_dt + timedelta(hours=1)
+            return start_dt, end_dt
 
         start_dt = datetime.combine(base_date, start_time_obj)
         end_dt = datetime.combine(base_date, end_time_obj)
+        if end_dt < start_dt:
+            # guard against invalid ranges
+            end_dt = start_dt
         return start_dt, end_dt
     except Exception:
         return datetime.combine(base_date, time.min), datetime.combine(base_date, time.max)

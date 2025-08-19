@@ -86,33 +86,6 @@ def _collect_stats(db: Session, year: int, month: int | None, categorie: List[st
     }
 
 
-@router.get("/trainings/stats", name="trainings_stats")
-def trainings_stats_page(
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_admin_or_coach_user),
-):
-    current_year = date.today().year
-    years = list(range(current_year, current_year - 5, -1))
-    categories = db.query(models.Categoria).order_by(models.Categoria.nome).all()
-    types = [
-        t[0]
-        for t in db.query(models.Allenamento.tipo)
-        .distinct()
-        .order_by(models.Allenamento.tipo)
-    ]
-    return templates.TemplateResponse(
-        "trainings/stats.html",
-        {
-            "request": request,
-            "current_user": current_user,
-            "years": years,
-            "current_year": current_year,
-            "categories": categories,
-            "types": types,
-        },
-    )
-
 
 @router.get("/api/trainings/stats")
 def trainings_stats_api(

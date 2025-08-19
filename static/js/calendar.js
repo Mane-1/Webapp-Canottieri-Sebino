@@ -8,6 +8,8 @@
   const toolbarMobile = { start: 'title', center: '', end: 'today prev,next' };
   const toolbarDesktop = { start: 'prev,next today', center: 'title', end: 'dayGridMonth,timeGridWeek,listWeek' };
 
+  const modal = window.showEventModal ? window.showEventModal : null;
+
   const calendar = new FullCalendar.Calendar(el, {
     themeSystem: 'bootstrap5',
     initialView: isXs() ? 'listWeek' : (isSmMd() ? 'timeGridWeek' : 'dayGridMonth'),
@@ -28,10 +30,22 @@
       failure: () => console.error('Errore nel caricare gli eventi')
     }],
     eventClick(info) {
-      // apri gestione allenamento se presente
-      if (info.event.id) {
-        window.location.href = `/trainings/${info.event.id}/manage`;
-      }
+      if (!modal) return;
+      const props = info.event.extendedProps || {};
+      modal({
+        id: info.event.id,
+        title: info.event.title,
+        date: info.event.start.toLocaleDateString('it-IT', {
+          weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+        }),
+        time: props.orario || '',
+        categories: props.categories || 'Nessuna',
+        catlist: props.catlist || [],
+        coaches: props.coaches || 'Nessuno',
+        recurrence: props.is_recurrent || 'No',
+        start: info.event.start.toISOString(),
+        type: 'allenamento'
+      });
     }
   });
 

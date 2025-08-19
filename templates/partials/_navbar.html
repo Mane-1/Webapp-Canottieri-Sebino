@@ -13,7 +13,6 @@
             <li><a class="dropdown-item" href="/calendario">Calendario Allenamenti</a></li>
             {% if current_user.is_admin or current_user.is_allenatore %}
             <li><a class="dropdown-item" href="{{ url_for('list_allenamenti') }}">Gestione Allenamenti</a></li>
-            <li><a class="dropdown-item" href="/trainings/stats">Statistiche</a></li>
             {% endif %}
           </ul>
         </li>
@@ -21,7 +20,7 @@
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="turniDropdown" role="button" data-bs-toggle="dropdown">Turni</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="/turni">Calendario</a></li>
+              <li><a class="dropdown-item" href="/turni">Calendario Turni</a></li>
               <li><a class="dropdown-item" href="/turni/statistiche">Statistiche</a></li>
               <li><a class="dropdown-item" href="/turni/disponibilita">Disponibilità</a></li>
               {% if current_user.is_admin %}

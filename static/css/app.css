@@ -170,3 +170,73 @@ body{
   .btn, .btn-sm { padding-top: .5rem; padding-bottom: .5rem; }
   .table td, .table th { white-space: nowrap; }
 }
+.fc .fc-toolbar-title{
+  font-size: clamp(14px, 4.5vw, 22px);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 768px){
+  .fc .fc-toolbar-chunk{ gap:.25rem; }
+  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
+  .fc-theme-standard .fc-list{ font-size:.95rem; }
+}
+
+/* ensure event text is visible */
+.fc-event-title,
+.fc-event-time{ display:inline; }
+.fc-event-main-frame{ display:flex; }
+.custom-event-dot{ display:none; }
+
+/* improve event readability */
+.fc .fc-timegrid-event{ border-radius:6px; }
+.fc .fc-timegrid-event .fc-event-main{ padding:2px 4px; font-weight:600; }
+.fc .fc-event{ color:#fff; }
+.fc .fc-toolbar-title{
+  font-size: clamp(14px, 4.5vw, 22px);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 768px){
+  .fc .fc-toolbar-chunk{ gap:.25rem; }
+  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
+  .fc-theme-standard .fc-list{ font-size:.95rem; }
+}
+
+/* ensure event text is visible */
+.fc-event-title,
+.fc-event-time{ display:inline; }
+.fc-event-main-frame{ display:flex; }
+.custom-event-dot{ display:none; }
+
+/* improve event readability */
+.fc .fc-timegrid-event{ border-radius:6px; }
+.fc .fc-timegrid-event .fc-event-main{ padding:2px 4px; font-weight:600; }
+.fc .fc-event{ color:#fff; }
+.fc .fc-toolbar-title{
+  font-size: clamp(14px, 4.5vw, 22px);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 768px){
+  .fc .fc-toolbar-chunk{ gap:.25rem; }
+  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
+  .fc-theme-standard .fc-list{ font-size:.95rem; }
+}
+.fc .fc-toolbar-title{
+  font-size: clamp(14px, 4.5vw, 22px);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 768px){
+  .fc .fc-toolbar-chunk{ gap:.25rem; }
+  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
+  .fc-theme-standard .fc-list{ font-size:.95rem; }
+}
