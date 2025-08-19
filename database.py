@@ -2,8 +2,7 @@
 import os
 import logging
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.exc import OperationalError
 from fastapi import HTTPException, status
 try:  # pragma: no cover - fallback if python-dotenv missing

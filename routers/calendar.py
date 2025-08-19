@@ -186,8 +186,9 @@ def agenda_page(
             .all()
         )
     return templates.TemplateResponse(
+        request,
         "agenda.html",
-        {"request": request, "current_user": current_user, "allenatori": coaches},
+        {"current_user": current_user, "allenatori": coaches},
     )
 
 

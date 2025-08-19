@@ -52,22 +52,42 @@ async def admin_users_list(request: Request, db: Session = Depends(get_db),
     all_categories = sorted(
         list(set(u.category for u in all_users_for_categories if u.category and u.category != "N/D")))
 
-    return templates.TemplateResponse("admin/users_list.html",
-                                      {"request": request, "users": users, "current_user": admin_user,
-                                       "all_roles": all_roles, "all_categories": all_categories, "all_years": all_years,
-                                       "current_filters": {"role_ids": role_ids, "categories": categories,
-                                                           "enrollment_year": enrollment_year,
-                                                           "cert_expiring": cert_expiring}, "sort_by": sort_by,
-                                       "sort_dir": sort_dir, "today": date.today()})
+    return templates.TemplateResponse(
+        request,
+        "admin/users_list.html",
+        {
+            "users": users,
+            "current_user": admin_user,
+            "all_roles": all_roles,
+            "all_categories": all_categories,
+            "all_years": all_years,
+            "current_filters": {
+                "role_ids": role_ids,
+                "categories": categories,
+                "enrollment_year": enrollment_year,
+                "cert_expiring": cert_expiring,
+            },
+            "sort_by": sort_by,
+            "sort_dir": sort_dir,
+            "today": date.today(),
+        },
+    )
 
 
 @router.get("/users/add", response_class=HTMLResponse)
 async def admin_add_user_form(request: Request, db: Session = Depends(get_db),
                               admin_user: models.User = Depends(get_current_admin_user)):
     roles = db.query(models.Role).order_by(models.Role.name).all()
-    return templates.TemplateResponse("admin/user_add.html",
-                                      {"request": request, "current_user": admin_user, "all_roles": roles, "user": {},
-                                       "user_role_ids": set()})
+    return templates.TemplateResponse(
+        request,
+        "admin/user_add.html",
+        {
+            "current_user": admin_user,
+            "all_roles": roles,
+            "user": {},
+            "user_role_ids": set(),
+        },
+    )
 
 
 @router.post("/users/add", response_class=RedirectResponse)
@@ -106,8 +126,9 @@ async def admin_view_user(user_id: int, request: Request, db: Session = Depends(
                           admin_user: models.User = Depends(get_current_admin_user)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
-    return templates.TemplateResponse("admin/user_detail.html",
-                                      {"request": request, "user": user, "current_user": admin_user})
+    return templates.TemplateResponse(
+        request, "admin/user_detail.html", {"user": user, "current_user": admin_user}
+    )
 
 
 @router.get("/users/{user_id}/edit", response_class=HTMLResponse)
@@ -117,9 +138,16 @@ async def admin_edit_user_form(user_id: int, request: Request, db: Session = Dep
     if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
     roles = db.query(models.Role).all()
     user_role_ids = {role.id for role in user.roles}
-    return templates.TemplateResponse("admin/user_edit.html",
-                                      {"request": request, "user": user, "current_user": admin_user, "all_roles": roles,
-                                       "user_role_ids": user_role_ids})
+    return templates.TemplateResponse(
+        request,
+        "admin/user_edit.html",
+        {
+            "user": user,
+            "current_user": admin_user,
+            "all_roles": roles,
+            "user_role_ids": user_role_ids,
+        },
+    )
 
 
 @router.post("/users/{user_id}/edit", response_class=RedirectResponse)

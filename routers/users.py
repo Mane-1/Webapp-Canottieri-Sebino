@@ -120,17 +120,18 @@ async def dashboard(
     events = events[:5]
 
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
-        {"request": request, "current_user": current_user, "events": events},
+        {"current_user": current_user, "events": events},
     )
 
 @router.get("/profilo", response_class=HTMLResponse)
 async def view_profile(request: Request, current_user: models.User = Depends(get_current_user)):
-    return templates.TemplateResponse("profilo/profilo.html", {"request": request, "user": current_user, "current_user": current_user})
+    return templates.TemplateResponse(request, "profilo/profilo.html", {"user": current_user, "current_user": current_user})
 
 @router.get("/profilo/modifica", response_class=HTMLResponse)
 async def edit_profile_form(request: Request, current_user: models.User = Depends(get_current_user)):
-    return templates.TemplateResponse("profilo/profilo_modifica.html", {"request": request, "user": current_user, "current_user": current_user})
+    return templates.TemplateResponse(request, "profilo/profilo_modifica.html", {"user": current_user, "current_user": current_user})
 
 @router.post("/profilo/modifica", response_class=RedirectResponse)
 async def update_profile(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), email: Optional[str] = Form(None), phone_number: Optional[str] = Form(None), new_password: Optional[str] = Form(None)):

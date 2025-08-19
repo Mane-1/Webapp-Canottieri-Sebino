@@ -30,7 +30,7 @@ async def toggle_attendance(
 ):
     if not current_user.is_atleta:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only athletes can toggle attendance")
-    training = db.query(models.Allenamento).get(training_id)
+    training = db.get(models.Allenamento, training_id)
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     start_dt, _ = parse_orario(training.data, training.orario)
@@ -94,7 +94,7 @@ async def list_attendance(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    training = db.query(models.Allenamento).get(training_id)
+    training = db.get(models.Allenamento, training_id)
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     roster = get_roster_for_training(db, training)
@@ -139,7 +139,7 @@ async def bulk_set_attendance(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    training = db.query(models.Allenamento).get(training_id)
+    training = db.get(models.Allenamento, training_id)
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     roster = {a.id for a in get_roster_for_training(db, training)}
@@ -201,7 +201,7 @@ async def set_attendance(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    training = db.query(models.Allenamento).get(training_id)
+    training = db.get(models.Allenamento, training_id)
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     desired_status = models.AttendanceStatus(payload.status)
@@ -248,7 +248,7 @@ async def toggle_training_category(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    training = db.query(models.Allenamento).get(training_id)
+    training = db.get(models.Allenamento, training_id)
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     category = (

@@ -33,7 +33,7 @@ def get_athlete_attendance_stats(
         trainings_query = trainings_query.filter(models.Allenamento.tipo.in_(tipi))
     trainings = trainings_query.options(joinedload(models.Allenamento.categories)).all()
 
-    athlete = db.query(models.User).get(athlete_id)
+    athlete = db.get(models.User, athlete_id)
     if not athlete:
         raise ValueError("Athlete not found")
 

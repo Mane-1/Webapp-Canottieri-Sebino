@@ -64,9 +64,9 @@ async def view_calendar(
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "allenamenti/calendario.html",
         {
-            "request": request,
             "current_user": current_user,
             "all_categories": all_categories,
             "all_types": all_types,
@@ -132,9 +132,9 @@ async def list_allenamenti(
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "allenamenti/allenamenti_list.html",
         {
-            "request": request,
             "allenamenti": query.all(),
             "current_user": current_user,
             "page_title": page_title,
@@ -168,9 +168,9 @@ async def nuovo_allenamento_form(
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "allenamenti/crea_allenamento.html",
         {
-            "request": request,
             "current_user": staff_user,
             "grouped_categories": grouped_categories,
             "selected_category_names": [],
@@ -208,9 +208,9 @@ async def crea_allenamento(
                 .all()
             )
             return templates.TemplateResponse(
+                request,
                 "allenamenti/crea_allenamento.html",
                 {
-                    "request": request,
                     "current_user": staff_user,
                     "grouped_categories": grouped_categories,
                     "selected_category_names": category_names,
@@ -231,9 +231,9 @@ async def crea_allenamento(
     if not categories or len(categories) != len(category_names):
         grouped_categories = _group_categories(db)
         return templates.TemplateResponse(
+            request,
             "allenamenti/crea_allenamento.html",
             {
-                "request": request,
                 "current_user": staff_user,
                 "grouped_categories": grouped_categories,
                 "selected_category_names": category_names,
@@ -259,9 +259,9 @@ async def crea_allenamento(
                 .all()
             )
             return templates.TemplateResponse(
+                request,
                 "allenamenti/crea_allenamento.html",
                 {
-                    "request": request,
                     "current_user": staff_user,
                     "grouped_categories": grouped_categories,
                     "selected_category_names": category_names,
@@ -283,9 +283,9 @@ async def crea_allenamento(
                 .all()
             )
             return templates.TemplateResponse(
+                request,
                 "allenamenti/crea_allenamento.html",
                 {
-                    "request": request,
                     "current_user": staff_user,
                     "grouped_categories": grouped_categories,
                     "selected_category_names": category_names,
@@ -356,9 +356,9 @@ async def modifica_allenamento_form(
     selected_category_names = [c.nome for c in allenamento.categories]
     selected_coach_ids = [c.id for c in allenamento.coaches]
     return templates.TemplateResponse(
+        request,
         "allenamenti/modifica_allenamento.html",
         {
-            "request": request,
             "current_user": staff_user,
             "allenamento": allenamento,
             "grouped_categories": grouped_categories,
@@ -383,7 +383,7 @@ async def aggiorna_allenamento(
     category_names: List[str] = Form([]),
     coach_ids: List[int] = Form([]),
 ):
-    allenamento = db.query(models.Allenamento).get(id)
+    allenamento = db.get(models.Allenamento, id)
     if not allenamento:
         raise HTTPException(status_code=404, detail="Allenamento non trovato")
     categories = (
@@ -401,9 +401,9 @@ async def aggiorna_allenamento(
             .all()
         )
         return templates.TemplateResponse(
+            request,
             "allenamenti/modifica_allenamento.html",
             {
-                "request": request,
                 "current_user": staff_user,
                 "allenamento": allenamento,
                 "grouped_categories": grouped_categories,
@@ -425,9 +425,9 @@ async def aggiorna_allenamento(
                 .all()
             )
             return templates.TemplateResponse(
+                request,
                 "allenamenti/modifica_allenamento.html",
                 {
-                    "request": request,
                     "current_user": staff_user,
                     "allenamento": allenamento,
                     "grouped_categories": grouped_categories,
@@ -460,9 +460,9 @@ async def aggiorna_allenamento(
                 .all()
             )
             return templates.TemplateResponse(
+                request,
                 "allenamenti/modifica_allenamento.html",
                 {
-                    "request": request,
                     "current_user": staff_user,
                     "allenamento": allenamento,
                     "grouped_categories": grouped_categories,
@@ -490,7 +490,7 @@ async def delete_allenamento_events(
     allenamento_id: int = Form(...),
     deletion_type: str = Form(...),
 ):
-    a = db.query(models.Allenamento).get(allenamento_id)
+    a = db.get(models.Allenamento, allenamento_id)
     if not a: raise HTTPException(status_code=404, detail="Allenamento non trovato")
     if deletion_type == 'future' and a.recurrence_id:
         db.query(models.Allenamento).filter(models.Allenamento.recurrence_id == a.recurrence_id, models.Allenamento.data >= a.data).delete(synchronize_session=False)
@@ -549,9 +549,9 @@ async def view_turni(
     month_uncovered = month_query.filter(models.Turno.user_id.is_(None)).count()
 
     return templates.TemplateResponse(
+        request,
         "turni.html",
         {
-            "request": request,
             "current_user": current_user,
             "allenatori": allenatori,
             "turni": turni,
@@ -574,7 +574,7 @@ async def assegna_turno(
     user_id: int = Form(...),
     week_offset: int = Form(0),
 ):
-    turno = db.query(models.Turno).get(turno_id)
+    turno = db.get(models.Turno, turno_id)
     if not turno:
         raise HTTPException(status_code=404, detail="Turno non trovato")
 
@@ -582,7 +582,7 @@ async def assegna_turno(
     if user_id == 0:
         turno.user_id = None
     else:
-        user = db.query(models.User).get(user_id)
+        user = db.get(models.User, user_id)
         if not user or not user.is_allenatore:
             raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
         turno.user_id = user_id
@@ -604,11 +604,11 @@ async def assegnazione_rapida(
     turno_ids: List[int] = Form([]),
     week_offset: int = Form(0),
 ):
-    user = db.query(models.User).get(user_id)
+    user = db.get(models.User, user_id)
     if not user or not user.is_allenatore:
         raise HTTPException(status_code=400, detail="Utente non valido o non è un allenatore")
     for t_id in turno_ids:
-        turno = db.query(models.Turno).get(int(t_id))
+        turno = db.get(models.Turno, int(t_id))
         if turno:
             turno.user_id = user_id
     db.commit()
@@ -716,9 +716,9 @@ async def turni_stats(
         season_counts.append((f"{coach.first_name} {coach.last_name}", count))
 
     return templates.TemplateResponse(
+        request,
         "turni_statistiche.html",
         {
-            "request": request,
             "current_user": current_user,
             "month_covered": month_covered,
             "month_uncovered": month_uncovered,
@@ -739,8 +739,9 @@ async def turni_gestione(
     message: str | None = None,
 ):
     return templates.TemplateResponse(
+        request,
         "turni_gestione.html",
-        {"request": request, "current_user": admin_user, "message": message},
+        {"current_user": admin_user, "message": message},
     )
 
 

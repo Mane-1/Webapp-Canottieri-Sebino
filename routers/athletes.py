@@ -56,9 +56,9 @@ def athletes_list(
             continue
         rows.append({"user": u, "category": cat.nome if cat else None})
     return templates.TemplateResponse(
+        request,
         "athletes/index.html",
         {
-            "request": request,
             "current_user": current_user,
             "rows": rows,
             "q": q,
@@ -277,7 +277,7 @@ def athlete_detail(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    athlete = db.query(models.User).get(athlete_id)
+    athlete = db.get(models.User, athlete_id)
     if not athlete:
         raise HTTPException(status_code=404, detail="Athlete not found")
     category = current_category_for_user(db, athlete, date.today())
@@ -333,9 +333,9 @@ def athlete_detail(
     rate = present / assigned if assigned else 0
 
     return templates.TemplateResponse(
+        request,
         "athletes/detail.html",
         {
-            "request": request,
             "current_user": current_user,
             "athlete": athlete,
             "category": category.nome if category else None,
@@ -354,7 +354,7 @@ async def add_measurement(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_admin_or_coach_user),
 ):
-    athlete = db.query(models.User).get(athlete_id)
+    athlete = db.get(models.User, athlete_id)
     if not athlete:
         raise HTTPException(status_code=404, detail="Athlete not found")
     measured_at = payload.measured_at or date.today()

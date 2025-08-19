@@ -5,6 +5,7 @@
 import os
 import logging
 import logging.config
+from contextlib import asynccontextmanager
 from datetime import date
 try:  # pragma: no cover - fallback if python-dotenv is missing
     from dotenv import load_dotenv
@@ -64,8 +65,63 @@ logging.config.dictConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gestione del ciclo di vita dell'applicazione."""
+    logger.info("Avvio dell'applicazione in corso...")
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Verifica tabelle completata.")
+    except Exception as e:  # pragma: no cover
+        logger.error(f"Impossibile connettersi al database all'avvio: {e}")
+        yield
+        return
+
+    db = SessionLocal()
+    try:
+        if db.query(models.Role).count() == 0:
+            logger.info("Popolamento dei ruoli...")
+            db.add_all([
+                models.Role(name='atleta'),
+                models.Role(name='allenatore'),
+                models.Role(name='admin')
+            ])
+            db.commit()
+
+        seed_categories(db)
+        seed_turni(db)
+        seed_default_allenamenti(db)
+
+        if not db.query(models.User).filter(models.User.username == "gabriele").first():
+            logger.info("Creazione utente admin...")
+            admin_role = db.query(models.Role).filter_by(name='admin').one()
+            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
+            admin_user = models.User(
+                username="gabriele",
+                hashed_password=security.get_password_hash("manenti"),
+                first_name="Gabriele",
+                last_name="Manenti",
+                email="gabriele.manenti@example.com",
+                date_of_birth=date(1990, 1, 1),
+                roles=[admin_role, allenatore_role]
+            )
+            db.add(admin_user)
+            db.commit()
+            logger.info("Utente admin 'gabriele' creato.")
+    except Exception as e:
+        logger.warning(
+            f"Errore durante il popolamento dei dati di base all'avvio: {e}"
+        )
+        db.rollback()
+    finally:
+        db.close()
+
+    yield
+
+
 # Creazione dell'istanza FastAPI
-app = FastAPI(title="Gestionale Canottieri")
+app = FastAPI(title="Gestionale Canottieri", lifespan=lifespan)
 
 # Configurazione del middleware per le sessioni
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -96,66 +152,10 @@ def render(
     context = {"request": request, "current_user": user}
     if ctx:
         context.update(ctx)
-    return templates.TemplateResponse(template_name, context, status_code=status_code)
+    return templates.TemplateResponse(request, template_name, context, status_code=status_code)
 
 
 # Evento di startup dell'applicazione
-@app.on_event("startup")
-def on_startup():
-    """
-    Esegue operazioni all'avvio dell'applicazione:
-    1. Crea le tabelle del database se non esistono.
-    2. Popola i dati essenziali (ruoli, utente admin) se il database è vuoto.
-    """
-    logger.info("Avvio dell'applicazione in corso...")
-    try:
-        # Verifica connessione al DB e crea le tabelle
-        Base.metadata.create_all(bind=engine)
-        logger.info("Verifica tabelle completata.")
-    except Exception as e:  # pragma: no cover - difficilmente simulabile
-        logger.error(f"Impossibile connettersi al database all'avvio: {e}")
-        return
-
-    db = SessionLocal()
-    try:
-        if db.query(models.Role).count() == 0:
-            logger.info("Popolamento dei ruoli...")
-            db.add_all([
-                models.Role(name='atleta'),
-                models.Role(name='allenatore'),
-                models.Role(name='admin')
-            ])
-            db.commit()
-
-        # Popola la tabella delle categorie se è vuota
-        seed_categories(db)
-        seed_turni(db)
-        seed_default_allenamenti(db)
-
-        if not db.query(models.User).filter(models.User.username == "gabriele").first():
-            logger.info("Creazione utente admin...")
-            admin_role = db.query(models.Role).filter_by(name='admin').one()
-            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
-            admin_user = models.User(
-                username="gabriele",
-                hashed_password=security.get_password_hash("manenti"),
-                first_name="Gabriele",
-                last_name="Manenti",
-                email="gabriele.manenti@example.com",
-                date_of_birth=date(1990, 1, 1),
-                roles=[admin_role, allenatore_role]
-            )
-            db.add(admin_user)
-            db.commit()
-            logger.info("Utente admin 'gabriele' creato.")
-    except Exception as e:
-        logger.warning(
-            f"Errore durante il popolamento dei dati di base all'avvio: {e}"
-        )
-        db.rollback()
-    finally:
-        db.close()
-
 # Inclusione dei router modulari
 # Ogni router gestisce una sezione specifica dell'applicazione
 app.include_router(authentication.router)
@@ -246,4 +246,4 @@ async def service_worker():
 @app.exception_handler(500)
 async def internal_server_error(request: Request, exc: Exception):
     logging.error(f"Errore 500: {exc}", exc_info=True)
-    return templates.TemplateResponse("errors/500.html", {"request": request}, status_code=500)
+    return templates.TemplateResponse(request, "errors/500.html", {}, status_code=500)

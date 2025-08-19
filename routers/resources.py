@@ -51,9 +51,9 @@ async def list_barche(
         ("in_trasferta", "In trasferta"),
     ]
     return templates.TemplateResponse(
+        request,
         "barche/barche_list.html",
         {
-            "request": request,
             "current_user": current_user,
             "barche": barche,
             "tipi_barca": tipi_barca,
@@ -80,7 +80,8 @@ async def barca_detail(
     barca = (
         db.query(models.Barca)
         .options(joinedload(models.Barca.atleti_assegnati))
-        .get(barca_id)
+        .filter(models.Barca.id == barca_id)
+        .first()
     )
     if not barca:
         raise HTTPException(status_code=404, detail="Barca non trovata")
@@ -92,8 +93,9 @@ async def barca_detail(
         raise HTTPException(status_code=403, detail="Accesso negato")
     message = request.query_params.get("message")
     return templates.TemplateResponse(
+        request,
         "barche/barca_detail.html",
-        {"request": request, "current_user": current_user, "barca": barca, "message": message},
+        {"current_user": current_user, "barca": barca, "message": message},
     )
 
 
@@ -123,7 +125,8 @@ async def aggiorna_misure_barca(
     barca = (
         db.query(models.Barca)
         .options(joinedload(models.Barca.atleti_assegnati))
-        .get(barca_id)
+        .filter(models.Barca.id == barca_id)
+        .first()
     )
     if not barca:
         raise HTTPException(status_code=404, detail="Barca non trovata")
@@ -162,9 +165,17 @@ async def aggiorna_misure_barca(
 async def nuova_barca_form(request: Request, db: Session = Depends(get_db),
                            admin_user: models.User = Depends(get_current_admin_user)):
     atleti, categorie = users_service.get_atleti_e_categorie(db)
-    return templates.TemplateResponse("barche/crea_barca.html",
-                                      {"request": request, "current_user": admin_user, "atleti": atleti,
-                                       "categorie": categorie, "barca": {}, "assigned_atleta_ids": []})
+    return templates.TemplateResponse(
+        request,
+        "barche/crea_barca.html",
+        {
+            "current_user": admin_user,
+            "atleti": atleti,
+            "categorie": categorie,
+            "barca": {},
+            "assigned_atleta_ids": [],
+        },
+    )
 
 
 @router.post("/barche/nuova", response_class=RedirectResponse)
@@ -203,9 +214,9 @@ async def crea_barca(
     if (in_manutenzione or fuori_uso) and (in_prestito or in_trasferta):
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
+            request,
             "barche/crea_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "atleti": atleti,
                 "categorie": categorie,
@@ -219,9 +230,9 @@ async def crea_barca(
     if not (nome.strip() and tipo.strip() and costruttore.strip() and anno_str.strip()):
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
+            request,
             "barche/crea_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "atleti": atleti,
                 "categorie": categorie,
@@ -237,9 +248,9 @@ async def crea_barca(
     except ValueError:
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         return templates.TemplateResponse(
+            request,
             "barche/crea_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "atleti": atleti,
                 "categorie": categorie,
@@ -294,14 +305,26 @@ async def crea_barca(
 @router.get("/barche/{barca_id}/modifica", response_class=HTMLResponse, name="modifica_barca_form")
 async def modifica_barca_form(barca_id: int, request: Request, db: Session = Depends(get_db),
                               admin_user: models.User = Depends(get_current_admin_user)):
-    barca = db.query(models.Barca).options(joinedload(models.Barca.atleti_assegnati)).get(barca_id)
+    barca = (
+        db.query(models.Barca)
+        .options(joinedload(models.Barca.atleti_assegnati))
+        .filter(models.Barca.id == barca_id)
+        .first()
+    )
     if not barca: raise HTTPException(status_code=404, detail="Barca non trovata")
     atleti, categorie = users_service.get_atleti_e_categorie(db)
     assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
-    return templates.TemplateResponse("barche/modifica_barca.html",
-                                      {"request": request, "current_user": admin_user, "barca": barca,
-                                       "atleti": atleti, "categorie": categorie,
-                                       "assigned_atleta_ids": assigned_atleta_ids})
+    return templates.TemplateResponse(
+        request,
+        "barche/modifica_barca.html",
+        {
+            "current_user": admin_user,
+            "barca": barca,
+            "atleti": atleti,
+            "categorie": categorie,
+            "assigned_atleta_ids": assigned_atleta_ids,
+        },
+    )
 
 
 @router.post("/barche/{barca_id}/modifica", response_class=RedirectResponse)
@@ -338,7 +361,7 @@ async def aggiorna_barca(
       altezza_carrello: Optional[str] = Form(None),
       avanzamento_guide: Optional[str] = Form(None),
 ):
-    barca = db.query(models.Barca).get(barca_id)
+    barca = db.get(models.Barca, barca_id)
     if not barca:
         raise HTTPException(status_code=404, detail="Barca non trovata")
 
@@ -346,9 +369,9 @@ async def aggiorna_barca(
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
+            request,
             "barche/modifica_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "barca": barca,
                 "atleti": atleti,
@@ -363,9 +386,9 @@ async def aggiorna_barca(
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
+            request,
             "barche/modifica_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "barca": barca,
                 "atleti": atleti,
@@ -382,9 +405,9 @@ async def aggiorna_barca(
         atleti, categorie = users_service.get_atleti_e_categorie(db)
         assigned_atleta_ids = {atleta.id for atleta in barca.atleti_assegnati}
         return templates.TemplateResponse(
+            request,
             "barche/modifica_barca.html",
             {
-                "request": request,
                 "current_user": admin_user,
                 "barca": barca,
                 "atleti": atleti,
@@ -457,7 +480,7 @@ async def view_pesi(
         selected_atleta = current_user
     if (current_user.is_admin or current_user.is_allenatore) and atleta_id:
         try:
-            selected_atleta = db.query(models.User).get(int(atleta_id))
+            selected_atleta = db.get(models.User, int(atleta_id))
         except (TypeError, ValueError):
             selected_atleta = None
 
@@ -467,9 +490,9 @@ async def view_pesi(
                        db.query(models.SchedaPesi).filter(models.SchedaPesi.atleta_id == selected_atleta.id).all()}
 
     return templates.TemplateResponse(
+        request,
         "pesi.html",
         {
-            "request": request,
             "current_user": current_user,
             "esercizi": esercizi,
             "atleti": atleti,
@@ -525,8 +548,9 @@ async def gestisci_esercizi(
         raise HTTPException(status_code=403, detail="Non autorizzato")
     esercizi = db.query(models.EsercizioPesi).order_by(models.EsercizioPesi.ordine).all()
     return templates.TemplateResponse(
+        request,
         "pesi_gestisci.html",
-        {"request": request, "current_user": current_user, "esercizi": esercizi},
+        {"current_user": current_user, "esercizi": esercizi},
     )
 
 
@@ -540,7 +564,7 @@ async def update_esercizio(
 ):
     if not (current_user.is_admin or current_user.is_allenatore):
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    esercizio = db.query(models.EsercizioPesi).get(id)
+    esercizio = db.get(models.EsercizioPesi, id)
     if esercizio:
         esercizio.ordine = ordine
         esercizio.nome = nome
@@ -556,7 +580,7 @@ async def delete_esercizio(
 ):
     if not (current_user.is_admin or current_user.is_allenatore):
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    esercizio = db.query(models.EsercizioPesi).get(id)
+    esercizio = db.get(models.EsercizioPesi, id)
     if esercizio:
         db.delete(esercizio)
         db.commit()
@@ -580,13 +604,13 @@ async def statistiche_pesi(
         selected_atleta = current_user
     elif atleta_id:
         try:
-            selected_atleta = db.query(models.User).get(int(atleta_id))
+            selected_atleta = db.get(models.User, int(atleta_id))
         except (TypeError, ValueError):
             selected_atleta = None
     return templates.TemplateResponse(
+        request,
         "pesi_statistiche.html",
         {
-            "request": request,
             "current_user": current_user,
             "esercizi": esercizi,
             "atleti": atleti,

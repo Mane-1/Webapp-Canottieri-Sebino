@@ -49,9 +49,9 @@ def calendar_view(request: Request, week: Optional[str] = None, coach_id: Option
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "calendar.html",
         {
-            "request": request,
             "week_start": start,
             "week_end": end,
             "year": year,

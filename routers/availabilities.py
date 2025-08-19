@@ -66,9 +66,9 @@ async def view_availabilities(
             .all()
         )
         return templates.TemplateResponse(
+            request,
             "turni_disponibilita.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "edit_user": None,
                 "coach_map": coach_map,
@@ -77,7 +77,7 @@ async def view_availabilities(
         )
     else:
         edit_user = (
-            db.query(models.User).get(user_id)
+            db.get(models.User, user_id)
             if current_user.is_admin and user_id
             else current_user
         )
@@ -92,9 +92,9 @@ async def view_availabilities(
         )
         selected_ids = {tid for (tid,) in existing}
         return templates.TemplateResponse(
+            request,
             "turni_disponibilita.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "edit_user": edit_user,
                 "turni": grouped,

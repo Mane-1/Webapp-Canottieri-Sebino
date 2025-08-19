@@ -21,7 +21,7 @@ async def login_form(
 ):
     """Renderizza la pagina di login."""
     return templates.TemplateResponse(
-        "auth/login.html", {"request": request, "current_user": current_user}
+        request, "auth/login.html", {"current_user": current_user}
     )
 
 
@@ -35,9 +35,9 @@ async def login(
     """Autentica l'utente e avvia la sessione."""
     if not creds.username.strip() or not creds.password.strip():
         return templates.TemplateResponse(
+            request,
             "auth/login.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "error_message": "Compila tutti i campi",
             },
@@ -47,9 +47,9 @@ async def login(
     db_user = db.query(models.User).filter(models.User.username == creds.username).first()
     if not db_user:
         return templates.TemplateResponse(
+            request,
             "auth/login.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "error_message": "Username o password non validi",
             },
@@ -58,9 +58,9 @@ async def login(
 
     if db_user.is_suspended:
         return templates.TemplateResponse(
+            request,
             "auth/login.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "error_message": "Account sospeso. Contatta un amministratore per reimpostare la password",
             },
@@ -81,9 +81,9 @@ async def login(
             status.HTTP_403_FORBIDDEN if db_user.is_suspended else status.HTTP_401_UNAUTHORIZED
         )
         return templates.TemplateResponse(
+            request,
             "auth/login.html",
             {
-                "request": request,
                 "current_user": current_user,
                 "error_message": message,
             },
