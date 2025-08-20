@@ -111,7 +111,7 @@
                             {{ sort_link('nome', 'Nome') }}
                             {{ sort_link('tipo', 'Tipo') }}
                             {{ sort_link('status', 'Stato', 'text-center') }}
-                            <th>Atleti Assegnati</th>
+                            <th>Equipaggi</th>
                             {% if current_user.is_admin or current_user.is_allenatore %}
                             <th class="text-end">Azioni</th>
                             {% endif %}
@@ -126,7 +126,23 @@
                                 {% set status, badge_class = barca.status %}
                                 <span class="badge rounded-pill {{ badge_class }}">{{ status }}</span>
                             </td>
-                            <td>{{ barca.atleti_assegnati|map(attribute='last_name')|join(', ') or '-' }}</td>
+                            <td>
+                                {% if barca.equipaggi %}
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-users text-primary me-2"></i>
+                                        <div>
+                                            {% for equipaggio in barca.equipaggi[:2] %}
+                                                <div class="small">{{ equipaggio.nome }}</div>
+                                            {% endfor %}
+                                            {% if barca.equipaggi|length > 2 %}
+                                                <div class="small text-muted">+{{ barca.equipaggi|length - 2 }} altri</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
                             {% if current_user.is_admin or current_user.is_allenatore %}
                             <td class="text-end">
                                 <a href="{{ url_for('modifica_barca_form', barca_id=barca.id) }}" class="btn btn-sm btn-outline-primary me-1">Modifica</a>

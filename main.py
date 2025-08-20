@@ -15,8 +15,9 @@ except ModuleNotFoundError:  # pragma: no cover
 
 load_dotenv()
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -24,10 +25,10 @@ from fastapi.exceptions import RequestValidationError
 from starlette.middleware.sessions import SessionMiddleware
 
 # Importa i moduli del progetto
-import models
+from models import *
 import security
 from database import engine, Base, SessionLocal
-from utils import get_color_for_type
+from utils import get_color_for_type, render
 from routers import (
     authentication,
     users,
@@ -43,7 +44,7 @@ from routers import (
     activities,
     api_activities,
 )
-from seed import seed_categories, seed_turni, seed_default_allenamenti
+from seed import seed_categories, seed_turni, seed_default_allenamenti, seed_mezzi
 
 # Configurazione del logging tramite dictConfig
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
@@ -82,27 +83,28 @@ async def lifespan(app: FastAPI):
 
     db = SessionLocal()
     try:
-        if db.query(models.Role).count() == 0:
+        if db.query(Role).count() == 0:
             logger.info("Popolamento dei ruoli...")
             db.add_all([
-                models.Role(name='atleta'),
-                models.Role(name='allenatore'),
-                models.Role(name='istruttore'),
-                models.Role(name='admin')
+                Role(name='atleta'),
+                Role(name='allenatore'),
+                Role(name='istruttore'),
+                Role(name='admin')
             ])
             db.commit()
 
         seed_categories(db)
         seed_turni(db)
         seed_default_allenamenti(db)
+        seed_mezzi(db)
 
         admin_username = os.environ.get("ADMIN_USERNAME", "admin")
         admin_password = os.environ.get("ADMIN_PASSWORD")
-        if admin_password and not db.query(models.User).filter(models.User.username == admin_username).first():
+        if admin_password and not db.query(User).filter(User.username == admin_username).first():
             logger.info(f"Creazione utente admin '{admin_username}'...")
-            admin_role = db.query(models.Role).filter_by(name='admin').one()
-            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
-            admin_user = models.User(
+            admin_role = db.query(Role).filter_by(name='admin').one()
+            allenatore_role = db.query(Role).filter_by(name='allenatore').one()
+            admin_user = User(
                 username=admin_username,
                 hashed_password=security.get_password_hash(admin_password),
                 first_name="Admin",
@@ -144,20 +146,6 @@ def is_api_request(request: Request) -> bool:
     """Return ``True`` if the incoming request expects a JSON response."""
     accept = request.headers.get("accept", "")
     return "application/json" in accept or request.url.path.startswith("/api")
-
-
-def render(
-    request: Request,
-    template_name: str,
-    ctx: dict | None = None,
-    user=None,
-    status_code: int = 200,
-):
-    """Helper to render Jinja templates with a consistent context."""
-    context = {"request": request, "current_user": user}
-    if ctx:
-        context.update(ctx)
-    return templates.TemplateResponse(request, template_name, context, status_code=status_code)
 
 
 # Evento di startup dell'applicazione

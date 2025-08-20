@@ -1,0 +1,25 @@
+# Migrazioni Database
+
+Questo file documenta le migrazioni del database per l'applicazione Canottieri Sebino.
+
+## Migrazioni Disponibili
+
+### 7cab9fb096ed - Add user login lock fields
+- Aggiunge campi per il blocco degli utenti dopo tentativi di login falliti
+
+### b90f227d6985 - Trainings add fields indexes
+- Aggiunge campi e indici per gli allenamenti
+
+### c19718caa743 - Add mezzi tables
+- Aggiunge tabelle per la gestione dei mezzi (furgoni, gommoni)
+
+### add_equipaggi_table - Add equipaggi table
+- Aggiunge la tabella equipaggi per la gestione degli equipaggi delle barche
+- Include tutti i posti richiesti per i diversi tipi di barca
+- Supporta equipaggi da 1x a 8+ con posti opzionali per timoniere
+
+## Note
+
+- Tutte le migrazioni sono state applicate al database SQLite
+- La tabella equipaggi è stata creata manualmente per evitare conflitti con migrazioni esistenti
+- Gli indici sono stati creati per ottimizzare le performance delle query

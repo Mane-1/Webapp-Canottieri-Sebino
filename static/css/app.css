@@ -183,16 +183,7 @@ body{
   .fc-theme-standard .fc-list{ font-size:.95rem; }
 }
 
-/* ensure event text is visible */
-.fc-event-title,
-.fc-event-time{ display:inline; }
-.fc-event-main-frame{ display:flex; }
-.custom-event-dot{ display:none; }
-
-/* improve event readability */
-.fc .fc-timegrid-event{ border-radius:6px; }
-.fc .fc-timegrid-event .fc-event-main{ padding:2px 4px; font-weight:600; }
-.fc .fc-event{ color:#fff; }
+/* FullCalendar Styles */
 .fc .fc-toolbar-title{
   font-size: clamp(14px, 4.5vw, 22px);
   line-height: 1.2;
@@ -200,6 +191,7 @@ body{
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 @media (max-width: 768px){
   .fc .fc-toolbar-chunk{ gap:.25rem; }
   .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
@@ -215,28 +207,51 @@ body{
 /* improve event readability */
 .fc .fc-timegrid-event{ border-radius:6px; }
 .fc .fc-timegrid-event .fc-event-main{ padding:2px 4px; font-weight:600; }
-.fc .fc-event{ color:#fff; }
-.fc .fc-toolbar-title{
-  font-size: clamp(14px, 4.5vw, 22px);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
+/* Event colors and text visibility */
+.fc .fc-event{ 
+  color: #333 !important; 
+  background-color: #e3f2fd !important;
+  border: 1px solid #2196f3 !important;
 }
-@media (max-width: 768px){
-  .fc .fc-toolbar-chunk{ gap:.25rem; }
-  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
-  .fc-theme-standard .fc-list{ font-size:.95rem; }
+
+.fc .fc-event-title{ 
+  color: #333 !important; 
+  font-weight: 600;
 }
-.fc .fc-toolbar-title{
-  font-size: clamp(14px, 4.5vw, 22px);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
+.fc .fc-event-time{ 
+  color: #666 !important; 
+  font-weight: 500;
 }
-@media (max-width: 768px){
-  .fc .fc-toolbar-chunk{ gap:.25rem; }
-  .fc .fc-button{ padding:.3rem .5rem; font-size:.9rem; }
-  .fc-theme-standard .fc-list{ font-size:.95rem; }
+
+/* Event duration display */
+.fc .fc-event-main-frame{ 
+  display: flex; 
+  flex-direction: column;
+  align-items: flex-start;
 }
+
+.fc .fc-event-main{ 
+  width: 100%;
+  padding: 4px 8px;
+}
+
+/* Badge stati attività */
+.state-badge.state-bozza { background-color: #6c757d !important; color: white !important; }
+.state-badge.state-confermato { background-color: #198754 !important; color: white !important; }
+.state-badge.state-in_corso { background-color: #ffc107 !important; color: black !important; }
+.state-badge.state-completato { background-color: #0d6efd !important; color: white !important; }
+.state-badge.state-annullato { background-color: #dc3545 !important; color: white !important; }
+
+/* Badge pagamento */
+.payment-badge.payment-da_effettuare { background-color: #ffc107 !important; color: #212529 !important; }
+.payment-badge.payment-da_verificare { background-color: #fd7e14 !important; color: white !important; }
+.payment-badge.payment-confermato { background-color: #28a745 !important; color: white !important; }
+.payment-badge.payment-rifiutato { background-color: #dc3545 !important; color: white !important; }
+
+/* Progress bar copertura */
+.coverage-progress { height: 20px; }
+.coverage-100 { background-color: #28a745 !important; }
+.coverage-partial { background-color: #ffc107 !important; }
+.coverage-low { background-color: #dc3545 !important; }

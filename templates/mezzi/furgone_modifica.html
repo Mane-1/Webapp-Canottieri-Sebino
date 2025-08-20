@@ -1,0 +1,389 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Modifica {{ furgone.marca }} {{ furgone.modello }} - Canottieri Sebino{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/risorse/mezzi">Mezzi</a></li>
+                            <li class="breadcrumb-item"><a href="/risorse/mezzi/gestione">Gestione Mezzi</a></li>
+                            <li class="breadcrumb-item active">Modifica {{ furgone.marca }} {{ furgone.modello }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="/risorse/mezzi/gestione" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Torna alla Gestione
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header mezzo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-truck fa-2x me-3 text-primary"></i>
+                        <div>
+                            <h2 class="card-title mb-1">{{ furgone.marca }} {{ furgone.modello }}</h2>
+                            <p class="mb-0 text-muted">{{ furgone.targa }} - Anno {{ furgone.anno }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="modificaTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">
+                        <i class="fas fa-info-circle me-2"></i>Informazioni Generali
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="scadenze-tab" data-bs-toggle="tab" data-bs-target="#scadenze" type="button" role="tab">
+                        <i class="fas fa-calendar-alt me-2"></i>Gestione Scadenze
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Contenuto tabs -->
+    <div class="tab-content" id="modificaTabsContent">
+        <!-- Tab Informazioni Generali -->
+        <div class="tab-pane fade show active" id="info" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Modifica Informazioni Furgone</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="modificaFurgoneForm" method="POST" action="/risorse/mezzi/furgone/{{ furgone.id }}/modifica">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="marca" class="form-label">Marca *</label>
+                                            <input type="text" class="form-control" id="marca" name="marca" 
+                                                   value="{{ furgone.marca }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="modello" class="form-label">Modello *</label>
+                                            <input type="text" class="form-control" id="modello" name="modello" 
+                                                   value="{{ furgone.modello }}" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="targa" class="form-label">Targa *</label>
+                                            <input type="text" class="form-control" id="targa" name="targa" 
+                                                   value="{{ furgone.targa }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="anno" class="form-label">Anno *</label>
+                                            <input type="number" class="form-control" id="anno" name="anno" 
+                                                   value="{{ furgone.anno }}" min="1900" max="2030" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="stato" class="form-label">Stato</label>
+                                            <select class="form-select" id="stato" name="stato">
+                                                <option value="libero" {% if furgone.stato == 'libero' %}selected{% endif %}>Libero</option>
+                                                <option value="manutenzione" {% if furgone.stato == 'manutenzione' %}selected{% endif %}>In manutenzione</option>
+                                                <option value="fuori_uso" {% if furgone.stato == 'fuori_uso' %}selected{% endif %}>Fuori uso</option>
+                                                <option value="trasferta" {% if furgone.stato == 'trasferta' %}selected{% endif %}>In trasferta</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Salva Modifiche
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Gestione Scadenze -->
+        <div class="tab-pane fade" id="scadenze" role="tabpanel">
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">Gestione Scadenze</h5>
+                            <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addScadenzaModal">
+                                <i class="fas fa-plus me-2"></i>Nuova Scadenza
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tipo Scadenza</th>
+                                            <th>Data</th>
+                                            <th>Giorni Rimanenti</th>
+                                            <th>Azioni</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if furgone.scadenza_bollo %}
+                                        <tr>
+                                            <td>Bollo</td>
+                                            <td>{{ furgone.scadenza_bollo.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                {% set giorni = (furgone.scadenza_bollo - today).days %}
+                                                {% if giorni > 0 %}
+                                                    <span class="badge bg-success">{{ giorni }} giorni</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="modificaScadenza('bollo', '{{ furgone.scadenza_bollo }}')">
+                                                        <i class="fas fa-edit me-1"></i>Modifica
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="eliminaScadenza('bollo')">
+                                                        <i class="fas fa-trash me-1"></i>Elimina
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        
+                                        {% if furgone.scadenza_revisione %}
+                                        <tr>
+                                            <td>Revisione</td>
+                                            <td>{{ furgone.scadenza_revisione.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                {% set giorni = (furgone.scadenza_revisione - today).days %}
+                                                {% if giorni > 0 %}
+                                                    <span class="badge bg-success">{{ giorni }} giorni</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="modificaScadenza('revisione', '{{ furgone.scadenza_revisione }}')">
+                                                        <i class="fas fa-edit me-1"></i>Modifica
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="eliminaScadenza('revisione')">
+                                                        <i class="fas fa-trash me-1"></i>Elimina
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        
+                                        {% if furgone.scadenza_rca %}
+                                        <tr>
+                                            <td>RCA</td>
+                                            <td>{{ furgone.scadenza_rca.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                {% set giorni = (furgone.scadenza_rca - today).days %}
+                                                {% if giorni > 0 %}
+                                                    <span class="badge bg-success">{{ giorni }} giorni</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="modificaScadenza('rca', '{{ furgone.scadenza_rca }}')">
+                                                        <i class="fas fa-edit me-1"></i>Modifica
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="eliminaScadenza('rca')">
+                                                        <i class="fas fa-trash me-1"></i>Elimina
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                        
+                                        {% if furgone.scadenza_infortuni_conducente %}
+                                        <tr>
+                                            <td>Infortuni Conducente</td>
+                                            <td>{{ furgone.scadenza_infortuni_conducente.strftime('%d/%m/%Y') }}</td>
+                                            <td>
+                                                {% set giorni = (furgone.scadenza_infortuni_conducente - today).days %}
+                                                {% if giorni > 0 %}
+                                                    <span class="badge bg-success">{{ giorni }} giorni</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button class="btn btn-outline-primary btn-sm" onclick="modificaScadenza('infortuni', '{{ furgone.scadenza_infortuni_conducente }}')">
+                                                        <i class="fas fa-edit me-1"></i>Modifica
+                                                    </button>
+                                                    <button class="btn btn-outline-danger btn-sm" onclick="eliminaScadenza('infortuni')">
+                                                        <i class="fas fa-trash me-1"></i>Elimina
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {% if not furgone.scadenza_bollo and not furgone.scadenza_revisione and not furgone.scadenza_rca and not furgone.scadenza_infortuni_conducente %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                                <p class="text-muted">Nessuna scadenza registrata</p>
+                                <p class="text-muted">Aggiungi la prima scadenza utilizzando il pulsante "Nuova Scadenza"</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nuova Scadenza -->
+<div class="modal fade" id="addScadenzaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuova Scadenza</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addScadenzaForm" method="POST" action="/risorse/mezzi/furgone/{{ furgone.id }}/scadenza">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="tipo_scadenza" class="form-label">Tipo Scadenza *</label>
+                        <select class="form-select" id="tipo_scadenza" name="tipo_scadenza" required>
+                            <option value="">Seleziona tipo...</option>
+                            <option value="bollo">Bollo</option>
+                            <option value="revisione">Revisione</option>
+                            <option value="rca">RCA</option>
+                            <option value="infortuni">Infortuni Conducente</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="data_scadenza" class="form-label">Data Scadenza *</label>
+                        <input type="date" class="form-control" id="data_scadenza" name="data_scadenza" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="identificativo" class="form-label">Identificativo</label>
+                        <input type="text" class="form-control" id="identificativo" name="identificativo" placeholder="es. 1/65166/128/178105055">
+                    </div>
+                    <div class="mb-3">
+                        <label for="frazionamento" class="form-label">Frazionamento</label>
+                        <select class="form-select" id="frazionamento" name="frazionamento">
+                            <option value="">Seleziona frazionamento...</option>
+                            <option value="mensile">Mensile</option>
+                            <option value="semestrale">Semestrale</option>
+                            <option value="annuale">Annuale</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assicuratore" class="form-label">Assicuratore</label>
+                        <input type="text" class="form-control" id="assicuratore" name="assicuratore" placeholder="es. UNIPOL SAI, REALE MUTUA">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Aggiungi Scadenza</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Gestione form modifica
+document.getElementById('modificaFurgoneForm').addEventListener('submit', function(e) {
+    // Il form si invia automaticamente alla rotta POST
+});
+
+// Gestione form nuova scadenza
+document.getElementById('addScadenzaForm').addEventListener('submit', function(e) {
+    // Il form si invia automaticamente alla rotta POST
+});
+
+// Funzioni per gestione scadenze
+function modificaScadenza(tipo, dataAttuale) {
+    // TODO: Implementare modifica scadenza
+    alert(`Modifica scadenza ${tipo} in sviluppo`);
+}
+
+function eliminaScadenza(tipo) {
+    if (confirm(`Sei sicuro di voler eliminare la scadenza ${tipo}?`)) {
+        // TODO: Implementare eliminazione scadenza
+        alert('Funzionalità di eliminazione in sviluppo');
+    }
+}
+</script>
+
+<style>
+.nav-tabs .nav-link {
+    color: var(--bs-gray-600);
+    border: none;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--bs-primary);
+    border-bottom-color: var(--bs-primary);
+    background: none;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: var(--bs-gray-700);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.text-primary {
+    color: var(--bs-primary) !important;
+}
+</style>
+{% endblock %}

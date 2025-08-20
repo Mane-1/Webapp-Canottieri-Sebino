@@ -13,6 +13,9 @@ except ImportError:  # pragma: no cover - openpyxl is an optional dep at runtime
     Workbook = None
 from dateutil.rrule import MO, TU, WE, TH, FR, SA, SU
 
+# Import della funzione render
+from .render import render
+
 
 MONTH_NAMES = {
     1: "Gennaio",

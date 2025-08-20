@@ -9,13 +9,12 @@ from sqlalchemy import and_, or_, func
 
 from database import get_db
 from dependencies import get_current_user, require_roles
-from models.activities import (
+from models import (
     Activity, ActivityType, QualificationType, ActivityRequirement, 
-    ActivityAssignment, UserQualification
+    ActivityAssignment, UserQualification, User, Role
 )
 from services.availability import compute_activity_coverage, get_user_activity_hours
-import models
-from main import render
+from utils.render import render
 
 router = APIRouter(prefix="/attivita", tags=["Attività"])
 
@@ -23,7 +22,7 @@ router = APIRouter(prefix="/attivita", tags=["Attività"])
 @router.get("/calendario", response_class=HTMLResponse)
 async def activities_calendar(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Pagina calendario attività."""
@@ -41,7 +40,7 @@ async def activities_calendar(
 @router.get("/gestione", response_class=HTMLResponse)
 async def activities_management(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db),
     # Filtri
     date_from: Optional[str] = Query(None),
@@ -109,6 +108,7 @@ async def activities_management(
     context = {
         "activities": activities,
         "activity_types": activity_types,
+        "current_user": current_user,
         "filters": {
             "date_from": date_from,
             "date_to": date_to,
@@ -126,7 +126,7 @@ async def activities_management(
 async def activity_detail(
     request: Request,
     activity_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Pagina dettaglio attività."""
@@ -171,7 +171,7 @@ async def activity_detail(
 @router.get("/pagamenti", response_class=HTMLResponse)
 async def activities_payments(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db),
     # Filtri
     date_from: Optional[str] = Query(None),
@@ -239,7 +239,7 @@ async def activities_payments(
 @router.get("/estrazioni", response_class=HTMLResponse)
 async def activities_extractions(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db),
     # Filtri
     user_id: Optional[int] = Query(None),
@@ -260,7 +260,7 @@ async def activities_extractions(
     # Ottieni le ore
     if user_id:
         hours_data = get_user_activity_hours(db, user_id, month, year)
-        user = db.query(models.User).filter(models.User.id == user_id).first()
+        user = db.query(User).filter(User.id == user_id).first()
         user_name = user.full_name if user else f"Utente {user_id}"
     else:
         hours_data = []
@@ -269,8 +269,8 @@ async def activities_extractions(
     # Ottieni lista utenti per il filtro (solo per admin/allenatori)
     users_for_filter = []
     if current_user.is_admin or current_user.is_allenatore:
-        users_for_filter = db.query(models.User).join(models.UserQualification).filter(
-            models.UserQualification.qualification_type_id.isnot(None)
+        users_for_filter = db.query(User).join(UserQualification).filter(
+            UserQualification.qualification_type_id.isnot(None)
         ).distinct().all()
     
     context = {
@@ -288,22 +288,22 @@ async def activities_extractions(
 @router.get("/istruttori", response_class=HTMLResponse)
 async def instructors_management(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db),
     qualification_id: Optional[int] = Query(None)
 ):
     """Pagina gestione istruttori."""
     # Query base per utenti con ruolo istruttore
-    query = db.query(models.User).join(models.user_roles).join(models.Role).filter(
-        models.Role.name == "istruttore"
+    query = db.query(User).join(User.roles).join(Role).filter(
+        Role.name == "istruttore"
     ).options(
-        selectinload(models.User.qualifications).selectinload(UserQualification.qualification_type)
+        selectinload(User.qualifications).selectinload(UserQualification.qualification_type)
     )
     
     # Filtra per qualifica se specificata
     if qualification_id:
-        query = query.join(models.UserQualification).filter(
-            models.UserQualification.qualification_type_id == qualification_id
+        query = query.join(UserQualification).filter(
+            UserQualification.qualification_type_id == qualification_id
         )
     
     instructors = query.all()
@@ -323,7 +323,7 @@ async def instructors_management(
 @router.get("/nuova", response_class=HTMLResponse)
 async def new_activity_form(
     request: Request,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Form per creare una nuova attività."""
@@ -335,7 +335,36 @@ async def new_activity_form(
     
     context = {
         "activity_types": activity_types,
-        "qualification_types": qualification_types
+        "qualification_types": qualification_types,
+        "current_user": current_user
     }
     
     return render(request, "attivita/nuova.html", ctx=context)
+
+
+@router.get("/modifica/{activity_id}", response_class=HTMLResponse)
+async def edit_activity_form(
+    request: Request,
+    activity_id: int,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Form per modificare un'attività esistente."""
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Attività non trovata")
+    
+    # Ottieni i tipi di attività
+    activity_types = db.query(ActivityType).filter(ActivityType.is_active == True).all()
+    
+    # Ottieni i tipi di qualifica
+    qualification_types = db.query(QualificationType).filter(QualificationType.is_active == True).all()
+    
+    context = {
+        "activity": activity,
+        "activity_types": activity_types,
+        "qualification_types": qualification_types,
+        "current_user": current_user
+    }
+    
+    return render(request, "attivita/modifica.html", ctx=context)

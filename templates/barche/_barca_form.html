@@ -1,6 +1,7 @@
 <ul class="nav nav-tabs mb-4" id="barcaTab" role="tablist">
     <li class="nav-item" role="presentation"><button class="nav-link active" id="generalita-tab" data-bs-toggle="tab" data-bs-target="#generalita" type="button" role="tab">Generalità</button></li>
     <li class="nav-item" role="presentation"><button class="nav-link" id="assegnazione-tab" data-bs-toggle="tab" data-bs-target="#assegnazione" type="button" role="tab">Assegnazione</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="equipaggi-tab" data-bs-toggle="tab" data-bs-target="#equipaggi" type="button" role="tab">Equipaggi</button></li>
     <li class="nav-item" role="presentation"><button class="nav-link" id="stato-tab" data-bs-toggle="tab" data-bs-target="#stato" type="button" role="tab">Stato Imbarcazione</button></li>
     <li class="nav-item" role="presentation"><button class="nav-link" id="misure-tab" data-bs-toggle="tab" data-bs-target="#misure" type="button" role="tab">Misure</button></li>
 </ul>
@@ -14,6 +15,81 @@
     <div class="tab-pane fade" id="assegnazione" role="tabpanel">
         <div class="mb-3"><label for="remi_assegnati" class="form-label">Remi Assegnati</label><input type="text" id="remi_assegnati" name="remi_assegnati" class="form-control" placeholder="Es. Coppia Concept2..." value="{{ barca.remi_assegnati or '' }}"></div>
         <div class="mb-3"><label class="form-label">Atleti Assegnati</label><div class="row mb-2"><div class="col-md-6"><label for="category_filter" class="form-label-sm">Filtra per categoria:</label><select id="category_filter" class="form-select form-select-sm"><option value="all">Tutte le categorie</option>{% for categoria in categorie %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}</select></div></div><div id="atleti-container" class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">{% for atleta in atleti %}<div class="form-check" data-category="{{ atleta.category }}"><input class="form-check-input" type="checkbox" name="atleti_ids" value="{{ atleta.id }}" id="atleta_{{ atleta.id }}" {% if atleta.id in assigned_atleta_ids %}checked{% endif %}><label class="form-check-label" for="atleta_{{ atleta.id }}">{{ atleta.last_name }} {{ atleta.first_name }} <small class="text-muted">({{ atleta.category }})</small></label></div>{% endfor %}</div></div>
+    </div>
+    <div class="tab-pane fade" id="equipaggi" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Gestione Equipaggi</h6>
+            <a href="{{ url_for('equipaggi_barca', barca_id=barca.id) }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-users me-2"></i>Gestisci Equipaggi
+            </a>
+        </div>
+        
+        {% if equipaggi %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Composizione</th>
+                        <th>Note</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipaggio in equipaggi %}
+                    <tr>
+                        <td class="fw-bold">{{ equipaggio.nome }}</td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% if equipaggio.capovoga %}
+                                <span class="badge bg-primary bg-opacity-75">Capovoga: {{ equipaggio.capovoga.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.secondo %}
+                                <span class="badge bg-info bg-opacity-75">Secondo: {{ equipaggio.secondo.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.terzo %}
+                                <span class="badge bg-info bg-opacity-75">Terzo: {{ equipaggio.terzo.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.quarto %}
+                                <span class="badge bg-info bg-opacity-75">Quarto: {{ equipaggio.quarto.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.quinto %}
+                                <span class="badge bg-info bg-opacity-75">Quinto: {{ equipaggio.quinto.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.sesto %}
+                                <span class="badge bg-info bg-opacity-75">Sesto: {{ equipaggio.sesto.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.settimo %}
+                                <span class="badge bg-info bg-opacity-75">Settimo: {{ equipaggio.settimo.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.prodiere %}
+                                <span class="badge bg-success bg-opacity-75">Prodiere: {{ equipaggio.prodiere.last_name }}</span>
+                                {% endif %}
+                                {% if equipaggio.timoniere %}
+                                <span class="badge bg-warning bg-opacity-75">Timoniere: {{ equipaggio.timoniere.last_name }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if equipaggio.note %}
+                            <small class="text-muted">{{ equipaggio.note }}</small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-users fa-2x text-muted mb-3"></i>
+            <p class="text-muted mb-0">Nessun equipaggio creato per questa barca</p>
+            <a href="{{ url_for('equipaggi_barca', barca_id=barca.id) }}" class="btn btn-outline-primary btn-sm mt-2">
+                <i class="fas fa-plus me-2"></i>Crea Primo Equipaggio
+            </a>
+        </div>
+        {% endif %}
     </div>
     <div class="tab-pane fade" id="stato" role="tabpanel">
         <div class="row p-3 border rounded">

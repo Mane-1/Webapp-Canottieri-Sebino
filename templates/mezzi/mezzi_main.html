@@ -1,0 +1,77 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Mezzi - Canottieri Sebino{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2 mb-0">
+                    <i class="fas fa-truck me-2"></i>Mezzi
+                </h1>
+                {% if current_user.is_admin %}
+                <a href="/risorse/mezzi/gestione" class="btn btn-primary">
+                    <i class="fas fa-cog me-2"></i>Gestione Mezzi
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle per tipo di mezzo -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group" aria-label="Tipo mezzo">
+                        <a href="/risorse/mezzi?tipo_filter=furgoni" 
+                           class="btn btn-outline-primary {% if tipo_filter == 'furgoni' %}active{% endif %}">
+                            <i class="fas fa-truck me-2"></i>Furgoni ({{ furgoni|length }})
+                        </a>
+                        <a href="/risorse/mezzi?tipo_filter=gommoni" 
+                           class="btn btn-outline-primary {% if tipo_filter == 'gommoni' %}active{% endif %}">
+                            <i class="fas fa-ship me-2"></i>Gommoni ({{ gommoni|length }})
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenuto dinamico -->
+    {% if tipo_filter == 'furgoni' %}
+        {% include 'mezzi/furgoni_list.html' %}
+    {% else %}
+        {% include 'mezzi/gommoni_list.html' %}
+    {% endif %}
+</div>
+
+<style>
+.btn-group .btn {
+    flex: 1;
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+.btn-group .btn.active {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}

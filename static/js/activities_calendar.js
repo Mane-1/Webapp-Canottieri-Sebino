@@ -134,13 +134,24 @@ class ActivitiesCalendar {
                 ...this.filters
             });
             
+            // Aggiungi filtro copertura se presente
+            if (this.filters.coverage) {
+                params.append('coverage', this.filters.coverage);
+            }
+            
             const response = await fetch(`/api/attivita?${params}`);
             if (!response.ok) throw new Error('Errore nel caricamento delle attività');
             
             const activities = await response.json();
             
+            // Filtra per copertura se richiesto
+            let filteredActivities = activities;
+            if (this.filters.coverage) {
+                filteredActivities = this.filterByCoverage(activities, this.filters.coverage);
+            }
+            
             // Converti in formato FullCalendar
-            const events = activities.map(activity => ({
+            const events = filteredActivities.map(activity => ({
                 id: activity.id,
                 title: activity.title,
                 start: `${activity.date}T${activity.start_time}`,
@@ -159,6 +170,19 @@ class ActivitiesCalendar {
         } catch (error) {
             console.error('Errore nel caricamento delle attività:', error);
             failureCallback(error);
+        }
+    }
+    
+    filterByCoverage(activities, coverageFilter) {
+        switch (coverageFilter) {
+            case '100':
+                return activities.filter(a => a.coverage_percentage >= 100);
+            case 'partial':
+                return activities.filter(a => a.coverage_percentage > 0 && a.coverage_percentage < 100);
+            case 'low':
+                return activities.filter(a => a.coverage_percentage === 0);
+            default:
+                return activities;
         }
     }
     
@@ -527,10 +551,11 @@ class ActivitiesCalendar {
         const labels = {
             'bozza': 'Bozza',
             'da_confermare': 'Da confermare',
-            'confermata': 'Confermata',
+            'confermato': 'Confermato',
             'rimandata': 'Rimandata',
-            'annullata': 'Annullata',
-            'completata': 'Completata'
+            'in_corso': 'In corso',
+            'annullato': 'Annullato',
+            'completato': 'Completato'
         };
         return labels[state] || state;
     }
@@ -539,10 +564,11 @@ class ActivitiesCalendar {
         const classes = {
             'bozza': 'draft',
             'da_confermare': 'pending',
-            'confermata': 'confirmed',
+            'confermato': 'confirmed',
             'rimandata': 'pending',
-            'annullata': 'cancelled',
-            'completata': 'completed'
+            'in_corso': 'in-progress',
+            'annullato': 'cancelled',
+            'completato': 'completed'
         };
         return classes[state] || '';
     }

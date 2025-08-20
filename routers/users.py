@@ -1,11 +1,12 @@
 # File: routers/users.py
 from typing import Optional
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 from fastapi import APIRouter, Request, Depends, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload
 from fastapi.templating import Jinja2Templates
-import models, security
+from models import User, Allenamento, Categoria, Turno
+import security
 from database import get_db
 from dependencies import get_current_user
 from utils import parse_orario, get_color_for_type
@@ -22,24 +23,24 @@ async def root(request: Request):
 async def dashboard(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     today = date.today()
     events = []
 
     if current_user.is_atleta:
         allenamenti = (
-            db.query(models.Allenamento)
-            .join(models.Allenamento.categories)
+            db.query(Allenamento)
+            .join(Allenamento.categories)
             .options(
-                joinedload(models.Allenamento.categories),
-                joinedload(models.Allenamento.coaches),
+                joinedload(Allenamento.categories),
+                joinedload(Allenamento.coaches),
             )
             .filter(
-                models.Categoria.nome == current_user.category,
-                models.Allenamento.data >= today,
+                Categoria.nome == current_user.category,
+                Allenamento.data >= today,
             )
-            .order_by(models.Allenamento.data, models.Allenamento.orario)
+            .order_by(Allenamento.data, Allenamento.orario)
             .all()
         )
         for a in allenamenti:
@@ -64,15 +65,15 @@ async def dashboard(
 
     if current_user.is_allenatore:
         turni = (
-            db.query(models.Turno)
-            .filter(models.Turno.user_id == current_user.id, models.Turno.data >= today)
-            .order_by(models.Turno.data, models.Turno.fascia_oraria)
+            db.query(Turno)
+            .filter(Turno.user_id == current_user.id, Turno.data >= today)
+            .order_by(Turno.data, Turno.fascia_oraria)
             .all()
         )
         for t in turni:
             start_hour, end_hour = (8, 12) if t.fascia_oraria == "Mattina" else (17, 21)
-            start_dt = datetime.combine(t.data, time(hour=start_hour))
-            end_dt = datetime.combine(t.data, time(hour=end_hour))
+            start_dt = datetime.combine(t.data, time(hour=start_hour)).replace(tzinfo=timezone.utc)
+            end_dt = datetime.combine(t.data, time(hour=end_hour)).replace(tzinfo=timezone.utc)
             events.append(
                 {
                     "id": t.id,
@@ -87,14 +88,14 @@ async def dashboard(
             )
 
         allenamenti_coach = (
-            db.query(models.Allenamento)
-            .join(models.Allenamento.coaches)
+            db.query(Allenamento)
+            .join(Allenamento.coaches)
             .options(
-                joinedload(models.Allenamento.categories),
-                joinedload(models.Allenamento.coaches),
+                joinedload(Allenamento.categories),
+                joinedload(Allenamento.coaches),
             )
-            .filter(models.User.id == current_user.id, models.Allenamento.data >= today)
-            .order_by(models.Allenamento.data, models.Allenamento.orario)
+            .filter(User.id == current_user.id, Allenamento.data >= today)
+            .order_by(Allenamento.data, Allenamento.orario)
             .all()
         )
         for a in allenamenti_coach:
@@ -126,15 +127,15 @@ async def dashboard(
     )
 
 @router.get("/profilo", response_class=HTMLResponse)
-async def view_profile(request: Request, current_user: models.User = Depends(get_current_user)):
+async def view_profile(request: Request, current_user: User = Depends(get_current_user)):
     return templates.TemplateResponse(request, "profilo/profilo.html", {"user": current_user, "current_user": current_user})
 
 @router.get("/profilo/modifica", response_class=HTMLResponse)
-async def edit_profile_form(request: Request, current_user: models.User = Depends(get_current_user)):
+async def edit_profile_form(request: Request, current_user: User = Depends(get_current_user)):
     return templates.TemplateResponse(request, "profilo/profilo_modifica.html", {"user": current_user, "current_user": current_user})
 
 @router.post("/profilo/modifica", response_class=RedirectResponse)
-async def update_profile(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user), email: Optional[str] = Form(None), phone_number: Optional[str] = Form(None), new_password: Optional[str] = Form(None)):
+async def update_profile(db: Session = Depends(get_db), current_user: User = Depends(get_current_user), email: Optional[str] = Form(None), phone_number: Optional[str] = Form(None), new_password: Optional[str] = Form(None)):
     current_user.email = email
     current_user.phone_number = phone_number
     if new_password:

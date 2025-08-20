@@ -1,0 +1,131 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{% if is_edit %}Modifica{% else %}Nuovo{% endif %} Equipaggio - {{ barca.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">
+                        {% if is_edit %}Modifica{% else %}Nuovo{% endif %} Equipaggio
+                    </h2>
+                    <p class="text-muted mb-0">{{ barca.nome }} ({{ barca.tipo }})</p>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% if is_edit %}{{ url_for('aggiorna_equipaggio', equipaggio_id=equipaggio.id) }}{% else %}{{ url_for('crea_equipaggio', barca_id=barca.id) }}{% endif %}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nome" class="form-label">Nome Equipaggio*</label>
+                                <input type="text" id="nome" name="nome" class="form-control" 
+                                       value="{{ equipaggio.nome if equipaggio else '' }}" required>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+                        <h5 class="mb-3">Composizione Equipaggio</h5>
+                        
+                        {% for posto, richiesto in posti_richiesti.items() %}
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">
+                                    {% if posto == 'capovoga' %}
+                                        <i class="fas fa-user text-primary me-2"></i>Capovoga*
+                                    {% elif posto == 'secondo' %}
+                                        <i class="fas fa-user text-info me-2"></i>Secondo*
+                                    {% elif posto == 'terzo' %}
+                                        <i class="fas fa-user text-info me-2"></i>Terzo*
+                                    {% elif posto == 'quarto' %}
+                                        <i class="fas fa-user text-info me-2"></i>Quarto*
+                                    {% elif posto == 'quinto' %}
+                                        <i class="fas fa-user text-info me-2"></i>Quinto*
+                                    {% elif posto == 'sesto' %}
+                                        <i class="fas fa-user text-info me-2"></i>Sesto*
+                                    {% elif posto == 'settimo' %}
+                                        <i class="fas fa-user text-info me-2"></i>Settimo*
+                                    {% elif posto == 'prodiere' %}
+                                        <i class="fas fa-user text-success me-2"></i>Prodiere*
+                                    {% elif posto == 'timoniere' %}
+                                        <i class="fas fa-user text-warning me-2"></i>Timoniere
+                                    {% endif %}
+                                </label>
+                            </div>
+                            <div class="col-md-8">
+                                <select name="{{ posto }}_id" id="{{ posto }}_id" class="form-select" 
+                                        {% if posto != 'timoniere' and richiesto %}required{% endif %}>
+                                    <option value="">Seleziona atleta...</option>
+                                    {% for atleta in atleti_disponibili[posto] %}
+                                    <option value="{{ atleta.id }}" 
+                                            {% if equipaggio and getattr(equipaggio, posto + '_id') == atleta.id %}selected{% endif %}>
+                                        {{ atleta.last_name }} {{ atleta.first_name }} 
+                                        {% if atleta.manual_category %}({{ atleta.manual_category }}){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% if posto == 'timoniere' %}
+                                <div class="form-text">Il timoniere è facoltativo</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <div class="mb-3">
+                            <label for="note" class="form-label">Note</label>
+                            <textarea id="note" name="note" class="form-control" rows="3" 
+                                      placeholder="Note aggiuntive sull'equipaggio...">{{ equipaggio.note if equipaggio else '' }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('equipaggi_barca', barca_id=barca.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annulla
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if is_edit %}Aggiorna{% else %}Crea{% endif %} Equipaggio
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestione validazione form
+    const form = document.querySelector('form');
+    const requiredSelects = form.querySelectorAll('select[required]');
+    
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        requiredSelects.forEach(select => {
+            if (!select.value) {
+                select.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                select.classList.remove('is-invalid');
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert('Per favore compila tutti i campi obbligatori.');
+        }
+    });
+    
+    // Rimuovi classe is-invalid quando viene selezionato un valore
+    requiredSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            if (this.value) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

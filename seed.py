@@ -2,14 +2,16 @@
 import os
 import sys
 from datetime import date, datetime, timedelta, time
+from decimal import Decimal
 import logging
 import random
+from sqlalchemy import or_
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine, Base
-import models
+from models import *
 import security
 
 logging.basicConfig(level=logging.INFO)
@@ -200,11 +202,11 @@ barche_data = [
 
 def seed_barche(db: Session):
     logger.info("Popolamento barche...")
-    if db.query(models.Barca).count() > 0:
+    if db.query(Barca).count() > 0:
         logger.info("Tabella barche già popolata. Skippo.")
         return
     try:
-        barche_da_creare = [models.Barca(**data) for data in barche_data]
+        barche_da_creare = [Barca(**data) for data in barche_data]
         db.add_all(barche_da_creare)
         db.commit()
         logger.info(f"{len(barche_da_creare)} barche popolate con successo.")
@@ -216,7 +218,7 @@ def seed_barche(db: Session):
 def seed_pesi(db: Session):
     """Popola gli esercizi della scheda pesi."""
     logger.info("Popolamento esercizi pesi...")
-    if db.query(models.EsercizioPesi).count() > 0:
+    if db.query(EsercizioPesi).count() > 0:
         logger.info("Tabella esercizi pesi già popolata. Skippo.")
         return
     esercizi = [
@@ -228,25 +230,25 @@ def seed_pesi(db: Session):
         {"ordine": 6, "nome": "Panca piana"},
         {"ordine": 7, "nome": "Pressa 45°"},
     ]
-    db.add_all([models.EsercizioPesi(**e) for e in esercizi])
+    db.add_all([EsercizioPesi(**e) for e in esercizi])
     db.commit()
 
 def seed_categories(db: Session):
     logger.info("Popolamento categorie...")
-    if db.query(models.Categoria).count() > 0:
+    if db.query(Categoria).count() > 0:
         logger.info("Tabella categorie già popolata. Skippo.")
         return
     categorie = [
-        models.Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1, macro_group="Under 14"),
-        models.Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2, macro_group="Under 14"),
-        models.Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3, macro_group="Under 14"),
-        models.Categoria(nome="Allievo C", eta_min=13, eta_max=13, ordine=4, macro_group="Under 14"),
-        models.Categoria(nome="Cadetto", eta_min=14, eta_max=14, ordine=5, macro_group="Under 14"),
-        models.Categoria(nome="Ragazzo", eta_min=15, eta_max=16, ordine=6, macro_group="Over 14"),
-        models.Categoria(nome="Junior", eta_min=17, eta_max=18, ordine=7, macro_group="Over 14"),
-        models.Categoria(nome="Under 23", eta_min=19, eta_max=23, ordine=8, macro_group="Over 14"),
-        models.Categoria(nome="Senior", eta_min=24, eta_max=27, ordine=9, macro_group="Over 14"),
-        models.Categoria(nome="Master", eta_min=28, eta_max=150, ordine=10, macro_group="Master"),
+        Categoria(nome="Allievo A", eta_min=0, eta_max=10, ordine=1, macro_group="Under 14"),
+        Categoria(nome="Allievo B1", eta_min=11, eta_max=11, ordine=2, macro_group="Under 14"),
+        Categoria(nome="Allievo B2", eta_min=12, eta_max=12, ordine=3, macro_group="Under 14"),
+        Categoria(nome="Allievo C", eta_min=13, eta_max=13, ordine=4, macro_group="Under 14"),
+        Categoria(nome="Cadetto", eta_min=14, eta_max=14, ordine=5, macro_group="Under 14"),
+        Categoria(nome="Ragazzo", eta_min=15, eta_max=16, ordine=6, macro_group="Over 14"),
+        Categoria(nome="Junior", eta_min=17, eta_max=18, ordine=7, macro_group="Over 14"),
+        Categoria(nome="Under 23", eta_min=19, eta_max=23, ordine=8, macro_group="Over 14"),
+        Categoria(nome="Senior", eta_min=24, eta_max=27, ordine=9, macro_group="Over 14"),
+        Categoria(nome="Master", eta_min=28, eta_max=150, ordine=10, macro_group="Master"),
     ]
     db.add_all(categorie)
     db.commit()
@@ -254,7 +256,7 @@ def seed_categories(db: Session):
 
 def seed_turni(db: Session):
     """Crea i turni predefiniti dell'estate 2025 se la tabella è vuota."""
-    if db.query(models.Turno).count() > 0:
+    if db.query(Turno).count() > 0:
         logger.info("Tabella turni già popolata. Skippo.")
         return
     logger.info("Popolamento turni estivi 2025...")
@@ -263,23 +265,23 @@ def seed_turni(db: Session):
     day = start
     while day <= end:
         if day.weekday() != 0:
-            db.add(models.Turno(data=day, fascia_oraria="Mattina"))
-            db.add(models.Turno(data=day, fascia_oraria="Sera"))
+            db.add(Turno(data=day, fascia_oraria="Mattina"))
+            db.add(Turno(data=day, fascia_oraria="Sera"))
         day += timedelta(days=1)
     db.commit()
 
     # Assegna casualmente gli allenatori a tutti i turni fino al 15 settembre 2025
     allenatori = (
-        db.query(models.User)
-        .join(models.User.roles)
-        .filter(models.Role.name == "allenatore")
+        db.query(User)
+        .join(User.roles)
+        .filter(Role.name == "allenatore")
         .all()
     )
     if allenatori:
         limite = end
         turni_da_assegnare = (
-            db.query(models.Turno)
-            .filter(models.Turno.data <= limite)
+            db.query(Turno)
+            .filter(Turno.data <= limite)
             .all()
         )
         for turno in turni_da_assegnare:
@@ -289,24 +291,24 @@ def seed_turni(db: Session):
 
 def seed_default_allenamenti(db: Session):
     """Inserisce alcuni allenamenti di esempio se non presenti."""
-    if db.query(models.Allenamento).count() > 0:
+    if db.query(Allenamento).count() > 0:
         logger.info("Allenamenti già presenti. Skippo seeding di esempio.")
         return
     logger.info("Popolamento allenamenti di esempio...")
-    categorie = {c.nome: c for c in db.query(models.Categoria).all()}
+    categorie = {c.nome: c for c in db.query(Categoria).all()}
     esempi = [
         ("Barca", date(2025, 6, 5), "08:00-10:00", ["Allievo A"]),
         ("Corsa", date(2025, 6, 6), "10:00-11:00", ["Junior", "Senior"]),
         ("Pesi", date(2025, 6, 7), "17:00-18:30", ["Master"]),
     ]
     allenatori = (
-        db.query(models.User)
-        .join(models.User.roles)
-        .filter(models.Role.name == "allenatore")
+        db.query(User)
+        .join(User.roles)
+        .filter(Role.name == "allenatore")
         .all()
     )
     for idx, (tipo, giorno, orario, cats) in enumerate(esempi):
-        a = models.Allenamento(tipo=tipo, data=giorno, orario=orario)
+        a = Allenamento(tipo=tipo, data=giorno, orario=orario)
         for nome in cats:
             cat = categorie.get(nome)
             if cat:
@@ -319,7 +321,7 @@ def seed_default_allenamenti(db: Session):
 
 def seed_test_allenamenti(db: Session):
     """Genera 300 allenamenti di test dal 18 agosto 2025 in poi."""
-    if db.query(models.Allenamento).count() >= 300:
+    if db.query(Allenamento).count() >= 300:
         logger.info("Allenamenti di test già presenti. Skippo.")
         return
     logger.info("Generazione di 300 allenamenti di test...")
@@ -336,11 +338,11 @@ def seed_test_allenamenti(db: Session):
         ("Barca", "Fartlek 45 min"),
     ]
     orari = ["06:00-08:00", "08:30-10:30", "15:00-17:00", "17:30-19:30"]
-    categories = db.query(models.Categoria).all()
+    categories = db.query(Categoria).all()
     coaches = (
-        db.query(models.User)
-        .join(models.User.roles)
-        .filter(models.Role.name == "allenatore")
+        db.query(User)
+        .join(User.roles)
+        .filter(Role.name == "allenatore")
         .all()
     )
     day = date(2025, 8, 18)
@@ -351,7 +353,7 @@ def seed_test_allenamenti(db: Session):
             if created >= 300:
                 break
             tipo, descr = random.choice(descrizioni)
-            allen = models.Allenamento(
+            allen = Allenamento(
                 tipo=tipo,
                 descrizione=descr,
                 data=day,
@@ -378,17 +380,28 @@ def main():
     logger.info("Avvio script di seeding completo...")
     logger.info("ATTENZIONE: Verranno cancellati tutti i dati esistenti nel database.")
     input("Premi Invio per continuare, o CTRL+C per annullare...")
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    logger.info("Tabelle create.")
+    
+    # Gestione più sicura del database
+    try:
+        Base.metadata.drop_all(bind=engine)
+        logger.info("Tabelle esistenti rimosse.")
+    except Exception as e:
+        logger.warning(f"Errore durante la rimozione delle tabelle: {e}")
+    
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Tabelle create.")
+    except Exception as e:
+        logger.error(f"Errore durante la creazione delle tabelle: {e}")
+        return
 
     db = SessionLocal()
     try:
         # Popola Ruoli
-        ruoli_da_creare = ['atleta', 'allenatore', 'admin']
+        ruoli_da_creare = ['atleta', 'allenatore', 'istruttore', 'admin']
         for nome_ruolo in ruoli_da_creare:
-            if not db.query(models.Role).filter_by(name=nome_ruolo).first():
-                db.add(models.Role(name=nome_ruolo))
+            if not db.query(Role).filter_by(name=nome_ruolo).first():
+                db.add(Role(name=nome_ruolo))
         db.commit()
         logger.info("Ruoli popolati.")
 
@@ -396,23 +409,28 @@ def main():
         seed_categories(db)
         seed_pesi(db)
 
-        # Crea Utente Admin
-        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
-        admin_password = os.environ.get("ADMIN_PASSWORD")
-        if admin_password and not db.query(models.User).filter(models.User.username == admin_username).first():
-            admin_role = db.query(models.Role).filter_by(name='admin').one()
-            allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
-            admin_user = models.User(
-                username=admin_username, hashed_password=security.get_password_hash(admin_password),
-                first_name="Admin", last_name="User", email=os.environ.get("ADMIN_EMAIL", "admin@example.com"),
-                date_of_birth=date(1990, 1, 1), roles=[admin_role, allenatore_role]
+        # Crea Utente Admin Gabriele Manenti
+        admin_username = "gabriele.manenti"
+        admin_password = "gabriele123"
+        if not db.query(User).filter(User.username == admin_username).first():
+            admin_role = db.query(Role).filter_by(name='admin').one()
+            allenatore_role = db.query(Role).filter_by(name='allenatore').one()
+            istruttore_role = db.query(Role).filter_by(name='istruttore').one()
+            admin_user = User(
+                username=admin_username, 
+                hashed_password=security.get_password_hash(admin_password),
+                first_name="Gabriele", 
+                last_name="Manenti", 
+                email="gabriele.manenti@example.com",
+                date_of_birth=date(2005, 3, 10), 
+                roles=[admin_role, allenatore_role, istruttore_role]
             )
             db.add(admin_user)
             db.commit()
-            logger.info(f"Utente admin '{admin_username}' creato.")
+            logger.info(f"Utente admin '{admin_username}' (Gabriele Manenti) creato con ruoli Admin, Allenatore e Istruttore.")
 
         # Popola Atleti
-        atleta_role = db.query(models.Role).filter_by(name='atleta').one()
+        atleta_role = db.query(Role).filter_by(name='atleta').one()
         emails_usate = {"gabriele.manenti@example.com"}
         atleti_creati = 0
         for atleta in atleti_data:
@@ -421,7 +439,7 @@ def main():
             username_base = f"{nome.split(' ')[0]}.{cognome.split(' ')[0]}".lower().replace("'", "")
             username = username_base
             counter = 1
-            while db.query(models.User).filter(models.User.username == username).first():
+            while db.query(User).filter(User.username == username).first():
                 username = f"{username_base}{counter}"
                 counter += 1
 
@@ -438,10 +456,10 @@ def main():
                 except ValueError:
                     continue
 
-            if db.query(models.User).filter(models.User.email == final_email).first():
+            if db.query(User).filter(User.email == final_email).first():
                 continue
 
-            new_user = models.User(
+            new_user = User(
                 username=username, hashed_password=security.get_password_hash(username),
                 first_name=nome, last_name=cognome, email=final_email,
                 date_of_birth=datetime.strptime(atleta['data_nascita'], '%d/%m/%Y').date(),
@@ -458,7 +476,7 @@ def main():
         db.commit()
         logger.info(f"{atleti_creati} atleti popolati con successo.")
         # Aggiungi allenatori predefiniti
-        allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
+        allenatore_role = db.query(Role).filter_by(name='allenatore').one()
         coaches_data = [
             {
                 'username': 'alberto.carizzoni',
@@ -476,8 +494,8 @@ def main():
             },
         ]
         for coach in coaches_data:
-            if not db.query(models.User).filter_by(username=coach['username']).first():
-                user = models.User(
+            if not db.query(User).filter_by(username=coach['username']).first():
+                user = User(
                     username=coach['username'],
                     hashed_password=security.get_password_hash(coach['username']),
                     first_name=coach['first_name'],
@@ -490,12 +508,23 @@ def main():
 
         # Attribuisci ruolo allenatore a Tommaso Bigoni e Marco Cambieri
         for nome, cognome in [("Tommaso", "Bigoni"), ("Marco", "Cambieri")]:
-            atleta = db.query(models.User).filter_by(first_name=nome, last_name=cognome).first()
+            atleta = db.query(User).filter_by(first_name=nome, last_name=cognome).first()
             if atleta and allenatore_role not in atleta.roles:
                 atleta.roles.append(allenatore_role)
 
         db.commit()
         logger.info("Allenatori aggiunti e ruoli aggiornati.")
+        
+        # Assegna ruolo Istruttore a tutti gli Allenatori
+        istruttore_role = db.query(Role).filter_by(name='istruttore').first()
+        if istruttore_role:
+            allenatori = db.query(User).join(User.roles).filter(Role.name == 'allenatore').all()
+            for allenatore in allenatori:
+                if istruttore_role not in allenatore.roles:
+                    allenatore.roles.append(istruttore_role)
+                    logger.info(f"Ruolo Istruttore assegnato a {allenatore.first_name} {allenatore.last_name}")
+            db.commit()
+            logger.info(f"Ruolo Istruttore assegnato a {len(allenatori)} allenatori.")
 
         # Popola turni e allenamenti di test (richiedono allenatori)
         seed_turni(db)
@@ -520,19 +549,15 @@ def seed_activities_data(db: Session):
     try:
         logger.info("Popolamento dati attività...")
         
-        # Importa i modelli delle attività
-        from models.activities import (
-            ActivityType, QualificationType, Activity, ActivityRequirement
-        )
-        
         # Crea tipi di qualifica se non esistono
         if db.query(QualificationType).count() == 0:
             qualification_types = [
-                QualificationType(name="Allenatore", is_active=True),
-                QualificationType(name="Istruttore", is_active=True),
+                QualificationType(name="Aiuto-istruttore", is_active=True),
+                QualificationType(name="Istruttore canottaggio", is_active=True),
+                QualificationType(name="Istruttore kayak", is_active=True),
+                QualificationType(name="Timoniere vichinga", is_active=True),
                 QualificationType(name="Autista gommone", is_active=True),
                 QualificationType(name="Autista furgone", is_active=True),
-                QualificationType(name="Timoniere vichinga", is_active=True),
             ]
             db.add_all(qualification_types)
             db.commit()
@@ -541,8 +566,15 @@ def seed_activities_data(db: Session):
         # Crea tipi di attività se non esistono
         if db.query(ActivityType).count() == 0:
             activity_types = [
-                ActivityType(name="Corso Kayak", color="#007bff", is_active=True),
-                ActivityType(name="Teambuilding", color="#28a745", is_active=True),
+                ActivityType(name="Canottaggio", color="#007bff", is_active=True),
+                ActivityType(name="Kayak", color="#28a745", is_active=True),
+                ActivityType(name="SUP", color="#ffc107", is_active=True),
+                ActivityType(name="Vichinga", color="#dc3545", is_active=True),
+                ActivityType(name="Kayak + Vichinga", color="#6f42c1", is_active=True),
+                ActivityType(name="Canottaggio + Kayak", color="#fd7e14", is_active=True),
+                ActivityType(name="Corso CAS", color="#20c997", is_active=True),
+                ActivityType(name="Teambuilding", color="#6c757d", is_active=True),
+                ActivityType(name="Altro", color="#e83e8c", is_active=True),
             ]
             db.add_all(activity_types)
             db.commit()
@@ -551,11 +583,12 @@ def seed_activities_data(db: Session):
         # Crea attività di esempio se non esistono
         if db.query(Activity).count() == 0:
             # Ottieni i tipi creati
-            corso_kayak_type = db.query(ActivityType).filter_by(name="Corso Kayak").first()
+            kayak_type = db.query(ActivityType).filter_by(name="Kayak").first()
             teambuilding_type = db.query(ActivityType).filter_by(name="Teambuilding").first()
             
             # Ottieni le qualifiche
-            istruttore_qual = db.query(QualificationType).filter_by(name="Istruttore").first()
+            aiuto_istruttore_qual = db.query(QualificationType).filter_by(name="Aiuto-istruttore").first()
+            istruttore_kayak_qual = db.query(QualificationType).filter_by(name="Istruttore kayak").first()
             autista_gommone_qual = db.query(QualificationType).filter_by(name="Autista gommone").first()
             
             # Crea attività di esempio
@@ -565,8 +598,8 @@ def seed_activities_data(db: Session):
             corso_kayak = Activity(
                 title="Corso Kayak Base - Gruppo A",
                 short_description="Corso introduttivo al kayak per principianti",
-                state="confermata",
-                type_id=corso_kayak_type.id,
+                state="confermato",
+                type_id=kayak_type.id,
                 date=tomorrow,
                 start_time=time(9, 0),
                 end_time=time(12, 0),
@@ -607,14 +640,21 @@ def seed_activities_data(db: Session):
             # Crea requisiti per le attività
             req_corso_istruttore = ActivityRequirement(
                 activity_id=corso_kayak.id,
-                qualification_type_id=istruttore_qual.id,
+                qualification_type_id=istruttore_kayak_qual.id,
                 quantity=1
             )
             db.add(req_corso_istruttore)
             
+            req_corso_aiuto = ActivityRequirement(
+                activity_id=corso_kayak.id,
+                qualification_type_id=aiuto_istruttore_qual.id,
+                quantity=1
+            )
+            db.add(req_corso_aiuto)
+            
             req_teambuilding_istruttore = ActivityRequirement(
                 activity_id=teambuilding.id,
-                qualification_type_id=istruttore_qual.id,
+                qualification_type_id=aiuto_istruttore_qual.id,
                 quantity=2
             )
             db.add(req_teambuilding_istruttore)
@@ -627,23 +667,331 @@ def seed_activities_data(db: Session):
             db.add(req_teambuilding_autista)
             
             db.commit()
-            logger.info("Attività di esempio create con requisiti.")
+        logger.info("Attività di esempio create con requisiti.")
         
-        # Assegna qualifiche ad alcuni utenti esistenti
-        istruttore_role = db.query(models.Role).filter_by(name='istruttore').first()
-        if istruttore_role:
-            # Assegna ruolo istruttore ad alcuni utenti
-            istruttori_candidates = ["alberto.carizzoni", "anna.manenti"]
-            for username in istruttori_candidates:
-                user = db.query(models.User).filter_by(username=username).first()
-                if user and istruttore_role not in user.roles:
-                    user.roles.append(istruttore_role)
+        # Genera 50 attività nel periodo 20 agosto 2025 - 28 febbraio 2026
+        logger.info("Generazione di 50 attività di esempio...")
+        generate_sample_activities(db, 50)
+        
+        # Assegna qualifiche a tutti gli allenatori e istruttori
+        allenatori_istruttori = db.query(User).join(User.roles).filter(
+            or_(Role.name == 'allenatore', Role.name == 'istruttore')
+        ).distinct().all()
+        
+        if allenatori_istruttori:
+            # Ottieni tutte le qualifiche disponibili
+            all_qualifications = db.query(QualificationType).filter_by(is_active=True).all()
+            
+            for user in allenatori_istruttori:
+                logger.info(f"Assegnazione qualifiche a {user.first_name} {user.last_name}")
+                
+                for qualification in all_qualifications:
+                    # Verifica se la qualifica è già assegnata
+                    if not db.query(UserQualification).filter_by(
+                        user_id=user.id, 
+                        qualification_type_id=qualification.id
+                    ).first():
+                        user_qual = UserQualification(
+                            user_id=user.id,
+                            qualification_type_id=qualification.id,
+                            obtained_date=date.today(),
+                            expiry_date=date.today() + timedelta(days=365),
+                            is_active=True
+                        )
+                        db.add(user_qual)
+                        logger.info(f"  - Qualifica '{qualification.name}' assegnata")
             
             db.commit()
-            logger.info("Ruoli istruttore assegnati.")
+            logger.info(f"Tutte le qualifiche assegnate a {len(allenatori_istruttori)} utenti (allenatori e istruttori).")
         
     except Exception as e:
         logger.error(f"Errore durante il seeding delle attività: {e}")
+        db.rollback()
+        raise
+
+
+def generate_sample_activities(db: Session, count: int = 50):
+    """Genera attività di esempio nel periodo specificato."""
+    try:
+        from datetime import datetime, timedelta
+        import random
+        
+        # Periodo: 20 agosto 2025 - 28 febbraio 2026
+        start_date = datetime(2025, 8, 20).date()
+        end_date = datetime(2026, 2, 28).date()
+        
+        # Ottieni tipi di attività e qualifiche
+        activity_types = db.query(ActivityType).filter_by(is_active=True).all()
+        qualification_types = db.query(QualificationType).filter_by(is_active=True).all()
+        
+        if not activity_types or not qualification_types:
+            logger.warning("Tipi di attività o qualifiche non trovati per la generazione")
+            return
+        
+        # Nomi aziende e clienti di esempio
+        companies = [
+            "TechCorp SRL", "SportCenter Bergamo", "Scuola Elementare Lovere", 
+            "Centro Sportivo Comunale", "Azienda Agricola Sebino", "Hotel Lago d'Iseo",
+            "Associazione Canottaggio Brescia", "Centro Estivo Giovanile", "Palestra Fitness Plus",
+            "Circolo Nautico Lombardo", "Scuola Media Endine", "Centro Commerciale Sebino",
+            "Pro Loco Costa Volpino", "Centro Anziani Riva di Solto", "Cooperativa Sociale"
+        ]
+        
+        # Titoli attività di esempio
+        activity_titles = [
+            "Corso Kayak Base", "Corso Kayak Avanzato", "Corso SUP Principianti",
+            "Gita Vichinga Famiglia", "Teambuilding Aziendale", "Corso CAS Base",
+            "Lezione Canottaggio", "Gara Amatoriale", "Corso Timoneria",
+            "Escursione Lago", "Corso Sicurezza", "Gita Scuola Elementare",
+            "Evento Aziendale", "Corso Estivo", "Gara Regionale"
+        ]
+        
+        # Genera attività
+        for i in range(count):
+            # Data casuale nel periodo
+            days_offset = random.randint(0, (end_date - start_date).days)
+            activity_date = start_date + timedelta(days=days_offset)
+            
+            # Tipo casuale
+            activity_type = random.choice(activity_types)
+            
+            # Orari casuali (9:00-18:00)
+            start_hour = random.randint(9, 16)
+            end_hour = start_hour + random.randint(1, 3)
+            
+            # Stato casuale (più probabilità per bozza e confermato)
+            states = ["bozza", "bozza", "da_confermare", "confermato", "confermato", "rimandata", "in_corso", "completato"]
+            state = random.choice(states)
+            
+            # Pagamento casuale
+            payment_states = ["da_effettuare", "da_verificare", "confermato"]
+            payment_state = random.choice(payment_states)
+            
+            # Cliente casuale
+            customer = random.choice(companies)
+            
+            # Crea attività
+            activity = Activity(
+                title=f"{random.choice(activity_titles)} - {customer}",
+                short_description=f"Attività di esempio #{i+1} per {customer}",
+                state=state,
+                type_id=activity_type.id,
+                date=activity_date,
+                start_time=time(start_hour, 0),
+                end_time=time(end_hour, 0),
+                customer_name=customer,
+                customer_email=f"info@{customer.lower().replace(' ', '').replace('srl', 'it')}.it",
+                contact_name=f"Contatto {i+1}",
+                contact_phone=f"+39 3{random.randint(10, 99)} {random.randint(100000, 999999)}",
+                contact_email=f"contatto{i+1}@{customer.lower().replace(' ', '').replace('srl', 'it')}.it",
+                participants_plan=random.randint(5, 25),
+                payment_amount=Decimal(random.randint(200, 1500)),
+                payment_method=random.choice(["bonifico", "carta", "contanti"]),
+                payment_state=payment_state
+            )
+            
+            db.add(activity)
+            db.flush()  # Per ottenere l'ID
+            
+            # Crea requisiti casuali (1-3 qualifiche per attività)
+            num_requirements = random.randint(1, 3)
+            selected_qualifications = random.sample(qualification_types, min(num_requirements, len(qualification_types)))
+            
+            for qual in selected_qualifications:
+                requirement = ActivityRequirement(
+                    activity_id=activity.id,
+                    qualification_type_id=qual.id,
+                    quantity=random.randint(1, 3)
+                )
+                db.add(requirement)
+        
+        db.commit()
+        logger.info(f"{count} attività di esempio generate con successo nel periodo {start_date} - {end_date}")
+        
+    except Exception as e:
+        logger.error(f"Errore durante la generazione delle attività di esempio: {e}")
+        db.rollback()
+        raise
+
+
+def seed_mezzi(db: Session):
+    """Popola il database con mezzi di esempio (furgoni e gommoni)"""
+    try:
+        # Controlla se esistono già mezzi
+        if db.query(Furgone).count() > 0 or db.query(Gommone).count() > 0:
+            logger.info("Mezzi già presenti nel database, saltando popolamento")
+            return
+        
+        # Furgoni di esempio con scadenze dall'immagine
+        furgoni = [
+            Furgone(
+                marca="Ford",
+                modello="Transit",
+                targa="FH577SJ",
+                anno=2017,
+                stato="libero",
+                # Bollo - dall'immagine: "Bollo furgone FORD FH577SJ"
+                scadenza_bollo=date(2025, 3, 1),
+                scadenza_bollo_identificativo="1/65166/128/178105055",
+                scadenza_bollo_frazionamento="annuale",
+                scadenza_bollo_assicuratore="Regione Lombardia",
+                # Revisione - dall'immagine: "Revisione furgone FORD FH577SJ"
+                scadenza_revisione=date(2025, 10, 20),
+                scadenza_revisione_identificativo="0241/10/0070522",
+                scadenza_revisione_frazionamento="annuale",
+                scadenza_revisione_assicuratore="Motorizzazione",
+                # RCA - dall'immagine: "RCA PULMINO FORD TRANSIT TARGA FH577SJ"
+                scadenza_rca=date(2025, 6, 30),
+                scadenza_rca_identificativo="RCA001",
+                scadenza_rca_frazionamento="semestrale",
+                scadenza_rca_assicuratore="UNIPOL SAI",
+                # Infortuni conducente - dall'immagine: "INFORTUNI CONDUCENTE FH577SJ"
+                scadenza_infortuni_conducente=date(2025, 12, 31),
+                scadenza_infortuni_conducente_identificativo="INF001",
+                scadenza_infortuni_conducente_frazionamento="annuale",
+                scadenza_infortuni_conducente_assicuratore="REALE MUTUA"
+            ),
+            Furgone(
+                marca="Opel",
+                modello="Vivaro",
+                targa="DT228VB",
+                anno=2008,
+                stato="manutenzione",
+                # Bollo - dall'immagine: "Bollo furgone OPEL DT228VB"
+                scadenza_bollo=date(2025, 10, 30),
+                scadenza_bollo_identificativo="1/65166/128/178105056",
+                scadenza_bollo_frazionamento="annuale",
+                scadenza_bollo_assicuratore="Regione Lombardia",
+                # Revisione - dall'immagine: "Revisione furgone OPEL DT228VB"
+                scadenza_revisione=date(2025, 7, 15),
+                scadenza_revisione_identificativo="0241/10/0070523",
+                scadenza_revisione_frazionamento="annuale",
+                scadenza_revisione_assicuratore="Motorizzazione",
+                # RCA - dall'immagine: "RCA PULMINO OPEL VIVARO TARGA DT228VB"
+                scadenza_rca=date(2025, 11, 30),
+                scadenza_rca_identificativo="RCA002",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI",
+                # Infortuni conducente - dall'immagine: "INFORTUNI CONDUCENTE DT228VB"
+                scadenza_infortuni_conducente=date(2025, 8, 20),
+                scadenza_infortuni_conducente_identificativo="INF002",
+                scadenza_infortuni_conducente_frazionamento="annuale",
+                scadenza_infortuni_conducente_assicuratore="REALE MUTUA"
+            ),
+            Furgone(
+                marca="Delta",
+                modello="RB900B",
+                targa="AA59565",
+                anno=2015,
+                stato="libero",
+                # Bollo - dall'immagine: "Bollo rimorchio AA59565"
+                scadenza_bollo=date(2025, 6, 10),
+                scadenza_bollo_identificativo="1/65166/128/178105057",
+                scadenza_bollo_frazionamento="annuale",
+                scadenza_bollo_assicuratore="Regione Lombardia",
+                # Revisione - dall'immagine: "Revisione rimorchio AA59565"
+                scadenza_revisione=date(2025, 3, 25),
+                scadenza_revisione_identificativo="0241/10/0070524",
+                scadenza_revisione_frazionamento="annuale",
+                scadenza_revisione_assicuratore="Motorizzazione",
+                # RCA - dall'immagine: "RCA RIMORCHIO DELTA RB900B TARGA AA59565"
+                scadenza_rca=date(2025, 10, 15),
+                scadenza_rca_identificativo="RCA003",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            ),
+            Furgone(
+                marca="Delta",
+                modello="RB22",
+                targa="AF68132",
+                anno=2016,
+                stato="trasferta",
+                # Bollo - dall'immagine: "Bollo rimorchio AF68132 grande"
+                scadenza_bollo=date(2025, 9, 10),
+                scadenza_bollo_identificativo="1/65166/128/178105058",
+                scadenza_bollo_frazionamento="annuale",
+                scadenza_bollo_assicuratore="Regione Lombardia",
+                # Revisione - dall'immagine: "Revisione rimorchio AF68132 grande"
+                scadenza_revisione=date(2025, 4, 15),
+                scadenza_revisione_identificativo="0241/10/0070525",
+                scadenza_revisione_frazionamento="annuale",
+                scadenza_revisione_assicuratore="Motorizzazione",
+                # RCA - dall'immagine: "RCA RIMORCHIO DELTA RB22 TARGA AF68132"
+                scadenza_rca=date(2025, 12, 15),
+                scadenza_rca_identificativo="RCA004",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            )
+        ]
+        
+        # Gommoni di esempio con scadenze dall'immagine
+        gommoni = [
+            Gommone(
+                nome="Gommoncino Bianco",
+                motore="Selva 15CV",
+                potenza="15 CV",
+                stato="libero",
+                # RCA - dall'immagine: "RCA MOTORE SELVA 15CV MATRICOLA S/N1023837"
+                scadenza_rca=date(2025, 12, 31),
+                scadenza_rca_identificativo="S/N1023837",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            ),
+            Gommone(
+                nome="Gommone Selva",
+                motore="Selva 20CV",
+                potenza="20 CV",
+                stato="libero",
+                # RCA - dall'immagine: "RCA MOTORE SELVA 15CV MATRICOLA S/N1019590"
+                scadenza_rca=date(2025, 11, 30),
+                scadenza_rca_identificativo="S/N1019590",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            ),
+            Gommone(
+                nome="Catamarano Rosso",
+                motore="Mercury 25CV",
+                potenza="25 CV",
+                stato="libero",
+                # RCA - dall'immagine: "RCA MOTORE MERCURY 15CV MATRICOLA OP162429"
+                scadenza_rca=date(2025, 10, 15),
+                scadenza_rca_identificativo="OP162429",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            ),
+            Gommone(
+                nome="Motoscafo Bianco",
+                motore="Selva 15CV",
+                potenza="15 CV",
+                stato="manutenzione",
+                # RCA - dall'immagine: "RCA MOTORE SELVA 15CV MATRICOLA S/N1023837"
+                scadenza_rca=date(2025, 9, 30),
+                scadenza_rca_identificativo="S/N1023838",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="REALE MUTUA"
+            ),
+            Gommone(
+                nome="Tohatsu",
+                motore="Tohatsu 40CV",
+                potenza="40 CV",
+                stato="libero",
+                # RCA - dall'immagine: "RCA MOTORE TOHATSU 40CV M40D MATRICOLA 02108"
+                scadenza_rca=date(2025, 8, 15),
+                scadenza_rca_identificativo="02108",
+                scadenza_rca_frazionamento="annuale",
+                scadenza_rca_assicuratore="UNIPOL SAI"
+            )
+        ]
+        
+        # Aggiungi tutti i mezzi
+        db.add_all(furgoni)
+        db.add_all(gommoni)
+        
+        db.commit()
+        logger.info(f"Popolamento mezzi completato: {len(furgoni)} furgoni e {len(gommoni)} gommoni")
+        
+    except Exception as e:
+        logger.error(f"Errore durante il popolamento dei mezzi: {e}")
         db.rollback()
         raise
 

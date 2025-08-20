@@ -4,6 +4,7 @@ from datetime import date, time, datetime
 from decimal import Decimal
 from typing import Optional, List
 from pydantic import BaseModel, Field, validator
+from models.activities import ActivityState, PaymentMethod, PaymentState
 
 
 # --- SCHEMI BASE ---
@@ -98,7 +99,7 @@ class ActivityCreate(BaseModel):
     """Schema per la creazione di un'attività."""
     title: str = Field(..., min_length=1, max_length=200)
     short_description: Optional[str] = None
-    state: str = "bozza"  # Default
+    state: ActivityState = ActivityState.bozza  # Default
     type_id: int
     date: date
     start_time: time
@@ -120,8 +121,8 @@ class ActivityCreate(BaseModel):
     
     # Pagamento
     payment_amount: Optional[Decimal] = Field(None, ge=0)
-    payment_method: Optional[str] = None
-    payment_state: str = "da_effettuare"  # Default
+    payment_method: Optional[PaymentMethod] = None
+    payment_state: PaymentState = PaymentState.da_effettuare  # Default
     
     # Fatturazione
     billing_name: Optional[str] = None
@@ -140,7 +141,7 @@ class ActivityUpdate(BaseModel):
     """Schema per l'aggiornamento di un'attività."""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     short_description: Optional[str] = None
-    state: Optional[str] = None
+    state: Optional[ActivityState] = None
     type_id: Optional[int] = None
     date: Optional[date] = None
     start_time: Optional[time] = None
@@ -162,8 +163,8 @@ class ActivityUpdate(BaseModel):
     
     # Pagamento
     payment_amount: Optional[Decimal] = Field(None, ge=0)
-    payment_method: Optional[str] = None
-    payment_state: Optional[str] = None
+    payment_method: Optional[PaymentMethod] = None
+    payment_state: Optional[PaymentState] = None
     
     # Fatturazione
     billing_name: Optional[str] = None
@@ -184,7 +185,7 @@ class ActivityRead(BaseModel):
     id: int
     title: str
     short_description: Optional[str] = None
-    state: str
+    state: ActivityState
     type_id: int
     activity_type: ActivityTypeRead
     date: date
@@ -207,8 +208,8 @@ class ActivityRead(BaseModel):
     
     # Pagamento
     payment_amount: Optional[Decimal] = None
-    payment_method: Optional[str] = None
-    payment_state: str
+    payment_method: Optional[PaymentMethod] = None
+    payment_state: PaymentState
     
     # Fatturazione
     billing_name: Optional[str] = None
@@ -240,8 +241,8 @@ class ActivityFilter(BaseModel):
     date_from: Optional[date] = None
     date_to: Optional[date] = None
     type_ids: Optional[List[int]] = None
-    states: Optional[List[str]] = None
-    payment_states: Optional[List[str]] = None
+    states: Optional[List[ActivityState]] = None
+    payment_states: Optional[List[PaymentState]] = None
     text: Optional[str] = None
     user_id: Optional[int] = None  # Per filtrare per utente assegnato
     

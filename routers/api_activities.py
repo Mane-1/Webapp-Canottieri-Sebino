@@ -8,22 +8,22 @@ from sqlalchemy import and_, or_, func
 
 from database import get_db
 from dependencies import get_current_user, require_roles
-from models.activities import (
+from models import (
     Activity, ActivityType, QualificationType, ActivityRequirement, 
-    ActivityAssignment, UserQualification
+    ActivityAssignment, UserQualification, User
 )
 from schemas.activities import (
     ActivityCreate, ActivityUpdate, ActivityRead, ActivityFilter,
     ActivityRequirementCreate, ActivityRequirementUpdate, ActivityRequirementRead,
     AssignmentCreate, AssignmentRead, SelfAssignRequest, SelfAssignResponse,
-    ExtractionFilter, ExtractionRow, PaymentKPI, PaymentSummary
+    ExtractionFilter, ExtractionRow, PaymentKPI, PaymentSummary,
+    QualificationTypeRead
 )
 from services.availability import (
     has_time_conflict, compute_activity_coverage, 
     get_available_users_for_requirement, can_user_self_assign,
     get_user_activity_hours
 )
-import models
 
 router = APIRouter(prefix="/api/attivita", tags=["API Attività"])
 
@@ -32,7 +32,7 @@ router = APIRouter(prefix="/api/attivita", tags=["API Attività"])
 
 @router.get("/", response_model=List[ActivityRead])
 async def get_activities(
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db),
     # Filtri
     date_from: Optional[date] = Query(None),
@@ -92,7 +92,7 @@ async def get_activities(
 @router.post("/", response_model=ActivityRead, status_code=status.HTTP_201_CREATED)
 async def create_activity(
     activity_data: ActivityCreate,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Crea una nuova attività."""
@@ -121,7 +121,7 @@ async def create_activity(
 @router.get("/{activity_id}", response_model=ActivityRead)
 async def get_activity(
     activity_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Ottiene i dettagli di un'attività."""
@@ -147,7 +147,7 @@ async def get_activity(
 async def update_activity(
     activity_id: int,
     activity_data: ActivityUpdate,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Aggiorna un'attività."""
@@ -183,7 +183,7 @@ async def update_activity(
 @router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_activity(
     activity_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Elimina un'attività."""
@@ -200,7 +200,7 @@ async def delete_activity(
 @router.get("/{activity_id}/requirements", response_model=List[ActivityRequirementRead])
 async def get_activity_requirements(
     activity_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Ottiene i requisiti di un'attività."""
@@ -222,7 +222,7 @@ async def get_activity_requirements(
 async def create_activity_requirement(
     activity_id: int,
     requirement_data: ActivityRequirementCreate,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Aggiunge un requisito a un'attività."""
@@ -259,7 +259,7 @@ async def create_activity_requirement(
 async def update_requirement(
     requirement_id: int,
     requirement_data: ActivityRequirementUpdate,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Aggiorna un requisito di attività."""
@@ -294,7 +294,7 @@ async def update_requirement(
 @router.delete("/requirements/{requirement_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_requirement(
     requirement_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Elimina un requisito di attività."""
@@ -322,7 +322,7 @@ async def delete_requirement(
 @router.get("/{activity_id}/assignments", response_model=List[AssignmentRead])
 async def get_activity_assignments(
     activity_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Ottiene le assegnazioni di un'attività."""
@@ -340,7 +340,7 @@ async def get_activity_assignments(
 @router.post("/assignments", response_model=AssignmentRead, status_code=status.HTTP_201_CREATED)
 async def create_assignment(
     assignment_data: AssignmentCreate,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Crea una nuova assegnazione."""
@@ -360,7 +360,7 @@ async def create_assignment(
         raise HTTPException(status_code=404, detail="Requisito non trovato")
     
     # Verifica che l'utente esista
-    user = db.query(models.User).filter(models.User.id == assignment_data.user_id).first()
+    user = db.query(User).filter(User.id == assignment_data.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
@@ -429,7 +429,7 @@ async def create_assignment(
 @router.delete("/assignments/{assignment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_assignment(
     assignment_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Elimina un'assegnazione."""
@@ -447,7 +447,7 @@ async def delete_assignment(
 async def self_assign_activity(
     activity_id: int,
     self_assign_data: SelfAssignRequest,
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Endpoint per l'autocandidatura di un utente a un'attività."""
@@ -507,7 +507,7 @@ async def self_assign_activity(
 
 @router.get("/qualifiche", response_model=List[QualificationTypeRead])
 async def get_qualification_types(
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db)
 ):
     """Ottiene la lista dei tipi di qualifica."""
@@ -519,12 +519,12 @@ async def get_qualification_types(
 async def assign_user_qualification(
     user_id: int,
     qualification_type_id: int = Query(...),
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Assegna una qualifica a un utente."""
     # Verifica che l'utente esista
-    user = db.query(models.User).filter(models.User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
@@ -564,7 +564,7 @@ async def assign_user_qualification(
 async def remove_user_qualification(
     user_id: int,
     qualification_type_id: int,
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db)
 ):
     """Rimuove una qualifica da un utente."""
@@ -601,7 +601,7 @@ async def remove_user_qualification(
 
 @router.get("/estrazioni", response_model=List[ExtractionRow])
 async def get_extractions(
-    current_user: models.User = Depends(require_roles("admin", "allenatore", "istruttore")),
+    current_user: User = Depends(require_roles("admin", "allenatore", "istruttore")),
     db: Session = Depends(get_db),
     user_id: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
@@ -636,7 +636,7 @@ async def get_extractions(
 
 @router.get("/pagamenti", response_model=PaymentSummary)
 async def get_payments_summary(
-    current_user: models.User = Depends(require_roles("admin", "allenatore")),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),

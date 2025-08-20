@@ -134,25 +134,35 @@ def compute_activity_coverage(db: Session, activity_id: int) -> Tuple[int, int, 
     Returns:
         Tuple (assigned_total, required_total, percent_0_100)
     """
-    # Conta i requisiti totali
-    required_total = db.query(func.sum(ActivityRequirement.quantity)).filter(
+    # Ottieni tutti i requisiti dell'attività
+    requirements = db.query(ActivityRequirement).filter(
         ActivityRequirement.activity_id == activity_id
-    ).scalar() or 0
+    ).all()
     
-    # Conta le assegnazioni totali
-    assigned_total = db.query(func.count(ActivityAssignment.id)).join(
-        ActivityRequirement
-    ).filter(
-        ActivityRequirement.activity_id == activity_id
-    ).scalar() or 0
+    if not requirements:
+        return 0, 0, 100
+    
+    total_required = 0
+    total_assigned = 0
+    
+    # Calcola per ogni requisito
+    for requirement in requirements:
+        total_required += requirement.quantity
+        
+        # Conta le assegnazioni per questo requisito
+        assigned_count = db.query(func.count(ActivityAssignment.id)).filter(
+            ActivityAssignment.requirement_id == requirement.id
+        ).scalar() or 0
+        
+        total_assigned += min(assigned_count, requirement.quantity)
     
     # Calcola la percentuale
-    if required_total == 0:
+    if total_required == 0:
         percent = 100
     else:
-        percent = min(100, int((assigned_total / required_total) * 100))
+        percent = min(100, int((total_assigned / total_required) * 100))
     
-    return assigned_total, required_total, percent
+    return total_assigned, total_required, percent
 
 
 def get_available_users_for_requirement(

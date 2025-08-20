@@ -1,0 +1,413 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Gestione Mezzi - Canottieri Sebino{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2 mb-0">
+                    <i class="fas fa-cog me-2"></i>Gestione Mezzi
+                </h1>
+                <div>
+                    <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#addFurgoneModal">
+                        <i class="fas fa-plus me-2"></i>Nuovo Furgone
+                    </button>
+                    <button class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#addGommoneModal">
+                        <i class="fas fa-plus me-2"></i>Nuovo Gommone
+                    </button>
+                    <a href="/risorse/mezzi" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Torna ai Mezzi
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabella mezzi -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>Elenco Mezzi
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipo Mezzo</th>
+                                    <th>Marca/Modello</th>
+                                    <th>Targa/Nome</th>
+                                    <th>Anno</th>
+                                    <th>Stato</th>
+                                    <th>Scadenze</th>
+                                    <th>Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for furgone in furgoni %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            <i class="fas fa-truck me-1"></i>Furgone
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ furgone.marca }} {{ furgone.modello }}</strong>
+                                    </td>
+                                    <td>{{ furgone.targa }}</td>
+                                    <td>{{ furgone.anno }}</td>
+                                    <td>
+                                        <span class="badge {{ furgone.status_info[1] }}">
+                                            {{ furgone.status_info[0] }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ furgone.scadenze|length }} scadenze
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/risorse/mezzi/furgone/{{ furgone.id }}/modifica" 
+                                               class="btn btn-outline-primary" title="Modifica">
+                                                <i class="fas fa-edit me-1"></i>Modifica
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteFurgone({{ furgone.id }})" title="Elimina">
+                                                <i class="fas fa-trash me-1"></i>Elimina
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                
+                                {% for gommone in gommoni %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-ship me-1"></i>Gommone
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong>{{ gommone.nome }}</strong>
+                                        {% if gommone.motore or gommone.potenza %}
+                                        <br><small class="text-muted">
+                                            {% if gommone.motore %}{{ gommone.motore }}{% endif %}
+                                            {% if gommone.potenza %} - {{ gommone.potenza }}{% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ gommone.nome }}</td>
+                                    <td>-</td>
+                                    <td>
+                                        <span class="badge {{ gommone.status_info[1] }}">
+                                            {{ gommone.status_info[0] }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ gommone.scadenze|length }} scadenze
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/risorse/mezzi/gommone/{{ gommone.id }}/modifica" 
+                                               class="btn btn-outline-primary" title="Modifica">
+                                                <i class="fas fa-edit me-1"></i>Modifica
+                                            </a>
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    onclick="deleteGommone({{ gommone.id }})" title="Elimina">
+                                                <i class="fas fa-trash me-1"></i>Elimina
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if not furgoni and not gommoni %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-truck fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">Nessun mezzo registrato</h4>
+                        <p class="text-muted">Inizia aggiungendo il primo mezzo utilizzando i pulsanti sopra.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aggiungi Furgone -->
+<div class="modal fade" id="addFurgoneModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Furgone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addFurgoneForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="marca" class="form-label">Marca *</label>
+                                <input type="text" class="form-control" id="marca" name="marca" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="modello" class="form-label">Modello *</label>
+                                <input type="text" class="form-control" id="modello" name="modello" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="targa" class="form-label">Targa *</label>
+                                <input type="text" class="form-control" id="targa" name="targa" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="anno" class="form-label">Anno *</label>
+                                <input type="number" class="form-control" id="anno" name="anno" min="1900" max="2030" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stato" class="form-label">Stato</label>
+                                <select class="form-select" id="stato" name="stato">
+                                    <option value="libero">Libero</option>
+                                    <option value="manutenzione">In manutenzione</option>
+                                    <option value="fuori_uso">Fuori uso</option>
+                                    <option value="trasferta">In trasferta</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_bollo" class="form-label">Scadenza Bollo</label>
+                                <input type="date" class="form-control" id="scadenza_bollo" name="scadenza_bollo">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_revisione" class="form-label">Scadenza Revisione</label>
+                                <input type="date" class="form-control" id="scadenza_revisione" name="scadenza_revisione">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_rca" class="form-label">Scadenza RCA</label>
+                                <input type="date" class="form-control" id="scadenza_rca" name="scadenza_rca">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_infortuni" class="form-label">Scadenza Infortuni Conducente</label>
+                                <input type="date" class="form-control" id="scadenza_infortuni" name="scadenza_infortuni">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Furgone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aggiungi Gommone -->
+<div class="modal fade" id="addGommoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuovo Gommone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addGommoneForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nome_gommone" class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="nome_gommone" name="nome" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="motore" class="form-label">Motore</label>
+                                <input type="text" class="form-control" id="motore" name="motore">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="potenza" class="form-label">Potenza</label>
+                                <input type="text" class="form-control" id="potenza" name="potenza">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stato_gommone" class="form-label">Stato</label>
+                        <select class="form-select" id="stato_gommone" name="stato">
+                            <option value="libero">Libero</option>
+                            <option value="manutenzione">In manutenzione</option>
+                            <option value="fuori_uso">Fuori uso</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_rca_gommone" class="form-label">Scadenza RCA</label>
+                                <input type="date" class="form-control" id="scadenza_rca_gommone" name="scadenza_rca">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="scadenza_manutenzione" class="form-label">Scadenza Manutenzione</label>
+                                <input type="date" class="form-control" id="scadenza_manutenzione" name="scadenza_manutenzione">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-primary">Salva Gommone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Funzioni per la gestione dei mezzi
+function deleteFurgone(id) {
+    if (confirm('Sei sicuro di voler eliminare questo furgone?')) {
+        fetch(`/risorse/mezzi/furgone/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Errore durante l\'eliminazione del furgone');
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+            alert('Errore durante l\'eliminazione del furgone');
+        });
+    }
+}
+
+function deleteGommone(id) {
+    if (confirm('Sei sicuro di voler eliminare questo gommone?')) {
+        fetch(`/risorse/mezzi/gommone/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Errore durante l\'eliminazione del gommone');
+            }
+        })
+        .catch(error => {
+            console.error('Errore:', error);
+            alert('Errore durante l\'eliminazione del gommone');
+        });
+    }
+}
+
+// Gestione form
+document.getElementById('addFurgoneForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/risorse/mezzi/furgone/nuovo', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = response.url;
+        } else {
+            alert('Errore durante la creazione del furgone');
+        }
+    })
+    .catch(error => {
+        console.error('Errore:', error);
+        alert('Errore durante la creazione del furgone');
+    });
+});
+
+document.getElementById('addGommoneForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch('/risorse/mezzi/gommone/nuovo', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.href = response.url;
+        } else {
+            alert('Errore durante la creazione del gommone');
+        }
+    })
+    .catch(error => {
+        console.error('Errore:', error);
+        alert('Errore durante la creazione del gommone');
+    });
+});
+</script>
+
+<style>
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: var(--bs-gray-700);
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+</style>
+{% endblock %}

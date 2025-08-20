@@ -1,0 +1,122 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Equipaggi - {{ barca.nome }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="h4 mb-0">Equipaggi di {{ barca.nome }}</h2>
+                    <p class="text-muted mb-0">{{ barca.tipo }} - {{ barca.costruttore }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('nuovo_equipaggio_form', barca_id=barca.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nuovo Equipaggio
+                    </a>
+                    <a href="{{ url_for('modifica_barca_form', barca_id=barca.id) }}" class="btn btn-outline-secondary ms-2">
+                        <i class="fas fa-edit me-2"></i>Modifica Barca
+                    </a>
+                </div>
+            </div>
+
+            {% if equipaggi %}
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome Equipaggio</th>
+                                    <th>Composizione</th>
+                                    <th>Note</th>
+                                    <th class="text-end">Azioni</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for equipaggio in equipaggi %}
+                                <tr>
+                                    <td class="fw-bold">{{ equipaggio.nome }}</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% if equipaggio.capovoga %}
+                                            <span class="badge bg-primary">Capovoga: {{ equipaggio.capovoga.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.secondo %}
+                                            <span class="badge bg-info">Secondo: {{ equipaggio.secondo.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.terzo %}
+                                            <span class="badge bg-info">Terzo: {{ equipaggio.terzo.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.quarto %}
+                                            <span class="badge bg-info">Quarto: {{ equipaggio.quarto.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.quinto %}
+                                            <span class="badge bg-info">Quinto: {{ equipaggio.quinto.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.sesto %}
+                                            <span class="badge bg-info">Sesto: {{ equipaggio.sesto.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.settimo %}
+                                            <span class="badge bg-info">Settimo: {{ equipaggio.settimo.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.prodiere %}
+                                            <span class="badge bg-success">Prodiere: {{ equipaggio.prodiere.last_name }}</span>
+                                            {% endif %}
+                                            {% if equipaggio.timoniere %}
+                                            <span class="badge bg-warning text-dark">Timoniere: {{ equipaggio.timoniere.last_name }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if equipaggio.note %}
+                                        <small class="text-muted">{{ equipaggio.note }}</small>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ url_for('modifica_equipaggio_form', equipaggio_id=equipaggio.id) }}" 
+                                           class="btn btn-sm btn-outline-primary me-1">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ url_for('elimina_equipaggio', equipaggio_id=equipaggio.id) }}" 
+                                              method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="return confirm('Confermi l\'eliminazione di questo equipaggio?');">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Nessun equipaggio creato</h5>
+                    <p class="text-muted">Crea il primo equipaggio per questa barca</p>
+                    <a href="{{ url_for('nuovo_equipaggio_form', barca_id=barca.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crea Primo Equipaggio
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="mt-4">
+                <a href="{{ url_for('list_barche') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Torna all'elenco barche
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+{% endblock %}

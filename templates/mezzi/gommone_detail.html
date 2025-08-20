@@ -1,0 +1,167 @@
+{% extends "layout/base.html" %}
+
+{% block title %}{{ gommone.nome }} - Canottieri Sebino{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/risorse/mezzi">Mezzi</a></li>
+                            <li class="breadcrumb-item"><a href="/risorse/mezzi?tipo_filter=gommoni">Gommoni</a></li>
+                            <li class="breadcrumb-item active">{{ gommone.nome }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="/risorse/mezzi?tipo_filter=gommoni" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Torna ai Gommoni
+                    </a>
+                    {% if current_user.is_admin %}
+                    <a href="/risorse/mezzi/gestione" class="btn btn-primary">
+                        <i class="fas fa-cog me-2"></i>Gestione
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-ship fa-3x me-4 text-info"></i>
+                        <div>
+                            <h2 class="card-title mb-1">{{ gommone.nome }}</h2>
+                            <p class="mb-0 text-muted fs-5">
+                                {% if gommone.motore %}{{ gommone.motore }}{% endif %}
+                                {% if gommone.potenza %} - {{ gommone.potenza }}{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Informazioni principali -->
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Informazioni Generali</h5>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Nome</small>
+                                    <p class="mb-2"><strong>{{ gommone.nome }}</strong></p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Motore</small>
+                                    <p class="mb-2"><strong>{{ gommone.motore or 'N/A' }}</strong></p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <small class="text-muted">Potenza</small>
+                                    <p class="mb-2"><strong>{{ gommone.potenza or 'N/A' }}</strong></p>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Registrato il</small>
+                                    <p class="mb-0"><strong>{{ gommone.created_at.strftime('%d/%m/%Y') if gommone.created_at else 'N/A' }}</strong></p>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <small class="text-muted">Ultimo aggiornamento</small>
+                                    <p class="mb-0"><strong>{{ gommone.updated_at.strftime('%d/%m/%Y %H:%M') if gommone.updated_at else 'N/A' }}</strong></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stato e scadenze -->
+                        <div class="col-md-6">
+                            <h5 class="text-muted mb-3">Stato e Scadenze</h5>
+                            
+                            <!-- Stato -->
+                            <div class="mb-4">
+                                <h6 class="text-muted mb-2">Stato Attuale</h6>
+                                <span class="badge {{ gommone.status_info[1] }} fs-5 px-4 py-2">
+                                    {{ gommone.status_info[0] }}
+                                </span>
+                            </div>
+                            
+                            <!-- Scadenze -->
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">Scadenze</h6>
+                                {% if gommone.scadenze %}
+                                    <div class="d-flex flex-column gap-2">
+                                        {% for nome, data, colore, identificativo, frazionamento, assicuratore in gommone.scadenze %}
+                                        <div class="d-flex align-items-center justify-content-between p-2 border rounded">
+                                            <div class="d-flex flex-column">
+                                                <span class="text-muted">{{ nome }}</span>
+                                                {% if identificativo %}
+                                                <small class="text-muted">{{ identificativo }}</small>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge {{ colore }} me-2">{{ data.strftime('%d/%m/%Y') }}</span>
+                                                {% set giorni_rimanenti = (data - today).days %}
+                                                {% if giorni_rimanenti > 0 %}
+                                                    <small class="text-muted">{{ giorni_rimanenti }} giorni rimanenti</small>
+                                                {% else %}
+                                                    <small class="text-danger">Scaduto da {{ abs(giorni_rimanenti) }} giorni</small>
+                                                {% endif %}
+                                                {% if frazionamento %}
+                                                <br><small class="text-muted">{{ frazionamento }}</small>
+                                                {% endif %}
+                                                {% if assicuratore %}
+                                                <br><small class="text-muted">{{ assicuratore }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+                                        <p class="text-muted">Nessuna scadenza registrata</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.badge {
+    font-weight: 500;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+}
+
+.border.rounded {
+    border-color: var(--bs-gray-300) !important;
+}
+
+.text-info {
+    color: var(--bs-info) !important;
+}
+</style>
+{% endblock %}

@@ -8,9 +8,9 @@ from fastapi import Request, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-import models
+from models import User
 
-async def get_current_user(request: Request, db: Session = Depends(get_db)) -> models.User:
+async def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
     """
     Dipendenza per ottenere l'utente attualmente autenticato dalla sessione.
     Se l'utente non è loggato o non esiste, solleva un'eccezione HTTP
@@ -24,7 +24,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> m
             headers={"Location": "/login"}
         )
 
-    user = db.query(models.User).options(joinedload(models.User.roles)).filter(models.User.id == user_id).first()
+    user = db.query(User).options(joinedload(User.roles)).filter(User.id == user_id).first()
 
     if user is None:
         request.session.pop("user_id", None)
@@ -38,7 +38,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> m
 
 async def get_optional_user(
     request: Request, db: Session = Depends(get_db)
-) -> Optional[models.User]:
+) -> Optional[User]:
     """Return the authenticated user if present, otherwise ``None``.
 
     Non solleva eccezioni quando l'utente non è loggato, ma rimuove dalla
@@ -48,9 +48,9 @@ async def get_optional_user(
     if user_id is None:
         return None
     user = (
-        db.query(models.User)
-        .options(joinedload(models.User.roles))
-        .filter(models.User.id == user_id)
+        db.query(User)
+        .options(joinedload(User.roles))
+        .filter(User.id == user_id)
         .first()
     )
     if user is None:
@@ -58,7 +58,7 @@ async def get_optional_user(
     return user
 
 
-async def get_current_admin_user(current_user: models.User = Depends(get_current_user)) -> models.User:
+async def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     Dipendenza che verifica se l'utente corrente ha il ruolo di 'admin'.
     Se non è un admin, solleva un'eccezione 403 Forbidden.
@@ -72,8 +72,8 @@ async def get_current_admin_user(current_user: models.User = Depends(get_current
 
 
 async def get_current_admin_or_coach_user(
-    current_user: models.User = Depends(get_current_user),
-) -> models.User:
+    current_user: User = Depends(get_current_user),
+) -> User:
     """Garantisce accesso ad admin e allenatori.
 
     Solleva 403 se l'utente non possiede almeno uno di questi ruoli."""
@@ -95,7 +95,7 @@ def require_roles(*roles: str):
     Returns:
         Dipendenza FastAPI che verifica i ruoli
     """
-    async def role_checker(current_user: models.User = Depends(get_current_user)) -> models.User:
+    async def role_checker(current_user: User = Depends(get_current_user)) -> User:
         user_roles = {role.name for role in current_user.roles}
         if not any(role in user_roles for role in roles):
             role_names = ", ".join(roles)

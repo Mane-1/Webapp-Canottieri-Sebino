@@ -1,0 +1,111 @@
+<!-- Lista Gommoni -->
+<div class="row">
+    {% if gommoni %}
+        {% for gommone in gommoni %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-ship fa-2x me-3 text-info"></i>
+                        <div>
+                            <h5 class="card-title mb-0 text-dark">{{ gommone.nome }}</h5>
+                            <small class="text-muted">
+                                {% if gommone.motore %}{{ gommone.motore }}{% endif %}
+                                {% if gommone.potenza %} - {{ gommone.potenza }}{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Stato -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">Stato</h6>
+                        <span class="badge {{ gommone.status_info[1] }} fs-6 px-3 py-2">
+                            {{ gommone.status_info[0] }}
+                        </span>
+                    </div>
+                    
+                    <!-- Scadenze -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">Scadenze</h6>
+                        {% if gommone.scadenze %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for nome, data, colore, identificativo, frazionamento, assicuratore in gommone.scadenze %}
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex flex-column">
+                                        <span class="text-muted small">{{ nome }}</span>
+                                        {% if identificativo %}
+                                        <small class="text-muted">{{ identificativo }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex flex-column align-items-end">
+                                        <span class="badge {{ colore }}">{{ data.strftime('%d/%m/%Y') }}</span>
+                                        {% if frazionamento %}
+                                        <small class="text-muted">{{ frazionamento }}</small>
+                                        {% endif %}
+                                        {% if assicuratore %}
+                                        <small class="text-muted">{{ assicuratore }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Nessuna scadenza registrata</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Aggiornato: {{ gommone.updated_at.strftime('%d/%m/%Y') if gommone.updated_at else 'N/A' }}
+                        </small>
+                        <a href="/risorse/mezzi/gommone/{{ gommone.id }}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-eye me-1"></i>Dettagli
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-ship fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">Nessun gommone registrato</h4>
+                <p class="text-muted">Non ci sono gommoni nel sistema.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.card-header {
+    background-color: white !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.text-info {
+    color: var(--bs-info) !important;
+}
+</style>

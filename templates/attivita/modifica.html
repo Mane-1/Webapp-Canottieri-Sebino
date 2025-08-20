@@ -1,0 +1,284 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Modifica Attività{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Modifica Attività: {{ activity.title }}</h1>
+        <div>
+          <a href="/attivita/gestione" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Torna alla lista
+          </a>
+          <a href="/attivita/dettaglio/{{ activity.id }}" class="btn btn-outline-primary">
+            <i class="bi bi-eye"></i> Visualizza
+          </a>
+        </div>
+      </div>
+      
+      <div class="card">
+        <div class="card-body">
+          <form method="POST" action="/api/attivita/{{ activity.id }}">
+            <input type="hidden" name="_method" value="PUT">
+            
+            <div class="row">
+              <div class="col-md-8">
+                <h5 class="card-title">Informazioni Generali</h5>
+                
+                <div class="mb-3">
+                  <label for="title" class="form-label">Titolo *</label>
+                  <input type="text" class="form-control" id="title" name="title" value="{{ activity.title }}" required>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="short_description" class="form-label">Descrizione</label>
+                  <textarea class="form-control" id="short_description" name="short_description" rows="3">{{ activity.short_description or '' }}</textarea>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="type_id" class="form-label">Tipo Attività *</label>
+                      <select class="form-select" id="type_id" name="type_id" required>
+                        {% for type in activity_types %}
+                        <option value="{{ type.id }}" {% if type.id == activity.type_id %}selected{% endif %}>
+                          {{ type.name }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="state" class="form-label">Stato *</label>
+                      <select class="form-select" id="state" name="state" required>
+                        <option value="bozza" {% if activity.state == 'bozza' %}selected{% endif %}>Bozza</option>
+                        <option value="da_confermare" {% if activity.state == 'da_confermare' %}selected{% endif %}>Da confermare</option>
+                        <option value="confermato" {% if activity.state == 'confermato' %}selected{% endif %}>Confermato</option>
+                        <option value="rimandata" {% if activity.state == 'rimandata' %}selected{% endif %}>Rimandata</option>
+                        <option value="in_corso" {% if activity.state == 'in_corso' %}selected{% endif %}>In Corso</option>
+                        <option value="completato" {% if activity.state == 'completato' %}selected{% endif %}>Completato</option>
+                        <option value="annullato" {% if activity.state == 'annullato' %}selected{% endif %}>Annullato</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="date" class="form-label">Data *</label>
+                      <input type="date" class="form-control" id="date" name="date" value="{{ activity.date.strftime('%Y-%m-%d') }}" required>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="start_time" class="form-label">Ora Inizio *</label>
+                      <input type="time" class="form-control" id="start_time" name="start_time" value="{{ activity.start_time.strftime('%H:%M') }}" required>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="mb-3">
+                      <label for="end_time" class="form-label">Ora Fine *</label>
+                      <input type="time" class="form-control" id="end_time" name="end_time" value="{{ activity.end_time.strftime('%H:%M') }}" required>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="participants_plan" class="form-label">Partecipanti Previsti</label>
+                      <input type="number" class="form-control" id="participants_plan" name="participants_plan" value="{{ activity.participants_plan or '' }}" min="0">
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                      <label for="participants_actual" class="form-label">Partecipanti Effettivi</label>
+                      <input type="number" class="form-control" id="participants_actual" name="participants_actual" value="{{ activity.participants_actual or '' }}" min="0">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="participants_notes" class="form-label">Note Partecipanti</label>
+                  <textarea class="form-control" id="participants_notes" name="participants_notes" rows="2">{{ activity.participants_notes or '' }}</textarea>
+                </div>
+              </div>
+              
+              <div class="col-md-4">
+                <h5 class="card-title">Cliente e Contatti</h5>
+                
+                <div class="mb-3">
+                  <label for="customer_name" class="form-label">Nome Cliente *</label>
+                  <input type="text" class="form-control" id="customer_name" name="customer_name" value="{{ activity.customer_name }}" required>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="customer_email" class="form-label">Email Cliente</label>
+                  <input type="email" class="form-control" id="customer_email" name="customer_email" value="{{ activity.customer_email or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="contact_name" class="form-label">Nome Contatto</label>
+                  <input type="text" class="form-control" id="contact_name" name="contact_name" value="{{ activity.contact_name or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="contact_phone" class="form-label">Telefono Contatto</label>
+                  <input type="tel" class="form-control" id="contact_phone" name="contact_phone" value="{{ activity.contact_phone or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="contact_email" class="form-label">Email Contatto</label>
+                  <input type="email" class="form-control" id="contact_email" name="contact_email" value="{{ activity.contact_email or '' }}">
+                </div>
+                
+                <h5 class="card-title mt-4">Pagamento</h5>
+                
+                <div class="mb-3">
+                  <label for="payment_amount" class="form-label">Importo</label>
+                  <div class="input-group">
+                    <span class="input-group-text">€</span>
+                    <input type="number" class="form-control" id="payment_amount" name="payment_amount" value="{{ activity.payment_amount or '' }}" step="0.01" min="0">
+                  </div>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="payment_method" class="form-label">Metodo Pagamento</label>
+                  <select class="form-select" id="payment_method" name="payment_method">
+                    <option value="">Seleziona...</option>
+                    <option value="contanti" {% if activity.payment_method == 'contanti' %}selected{% endif %}>Contanti</option>
+                    <option value="carta" {% if activity.payment_method == 'carta' %}selected{% endif %}>Carta</option>
+                    <option value="bonifico" {% if activity.payment_method == 'bonifico' %}selected{% endif %}>Bonifico</option>
+                    <option value="assegno" {% if activity.payment_method == 'assegno' %}selected{% endif %}>Assegno</option>
+                    <option value="altro" {% if activity.payment_method == 'altro' %}selected{% endif %}>Altro</option>
+                  </select>
+                </div>
+                
+                <div class="mb-3">
+                  <label for="payment_state" class="form-label">Stato Pagamento *</label>
+                  <select class="form-select" id="payment_state" name="payment_state" required>
+                    <option value="da_effettuare" {% if activity.payment_state == 'da_effettuare' %}selected{% endif %}>Da Effettuare</option>
+                    <option value="da_verificare" {% if activity.payment_state == 'da_verificare' %}selected{% endif %}>Da Verificare</option>
+                    <option value="confermato" {% if activity.payment_state == 'confermato' %}selected{% endif %}>Confermato</option>
+                    <option value="rifiutato" {% if activity.payment_state == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="d-flex justify-content-between">
+              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteActivityModal">
+                <i class="bi bi-trash"></i> Elimina Attività
+              </button>
+              <div>
+                <a href="/attivita/gestione" class="btn btn-secondary me-2">Annulla</a>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-check-circle"></i> Salva Modifiche
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal conferma eliminazione -->
+<div class="modal fade" id="deleteActivityModal" tabindex="-1" aria-labelledby="deleteActivityModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteActivityModalLabel">Conferma eliminazione</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Sei sicuro di voler eliminare l'attività <strong>{{ activity.title }}</strong>?</p>
+        <p class="text-danger"><small>Questa azione non può essere annullata.</small></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-danger" onclick="deleteActivity({{ activity.id }}, '{{ activity.title }}')">Elimina</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function deleteActivity(activityId, activityTitle) {
+    if (!confirm(`Sei sicuro di voler eliminare l'attività "${activityTitle}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/attivita/${activityId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            // Redirect alla lista attività
+            window.location.href = '/attivita/gestione';
+        } else {
+            const error = await response.json();
+            alert('Errore nell\'eliminazione: ' + (error.detail || 'Errore sconosciuto'));
+        }
+    } catch (error) {
+        console.error('Errore nell\'eliminazione:', error);
+        alert('Errore nell\'eliminazione dell\'attività');
+    }
+}
+
+// Gestione form con API
+document.querySelector('form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const startTime = document.getElementById('start_time').value;
+    const endTime = document.getElementById('end_time').value;
+    
+    if (startTime >= endTime) {
+        alert('L\'ora di fine deve essere successiva all\'ora di inizio');
+        return false;
+    }
+    
+    // Raccogli i dati del form
+    const formData = new FormData(this);
+    const data = {};
+    
+    // Converti FormData in oggetto JSON
+    for (let [key, value] of formData.entries()) {
+        if (key !== '_method') {  // Escludi il campo _method
+            data[key] = value;
+        }
+    }
+    
+    try {
+        const response = await fetch(`/api/attivita/{{ activity.id }}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            // Redirect alla pagina di gestione con messaggio di successo
+            window.location.href = '/attivita/gestione?message=Attività aggiornata con successo';
+        } else {
+            const error = await response.json();
+            alert('Errore nel salvataggio: ' + (error.detail || 'Errore sconosciuto'));
+        }
+    } catch (error) {
+        console.error('Errore nel salvataggio:', error);
+        alert('Errore nel salvataggio dell\'attività');
+    }
+});
+</script>
+{% endblock %}
