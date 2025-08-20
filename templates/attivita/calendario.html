@@ -1,0 +1,190 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Calendario Attività{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', path='fullcalendar/main.min.css') }}" />
+<style>
+  .view-switch {
+    margin-bottom: 1rem;
+  }
+  .view-switch .btn {
+    border-radius: 0;
+  }
+  .view-switch .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+  }
+  .view-switch .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+  }
+  .view-switch .btn.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+  }
+  
+  .filters-section {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+  }
+  
+  .filters-section .row {
+    align-items: end;
+  }
+  
+  #activities-calendar {
+    min-height: 600px;
+  }
+  
+  #activities-list {
+    min-height: 400px;
+  }
+  
+  .activity-item {
+    border-left: 4px solid #dee2e6;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background-color: white;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .activity-item.confirmed {
+    border-left-color: #198754;
+  }
+  
+  .activity-item.pending {
+    border-left-color: #ffc107;
+  }
+  
+  .activity-item.draft {
+    border-left-color: #6c757d;
+  }
+  
+  .activity-item.cancelled {
+    border-left-color: #dc3545;
+  }
+  
+  .activity-item.completed {
+    border-left-color: #0d6efd;
+  }
+  
+  .coverage-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .coverage-100 {
+    background-color: #198754;
+    color: white;
+  }
+  
+  .coverage-partial {
+    background-color: #ffc107;
+    color: black;
+  }
+  
+  .coverage-low {
+    background-color: #dc3545;
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h1 class="h3 mb-4">Calendario Attività</h1>
+      
+      <!-- Switch vista -->
+      <div class="view-switch text-center">
+        <div class="btn-group" role="group">
+          <button type="button" class="btn btn-outline-primary active" id="btn-calendar">
+            <i class="bi bi-calendar3"></i> Calendario
+          </button>
+          <button type="button" class="btn btn-outline-primary" id="btn-list">
+            <i class="bi bi-list-ul"></i> Elenco
+          </button>
+        </div>
+      </div>
+      
+      <!-- Filtri -->
+      <div class="filters-section">
+        <form id="filters-form" class="row g-3">
+          <div class="col-md-3">
+            <label for="filter-type" class="form-label">Tipo Attività</label>
+            <select class="form-select" id="filter-type" name="type_id">
+              <option value="">Tutti i tipi</option>
+              {% for type in activity_types %}
+              <option value="{{ type.id }}">{{ type.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="filter-state" class="form-label">Stato</label>
+            <select class="form-select" id="filter-state" name="state">
+              <option value="">Tutti gli stati</option>
+              <option value="bozza">Bozza</option>
+              <option value="da_confermare">Da confermare</option>
+              <option value="confermata">Confermata</option>
+              <option value="rimandata">Rimandata</option>
+              <option value="annullata">Annullata</option>
+              <option value="completata">Completata</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="filter-coverage" class="form-label">Copertura</label>
+            <select class="form-select" id="filter-coverage" name="coverage">
+              <option value="">Tutte</option>
+              <option value="100">100% coperto</option>
+              <option value="partial">Parzialmente coperto</option>
+              <option value="low">Poco coperto</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="filter-text" class="form-label">Testo</label>
+            <input type="text" class="form-control" id="filter-text" name="text" placeholder="Cerca nel titolo...">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-search"></i> Filtra
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-clear-filters">
+              <i class="bi bi-x-circle"></i> Pulisci
+            </button>
+          </div>
+        </form>
+      </div>
+      
+      <!-- Contenuto calendario -->
+      <div id="activities-calendar"></div>
+      
+      <!-- Contenuto elenco (nascosto di default) -->
+      <div id="activities-list" class="d-none">
+        <div class="row" id="activities-list-content">
+          <!-- Popolato via JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal per dettagli attività -->
+{% include 'attivita/_activity_modal.html' %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='fullcalendar/core/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/daygrid/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/timegrid/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/list/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/interaction/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/bootstrap5/index.global.min.js') }}"></script>
+<script src="{{ url_for('static', path='fullcalendar/locales-all/locales-all.min.js') }}"></script>
+<script src="{{ url_for('static', path='js/activities_calendar.js') }}"></script>
+{% endblock %}

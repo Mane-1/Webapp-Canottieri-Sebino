@@ -1,5 +1,5 @@
 import pytest
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta, datetime, timezone
 
 import models
 from services.attendance_service import compute_status_for_athlete
@@ -35,7 +35,7 @@ async def test_athlete_toggle_time_window(client, db_session):
     athlete = factories.create_user(
         db_session, username="athlete", roles=[atleta_role], date_of_birth=date.today() - timedelta(days=15*365)
     )
-    start_dt = datetime.utcnow() + timedelta(hours=5)
+    start_dt = datetime.now(timezone.utc) + timedelta(hours=5)
     training = models.Allenamento(tipo="Test", data=start_dt.date(), orario=start_dt.strftime("%H:%M"))
     training.categories.append(categoria)
     db_session.add(training)
@@ -49,7 +49,7 @@ async def test_athlete_toggle_time_window(client, db_session):
         assert r.status_code == 200
 
     # move training within 2 hours
-    new_start = datetime.utcnow() + timedelta(hours=2)
+    new_start = datetime.now(timezone.utc) + timedelta(hours=2)
     training.data = new_start.date()
     training.orario = new_start.strftime("%H:%M")
     db_session.commit()

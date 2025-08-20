@@ -1,5 +1,5 @@
 """Calendar and agenda related routes."""
-from datetime import date, datetime, timedelta, time
+from datetime import date, datetime, timedelta, time, timezone
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Response, Request
 from fastapi.responses import HTMLResponse
@@ -38,7 +38,7 @@ def _event(uid: str, start: datetime, end: datetime, summary: str, description: 
     lines = [
         "BEGIN:VEVENT",
         f"UID:{uid}",
-        f"DTSTAMP:{datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}",
+        f"DTSTAMP:{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}",
         f"DTSTART;TZID=Europe/Rome:{_fmt_dt(start)}",
         f"DTEND;TZID=Europe/Rome:{_fmt_dt(end)}",
         "STATUS:CONFIRMED",

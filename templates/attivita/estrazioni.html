@@ -1,0 +1,176 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Estrazioni Ore{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h1 class="h3 mb-4">Estrazioni Ore</h1>
+      
+      <!-- Filtri -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <form method="GET" class="row g-3">
+            {% if current_user.is_admin or current_user.is_allenatore %}
+            <div class="col-md-3">
+              <label for="user_id" class="form-label">Istruttore</label>
+              <select class="form-select" id="user_id" name="user_id">
+                <option value="">Seleziona istruttore</option>
+                {% for user in users_for_filter %}
+                <option value="{{ user.id }}" {% if request.query_params.user_id|string == user.id|string %}selected{% endif %}>
+                  {{ user.full_name }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+            <div class="col-md-2">
+              <label for="month" class="form-label">Mese</label>
+              <select class="form-select" id="month" name="month">
+                <option value="1" {% if month == 1 %}selected{% endif %}>Gennaio</option>
+                <option value="2" {% if month == 2 %}selected{% endif %}>Febbraio</option>
+                <option value="3" {% if month == 3 %}selected{% endif %}>Marzo</option>
+                <option value="4" {% if month == 4 %}selected{% endif %}>Aprile</option>
+                <option value="5" {% if month == 5 %}selected{% endif %}>Maggio</option>
+                <option value="6" {% if month == 6 %}selected{% endif %}>Giugno</option>
+                <option value="7" {% if month == 7 %}selected{% endif %}>Luglio</option>
+                <option value="8" {% if month == 8 %}selected{% endif %}>Agosto</option>
+                <option value="9" {% if month == 9 %}selected{% endif %}>Settembre</option>
+                <option value="10" {% if month == 10 %}selected{% endif %}>Ottobre</option>
+                <option value="11" {% if month == 11 %}selected{% endif %}>Novembre</option>
+                <option value="12" {% if month == 12 %}selected{% endif %}>Dicembre</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label for="year" class="form-label">Anno</label>
+              <select class="form-select" id="year" name="year">
+                {% for y in range(2020, 2031) %}
+                <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">&nbsp;</label>
+              <div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="bi bi-search"></i> Filtra
+                </button>
+                <button type="button" class="btn btn-success" onclick="exportData()">
+                  <i class="bi bi-download"></i> Export CSV
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Riepilogo -->
+      {% if user_name %}
+      <div class="alert alert-info">
+        <h6 class="mb-1">Estrazione per: <strong>{{ user_name }}</strong></h6>
+        <p class="mb-0">Periodo: {{ month }}/{{ year }}</p>
+      </div>
+      {% endif %}
+      
+      <!-- Tabella ore -->
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Dettaglio Ore</h5>
+        </div>
+        <div class="card-body">
+          {% if hours_data %}
+          <div class="table-responsive">
+            <table class="table table-hover" id="hours-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Attività</th>
+                  <th>Qualifica</th>
+                  <th>Ruolo</th>
+                  <th>Ore</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in hours_data %}
+                <tr>
+                  <td>{{ row.date.strftime('%d/%m/%Y') }}</td>
+                  <td>
+                    <a href="/attivita/dettaglio/{{ row.activity_id }}" target="_blank">
+                      {{ row.activity_title }}
+                    </a>
+                  </td>
+                  <td>{{ row.qualification_name }}</td>
+                  <td>{{ row.role_label or '-' }}</td>
+                  <td><strong>{{ "%.1f"|format(row.hours) }}h</strong></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr class="table-info">
+                  <td colspan="4"><strong>Totale ore</strong></td>
+                  <td><strong>{{ "%.1f"|format(hours_data|sum(attribute='hours')) }}h</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-5">
+            <i class="bi bi-clock display-1 text-muted"></i>
+            <h5 class="mt-3">Nessuna ora registrata</h5>
+            <p class="text-muted">Non ci sono ore registrate per il periodo selezionato.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportData() {
+    const table = document.getElementById('hours-table');
+    if (!table) return;
+    
+    let csv = 'Data,Attività,Qualifica,Ruolo,Ore\n';
+    
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = [];
+        cells.forEach((cell, index) => {
+            let text = cell.textContent.trim();
+            if (index === 1) { // Attività - rimuovi link
+                text = cell.querySelector('a') ? cell.querySelector('a').textContent.trim() : text;
+            }
+            rowData.push(`"${text}"`);
+        });
+        csv += rowData.join(',') + '\n';
+    });
+    
+    // Aggiungi totale
+    const totalRow = table.querySelector('tfoot tr');
+    if (totalRow) {
+        const totalCells = totalRow.querySelectorAll('td');
+        const totalData = [];
+        totalCells.forEach(cell => {
+            totalData.push(`"${cell.textContent.trim()}"`);
+        });
+        csv += totalData.join(',') + '\n';
+    }
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Estrazione_Istruttore_${document.title}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

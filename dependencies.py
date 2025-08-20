@@ -83,3 +83,26 @@ async def get_current_admin_or_coach_user(
             detail="Accesso negato. Sono richiesti privilegi di amministratore o allenatore.",
         )
     return current_user
+
+
+def require_roles(*roles: str):
+    """
+    Decorator per verificare che l'utente abbia almeno uno dei ruoli specificati.
+    
+    Args:
+        *roles: Nomi dei ruoli richiesti
+        
+    Returns:
+        Dipendenza FastAPI che verifica i ruoli
+    """
+    async def role_checker(current_user: models.User = Depends(get_current_user)) -> models.User:
+        user_roles = {role.name for role in current_user.roles}
+        if not any(role in user_roles for role in roles):
+            role_names = ", ".join(roles)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Accesso negato. Sono richiesti privilegi di: {role_names}",
+            )
+        return current_user
+    
+    return role_checker

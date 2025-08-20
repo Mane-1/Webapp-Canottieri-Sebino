@@ -1,7 +1,7 @@
-# File: test_helpers.py
+# File: utils/__init__.py
 # Descrizione: Contiene funzioni di utilità generiche riutilizzate in diverse parti dell'applicazione.
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Optional, Tuple, List
 import csv
 import tempfile
@@ -64,10 +64,11 @@ def parse_time_string(time_str: str) -> time:
 def parse_orario(base_date: date, orario_str: str) -> Tuple[datetime, datetime]:
     """
     Converte una stringa di orario (es. "8:00-10:00") in un tuple
-    di oggetti datetime di inizio e fine.
+    di oggetti datetime di inizio e fine con timezone UTC.
     """
     if not orario_str or orario_str.lower() == "personalizzato":
-        return datetime.combine(base_date, time.min), datetime.combine(base_date, time.max)
+        return (datetime.combine(base_date, time.min, timezone.utc), 
+                datetime.combine(base_date, time.max, timezone.utc))
     try:
         if '-' in orario_str:
             parts = orario_str.split('-', 1)
@@ -78,23 +79,24 @@ def parse_orario(base_date: date, orario_str: str) -> Tuple[datetime, datetime]:
                 end_time_obj = parse_time_string(end_part)
             else:
                 # default duration 60 minutes when end is missing
-                start_dt = datetime.combine(base_date, start_time_obj)
+                start_dt = datetime.combine(base_date, start_time_obj, timezone.utc)
                 end_dt = start_dt + timedelta(hours=1)
                 return start_dt, end_dt
         else:
             start_time_obj = parse_time_string(orario_str.strip())
-            start_dt = datetime.combine(base_date, start_time_obj)
+            start_dt = datetime.combine(base_date, start_time_obj, timezone.utc)
             end_dt = start_dt + timedelta(hours=1)
             return start_dt, end_dt
 
-        start_dt = datetime.combine(base_date, start_time_obj)
-        end_dt = datetime.combine(base_date, end_time_obj)
+        start_dt = datetime.combine(base_date, start_time_obj, timezone.utc)
+        end_dt = datetime.combine(base_date, end_time_obj, timezone.utc)
         if end_dt < start_dt:
             # guard against invalid ranges
             end_dt = start_dt
         return start_dt, end_dt
     except Exception:
-        return datetime.combine(base_date, time.min), datetime.combine(base_date, time.max)
+        return (datetime.combine(base_date, time.min, timezone.utc), 
+                datetime.combine(base_date, time.max, timezone.utc))
 
 
 def _build_title(month_start: date) -> str:

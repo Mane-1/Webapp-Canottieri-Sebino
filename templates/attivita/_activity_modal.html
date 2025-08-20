@@ -1,0 +1,216 @@
+<!-- Modal per dettagli attività -->
+<div class="modal fade" id="activityModal" tabindex="-1" aria-labelledby="activityModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="activityModalLabel">Dettagli Attività</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Tabs -->
+        <ul class="nav nav-tabs" id="activityTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="generale-tab" data-bs-toggle="tab" data-bs-target="#generale" type="button" role="tab">
+              Generale
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="copertura-tab" data-bs-toggle="tab" data-bs-target="#copertura" type="button" role="tab">
+              Copertura
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="risorse-tab" data-bs-toggle="tab" data-bs-target="#risorse" type="button" role="tab">
+              Risorse
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pagamento-tab" data-bs-toggle="tab" data-bs-target="#pagamento" type="button" role="tab">
+              Pagamento
+            </button>
+          </li>
+        </ul>
+        
+        <!-- Contenuto tabs -->
+        <div class="tab-content" id="activityTabsContent">
+          <!-- Tab Generale -->
+          <div class="tab-pane fade show active" id="generale" role="tabpanel">
+            <div class="row mt-3">
+              <div class="col-md-8">
+                <h6 class="fw-bold" id="activity-title">Titolo Attività</h6>
+                <p class="text-muted" id="activity-description">Descrizione attività</p>
+                
+                <div class="row">
+                  <div class="col-md-6">
+                    <strong>Data:</strong> <span id="activity-date"></span><br>
+                    <strong>Orario:</strong> <span id="activity-time"></span><br>
+                    <strong>Tipo:</strong> <span id="activity-type"></span><br>
+                    <strong>Stato:</strong> <span id="activity-state"></span>
+                  </div>
+                  <div class="col-md-6">
+                    <strong>Partecipanti previsti:</strong> <span id="activity-participants"></span><br>
+                    <strong>Partecipanti effettivi:</strong> <span id="activity-participants-actual"></span><br>
+                    <strong>Note partecipanti:</strong> <span id="activity-participants-notes"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card">
+                  <div class="card-body">
+                    <h6 class="card-title">Cliente</h6>
+                    <p class="mb-1"><strong id="activity-customer-name"></strong></p>
+                    <p class="mb-1" id="activity-customer-email"></p>
+                    <hr>
+                    <h6 class="card-title">Contatti</h6>
+                    <p class="mb-1"><strong id="activity-contact-name"></strong></p>
+                    <p class="mb-1" id="activity-contact-phone"></p>
+                    <p class="mb-0" id="activity-contact-email"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab Copertura -->
+          <div class="tab-pane fade" id="copertura" role="tabpanel">
+            <div class="mt-3">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Requisiti e Assegnazioni</h6>
+                <div class="coverage-summary">
+                  <span class="badge" id="coverage-badge">0/0 (0%)</span>
+                </div>
+              </div>
+              
+              <div id="requirements-list">
+                <!-- Popolato via JavaScript -->
+              </div>
+              
+              <!-- Bottone autocandidatura -->
+              <div class="text-center mt-3" id="self-assign-section" style="display: none;">
+                <button type="button" class="btn btn-success" id="btn-self-assign">
+                  <i class="bi bi-person-plus"></i> Mi offro per questa attività
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab Risorse -->
+          <div class="tab-pane fade" id="risorse" role="tabpanel">
+            <div class="mt-3">
+              <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                Gestione risorse materiali (barche, kayak, veicoli) sarà disponibile nella Fase 2.
+              </div>
+              
+              <div class="row">
+                <div class="col-md-6">
+                  <h6>Barche necessarie</h6>
+                  <p class="text-muted">Nessuna barca specificata</p>
+                </div>
+                <div class="col-md-6">
+                  <h6>Attrezzature</h6>
+                  <p class="text-muted">Nessuna attrezzatura specificata</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Tab Pagamento -->
+          <div class="tab-pane fade" id="pagamento" role="tabpanel">
+            <div class="mt-3">
+              <div class="row">
+                <div class="col-md-6">
+                  <h6>Dettagli Pagamento</h6>
+                  <table class="table table-sm">
+                    <tr>
+                      <td><strong>Importo:</strong></td>
+                      <td id="activity-payment-amount"></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Metodo:</strong></td>
+                      <td id="activity-payment-method"></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Stato:</strong></td>
+                      <td id="activity-payment-state"></td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="col-md-6">
+                  <h6>Fatturazione</h6>
+                  <table class="table table-sm">
+                    <tr>
+                      <td><strong>Nome:</strong></td>
+                      <td id="activity-billing-name"></td>
+                    </tr>
+                    <tr>
+                      <td><strong>P.IVA/CF:</strong></td>
+                      <td id="activity-billing-vat"></td>
+                    </tr>
+                    <tr>
+                      <td><strong>SDI/PEC:</strong></td>
+                      <td id="activity-billing-sdi"></td>
+                    </tr>
+                    <tr>
+                      <td><strong>Indirizzo:</strong></td>
+                      <td id="activity-billing-address"></td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+        <a href="#" class="btn btn-primary" id="btn-edit-activity" style="display: none;">
+          <i class="bi bi-pencil"></i> Modifica
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Template per i requisiti -->
+<template id="requirement-template">
+  <div class="requirement-item card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <h6 class="card-title requirement-title">Titolo Requisito</h6>
+          <p class="card-text requirement-description">Descrizione requisito</p>
+        </div>
+        <div class="text-end">
+          <span class="badge bg-primary requirement-coverage">0/0</span>
+          <div class="mt-1">
+            <button type="button" class="btn btn-sm btn-outline-primary btn-add-assignment" style="display: none;">
+              <i class="bi bi-person-plus"></i> Aggiungi
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="assignments-list mt-2">
+        <!-- Popolato via JavaScript -->
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Template per le assegnazioni -->
+<template id="assignment-template">
+  <div class="assignment-item d-flex justify-content-between align-items-center p-2 bg-light rounded mb-1">
+    <div>
+      <i class="bi bi-person-circle"></i>
+      <span class="assignment-user-name">Nome Utente</span>
+      <small class="text-muted assignment-role">(Ruolo)</small>
+    </div>
+    <div>
+      <span class="badge bg-secondary assignment-hours">0h</span>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-assignment ms-1" style="display: none;">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  </div>
+</template>

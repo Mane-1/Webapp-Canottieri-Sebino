@@ -40,6 +40,8 @@ from routers import (
     attendance,
     athletes,
     calendar as calendar_router,
+    activities,
+    api_activities,
 )
 from seed import seed_categories, seed_turni, seed_default_allenamenti
 
@@ -85,6 +87,7 @@ async def lifespan(app: FastAPI):
             db.add_all([
                 models.Role(name='atleta'),
                 models.Role(name='allenatore'),
+                models.Role(name='istruttore'),
                 models.Role(name='admin')
             ])
             db.commit()
@@ -93,22 +96,24 @@ async def lifespan(app: FastAPI):
         seed_turni(db)
         seed_default_allenamenti(db)
 
-        if not db.query(models.User).filter(models.User.username == "gabriele").first():
-            logger.info("Creazione utente admin...")
+        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+        admin_password = os.environ.get("ADMIN_PASSWORD")
+        if admin_password and not db.query(models.User).filter(models.User.username == admin_username).first():
+            logger.info(f"Creazione utente admin '{admin_username}'...")
             admin_role = db.query(models.Role).filter_by(name='admin').one()
             allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
             admin_user = models.User(
-                username="gabriele",
-                hashed_password=security.get_password_hash("manenti"),
-                first_name="Gabriele",
-                last_name="Manenti",
-                email="gabriele.manenti@example.com",
+                username=admin_username,
+                hashed_password=security.get_password_hash(admin_password),
+                first_name="Admin",
+                last_name="User",
+                email=os.environ.get("ADMIN_EMAIL", "admin@example.com"),
                 date_of_birth=date(1990, 1, 1),
                 roles=[admin_role, allenatore_role]
             )
             db.add(admin_user)
             db.commit()
-            logger.info("Utente admin 'gabriele' creato.")
+            logger.info(f"Utente admin '{admin_username}' creato.")
     except Exception as e:
         logger.warning(
             f"Errore durante il popolamento dei dati di base all'avvio: {e}"
@@ -169,6 +174,8 @@ app.include_router(availabilities.router)
 app.include_router(attendance.router)
 app.include_router(athletes.router)
 app.include_router(calendar_router.router)
+app.include_router(activities.router)
+app.include_router(api_activities.router)
 
 
 @app.get("/health")
@@ -243,7 +250,4 @@ async def manifest():
 async def service_worker():
     return FileResponse('static/sw.js', media_type='application/javascript')
 
-@app.exception_handler(500)
-async def internal_server_error(request: Request, exc: Exception):
-    logging.error(f"Errore 500: {exc}", exc_info=True)
-    return templates.TemplateResponse(request, "errors/500.html", {}, status_code=500)
+

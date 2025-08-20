@@ -30,6 +30,18 @@
           </li>
           {% endif %}
           <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="attivitaDropdown" role="button" data-bs-toggle="dropdown">Attività</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="/attivita/calendario">Calendario Attività</a></li>
+              {% if current_user.is_admin or current_user.is_allenatore %}
+              <li><a class="dropdown-item" href="/attivita/gestione">Gestione Attività</a></li>
+              <li><a class="dropdown-item" href="/attivita/pagamenti">Pagamenti</a></li>
+              <li><a class="dropdown-item" href="/attivita/istruttori">Gestione Istruttori</a></li>
+              {% endif %}
+              <li><a class="dropdown-item" href="/attivita/estrazioni">Estrazioni</a></li>
+            </ul>
+          </li>
+          <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="risorseDropdown" role="button" data-bs-toggle="dropdown">Risorse</a>
             <ul class="dropdown-menu">
               {% if current_user.is_admin or current_user.is_allenatore %}

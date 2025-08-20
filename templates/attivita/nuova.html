@@ -1,0 +1,326 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Nuova Attività{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Nuova Attività</h1>
+        <a href="/attivita/gestione" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left"></i> Torna alla lista
+        </a>
+      </div>
+      
+      <div class="card">
+        <div class="card-body">
+          <form id="newActivityForm" method="POST" action="/api/attivita/">
+            <!-- Informazioni Generali -->
+            <h5 class="mb-3">Informazioni Generali</h5>
+            <div class="row mb-3">
+              <div class="col-md-8">
+                <label for="title" class="form-label">Titolo *</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+              </div>
+              <div class="col-md-4">
+                <label for="type_id" class="form-label">Tipo Attività *</label>
+                <select class="form-select" id="type_id" name="type_id" required>
+                  <option value="">Seleziona tipo</option>
+                  {% for type in activity_types %}
+                  <option value="{{ type.id }}">{{ type.name }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-12">
+                <label for="short_description" class="form-label">Descrizione</label>
+                <textarea class="form-control" id="short_description" name="short_description" rows="3"></textarea>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="date" class="form-label">Data *</label>
+                <input type="date" class="form-control" id="date" name="date" required>
+              </div>
+              <div class="col-md-4">
+                <label for="start_time" class="form-label">Ora Inizio *</label>
+                <input type="time" class="form-control" id="start_time" name="start_time" required>
+              </div>
+              <div class="col-md-4">
+                <label for="end_time" class="form-label">Ora Fine *</label>
+                <input type="time" class="form-control" id="end_time" name="end_time" required>
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="state" class="form-label">Stato</label>
+                <select class="form-select" id="state" name="state">
+                  <option value="bozza">Bozza</option>
+                  <option value="da_confermare">Da confermare</option>
+                  <option value="confermata">Confermata</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="participants_plan" class="form-label">Partecipanti Previsti</label>
+                <input type="number" class="form-control" id="participants_plan" name="participants_plan" min="0">
+              </div>
+              <div class="col-md-4">
+                <label for="participants_notes" class="form-label">Note Partecipanti</label>
+                <input type="text" class="form-control" id="participants_notes" name="participants_notes">
+              </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Cliente e Contatti -->
+            <h5 class="mb-3">Cliente e Contatti</h5>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="customer_name" class="form-label">Nome Cliente</label>
+                <input type="text" class="form-control" id="customer_name" name="customer_name">
+              </div>
+              <div class="col-md-6">
+                <label for="customer_email" class="form-label">Email Cliente</label>
+                <input type="email" class="form-control" id="customer_email" name="customer_email">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="contact_name" class="form-label">Nome Contatto</label>
+                <input type="text" class="form-control" id="contact_name" name="contact_name">
+              </div>
+              <div class="col-md-4">
+                <label for="contact_phone" class="form-label">Telefono Contatto</label>
+                <input type="tel" class="form-control" id="contact_phone" name="contact_phone">
+              </div>
+              <div class="col-md-4">
+                <label for="contact_email" class="form-label">Email Contatto</label>
+                <input type="email" class="form-control" id="contact_email" name="contact_email">
+              </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Pagamento -->
+            <h5 class="mb-3">Pagamento</h5>
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="payment_amount" class="form-label">Importo</label>
+                <div class="input-group">
+                  <span class="input-group-text">€</span>
+                  <input type="number" class="form-control" id="payment_amount" name="payment_amount" min="0" step="0.01">
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label for="payment_method" class="form-label">Metodo Pagamento</label>
+                <select class="form-select" id="payment_method" name="payment_method">
+                  <option value="">Seleziona metodo</option>
+                  <option value="contanti">Contanti</option>
+                  <option value="carta">Carta</option>
+                  <option value="bonifico">Bonifico</option>
+                  <option value="assegno">Assegno</option>
+                  <option value="voucher">Voucher</option>
+                  <option value="altro">Altro</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label for="payment_state" class="form-label">Stato Pagamento</label>
+                <select class="form-select" id="payment_state" name="payment_state">
+                  <option value="da_effettuare">Da effettuare</option>
+                  <option value="da_verificare">Da verificare</option>
+                  <option value="confermato">Confermato</option>
+                </select>
+              </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Fatturazione -->
+            <h5 class="mb-3">Fatturazione</h5>
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="billing_name" class="form-label">Nome Fatturazione</label>
+                <input type="text" class="form-control" id="billing_name" name="billing_name">
+              </div>
+              <div class="col-md-6">
+                <label for="billing_vat_or_cf" class="form-label">P.IVA / Codice Fiscale</label>
+                <input type="text" class="form-control" id="billing_vat_or_cf" name="billing_vat_or_cf">
+              </div>
+            </div>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="billing_sdi_or_pec" class="form-label">SDI / PEC</label>
+                <input type="text" class="form-control" id="billing_sdi_or_pec" name="billing_sdi_or_pec">
+              </div>
+              <div class="col-md-6">
+                <label for="billing_address" class="form-label">Indirizzo Fatturazione</label>
+                <input type="text" class="form-control" id="billing_address" name="billing_address">
+              </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Requisiti -->
+            <h5 class="mb-3">Requisiti</h5>
+            <div id="requirements-container">
+              <div class="requirement-item card mb-3">
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-6">
+                      <label class="form-label">Tipo Qualifica</label>
+                      <select class="form-select requirement-qualification" name="requirements[0][qualification_type_id]" required>
+                        <option value="">Seleziona qualifica</option>
+                        {% for qual in qualification_types %}
+                        <option value="{{ qual.id }}">{{ qual.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label">Quantità</label>
+                      <input type="number" class="form-control requirement-quantity" name="requirements[0][quantity]" min="1" value="1" required>
+                    </div>
+                    <div class="col-md-2">
+                      <label class="form-label">&nbsp;</label>
+                      <button type="button" class="btn btn-outline-danger d-block w-100" onclick="removeRequirement(this)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="text-center mb-3">
+              <button type="button" class="btn btn-outline-primary" onclick="addRequirement()">
+                <i class="bi bi-plus-circle"></i> Aggiungi Requisito
+              </button>
+            </div>
+            
+            <hr>
+            
+            <!-- Pulsanti -->
+            <div class="text-center">
+              <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-check-circle"></i> Crea Attività
+              </button>
+              <a href="/attivita/gestione" class="btn btn-outline-secondary btn-lg ms-2">
+                <i class="bi bi-x-circle"></i> Annulla
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let requirementCounter = 1;
+
+function addRequirement() {
+    const container = document.getElementById('requirements-container');
+    const newRequirement = document.createElement('div');
+    newRequirement.className = 'requirement-item card mb-3';
+    
+    newRequirement.innerHTML = `
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label">Tipo Qualifica</label>
+                    <select class="form-select requirement-qualification" name="requirements[${requirementCounter}][qualification_type_id]" required>
+                        <option value="">Seleziona qualifica</option>
+                        {% for qual in qualification_types %}
+                        <option value="{{ qual.id }}">{{ qual.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Quantità</label>
+                    <input type="number" class="form-control requirement-quantity" name="requirements[${requirementCounter}][quantity]" min="1" value="1" required>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="button" class="btn btn-outline-danger d-block w-100" onclick="removeRequirement(this)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newRequirement);
+    requirementCounter++;
+}
+
+function removeRequirement(button) {
+    const requirementItem = button.closest('.requirement-item');
+    if (document.querySelectorAll('.requirement-item').length > 1) {
+        requirementItem.remove();
+    }
+}
+
+// Gestione form
+document.getElementById('newActivityForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {};
+    
+    // Raccogli i dati del form
+    for (let [key, value] of formData.entries()) {
+        if (key.startsWith('requirements[')) {
+            // Gestisci i requisiti
+            const match = key.match(/requirements\[(\d+)\]\[(\w+)\]/);
+            if (match) {
+                const index = match[1];
+                const field = match[2];
+                if (!data.requirements) data.requirements = {};
+                if (!data.requirements[index]) data.requirements[index] = {};
+                data.requirements[index][field] = value;
+            }
+        } else {
+            data[key] = value;
+        }
+    }
+    
+    // Converti i requisiti in array
+    if (data.requirements) {
+        data.requirements = Object.values(data.requirements);
+    }
+    
+    try {
+        const response = await fetch('/api/attivita/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            alert('Attività creata con successo!');
+            window.location.href = `/attivita/dettaglio/${result.id}`;
+        } else {
+            const error = await response.json();
+            alert('Errore nella creazione: ' + (error.detail || 'Errore sconosciuto'));
+        }
+    } catch (error) {
+        console.error('Errore nella creazione:', error);
+        alert('Errore nella creazione dell\'attività');
+    }
+});
+
+// Imposta data di default a domani
+document.getElementById('date').value = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+</script>
+{% endblock %}

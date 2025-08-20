@@ -1,5 +1,5 @@
 """Routes for attendance management."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -34,7 +34,7 @@ async def toggle_attendance(
     if not training:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Training not found")
     start_dt, _ = parse_orario(training.data, training.orario)
-    if datetime.utcnow() >= start_dt - timedelta(hours=3):
+    if datetime.now(timezone.utc) >= start_dt - timedelta(hours=3):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cambio limite superato")
     roster = get_roster_for_training(db, training)
     if current_user.id not in [a.id for a in roster]:
@@ -52,7 +52,7 @@ async def toggle_attendance(
         attendance.status = desired_status
         attendance.change_count += 1
         attendance.source = models.AttendanceSource.athlete
-        attendance.last_changed_at = datetime.utcnow()
+        attendance.last_changed_at = datetime.now(timezone.utc)
         log = models.AttendanceChangeLog(
             attendance=attendance,
             changed_by_user_id=current_user.id,
@@ -71,7 +71,7 @@ async def toggle_attendance(
             status=desired_status,
             source=models.AttendanceSource.athlete,
             change_count=1,
-            last_changed_at=datetime.utcnow(),
+            last_changed_at=datetime.now(timezone.utc),
         )
         db.add(attendance)
         db.flush()
@@ -167,14 +167,14 @@ async def bulk_set_attendance(
             old_status = attendance.status
             attendance.status = desired_status
             attendance.source = models.AttendanceSource.coach
-            attendance.last_changed_at = datetime.utcnow()
+            attendance.last_changed_at = datetime.now(timezone.utc)
         else:
             attendance = models.Attendance(
                 training_id=training_id,
                 athlete_id=item.athlete_id,
                 status=desired_status,
                 source=models.AttendanceSource.coach,
-                last_changed_at=datetime.utcnow(),
+                last_changed_at=datetime.now(timezone.utc),
             )
             db.add(attendance)
             old_status = models.AttendanceStatus.maybe
@@ -215,14 +215,14 @@ async def set_attendance(
         old_status = attendance.status
         attendance.status = desired_status
         attendance.source = models.AttendanceSource.coach
-        attendance.last_changed_at = datetime.utcnow()
+        attendance.last_changed_at = datetime.now(timezone.utc)
     else:
         attendance = models.Attendance(
             training_id=training_id,
             athlete_id=athlete_id,
             status=desired_status,
             source=models.AttendanceSource.coach,
-            last_changed_at=datetime.utcnow(),
+            last_changed_at=datetime.now(timezone.utc),
         )
         db.add(attendance)
         old_status = models.AttendanceStatus.maybe

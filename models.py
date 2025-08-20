@@ -1,6 +1,6 @@
 """SQLAlchemy models for the application."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Tuple
 import enum
 
@@ -24,6 +24,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, object_session, backref
 from sqlalchemy.orm.attributes import flag_modified
 from database import Base
+
+# Import dei modelli per le attività
+from models.activities import (
+    ActivityType, QualificationType, Activity, UserQualification,
+    ActivityRequirement, ActivityAssignment, ActivityAudit
+)
 
 # --- TABELLE DI ASSOCIAZIONE (MOLTI-A-MOLTI) ---
 
@@ -123,6 +129,10 @@ class User(Base):
     @property
     def is_atleta(self) -> bool:
         return any(role.name == "atleta" for role in self.roles)
+
+    @property
+    def is_istruttore(self) -> bool:
+        return any(role.name == "istruttore" for role in self.roles)
 
     @property
     def full_name(self) -> str:
@@ -326,7 +336,7 @@ class AttendanceChangeLog(Base):
     old_status = Column(Enum(AttendanceStatus), nullable=True)
     new_status = Column(Enum(AttendanceStatus), nullable=False)
     source = Column(Enum(AttendanceSource), nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     reason = Column(String, nullable=True)
 
     attendance = relationship(

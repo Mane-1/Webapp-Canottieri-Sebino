@@ -1,7 +1,7 @@
 # File: seed.py
 import os
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 import logging
 import random
 
@@ -397,17 +397,19 @@ def main():
         seed_pesi(db)
 
         # Crea Utente Admin
-        if not db.query(models.User).filter(models.User.username == "gabriele").first():
+        admin_username = os.environ.get("ADMIN_USERNAME", "admin")
+        admin_password = os.environ.get("ADMIN_PASSWORD")
+        if admin_password and not db.query(models.User).filter(models.User.username == admin_username).first():
             admin_role = db.query(models.Role).filter_by(name='admin').one()
             allenatore_role = db.query(models.Role).filter_by(name='allenatore').one()
             admin_user = models.User(
-                username="gabriele", hashed_password=security.get_password_hash("manenti"),
-                first_name="Gabriele", last_name="Manenti", email="gabriele.manenti@example.com",
+                username=admin_username, hashed_password=security.get_password_hash(admin_password),
+                first_name="Admin", last_name="User", email=os.environ.get("ADMIN_EMAIL", "admin@example.com"),
                 date_of_birth=date(1990, 1, 1), roles=[admin_role, allenatore_role]
             )
             db.add(admin_user)
             db.commit()
-            logger.info("Utente admin 'gabriele' creato.")
+            logger.info(f"Utente admin '{admin_username}' creato.")
 
         # Popola Atleti
         atleta_role = db.query(models.Role).filter_by(name='atleta').one()
@@ -501,6 +503,9 @@ def main():
 
         # Popola Barche
         seed_barche(db)
+        
+        # Popola dati per le attività
+        seed_activities_data(db)
 
     except Exception as e:
         logger.error(f"Errore durante il seeding: {e}")
@@ -508,6 +513,139 @@ def main():
     finally:
         db.close()
     logger.info("Seeding completato!")
+
+
+def seed_activities_data(db: Session):
+    """Popola i dati iniziali per le attività."""
+    try:
+        logger.info("Popolamento dati attività...")
+        
+        # Importa i modelli delle attività
+        from models.activities import (
+            ActivityType, QualificationType, Activity, ActivityRequirement
+        )
+        
+        # Crea tipi di qualifica se non esistono
+        if db.query(QualificationType).count() == 0:
+            qualification_types = [
+                QualificationType(name="Allenatore", is_active=True),
+                QualificationType(name="Istruttore", is_active=True),
+                QualificationType(name="Autista gommone", is_active=True),
+                QualificationType(name="Autista furgone", is_active=True),
+                QualificationType(name="Timoniere vichinga", is_active=True),
+            ]
+            db.add_all(qualification_types)
+            db.commit()
+            logger.info("Tipi di qualifica creati.")
+        
+        # Crea tipi di attività se non esistono
+        if db.query(ActivityType).count() == 0:
+            activity_types = [
+                ActivityType(name="Corso Kayak", color="#007bff", is_active=True),
+                ActivityType(name="Teambuilding", color="#28a745", is_active=True),
+            ]
+            db.add_all(activity_types)
+            db.commit()
+            logger.info("Tipi di attività creati.")
+        
+        # Crea attività di esempio se non esistono
+        if db.query(Activity).count() == 0:
+            # Ottieni i tipi creati
+            corso_kayak_type = db.query(ActivityType).filter_by(name="Corso Kayak").first()
+            teambuilding_type = db.query(ActivityType).filter_by(name="Teambuilding").first()
+            
+            # Ottieni le qualifiche
+            istruttore_qual = db.query(QualificationType).filter_by(name="Istruttore").first()
+            autista_gommone_qual = db.query(QualificationType).filter_by(name="Autista gommone").first()
+            
+            # Crea attività di esempio
+            tomorrow = date.today() + timedelta(days=1)
+            next_week = date.today() + timedelta(days=7)
+            
+            corso_kayak = Activity(
+                title="Corso Kayak Base - Gruppo A",
+                short_description="Corso introduttivo al kayak per principianti",
+                state="confermata",
+                type_id=corso_kayak_type.id,
+                date=tomorrow,
+                start_time=time(9, 0),
+                end_time=time(12, 0),
+                customer_name="Centro Sportivo Comunale",
+                customer_email="info@centrosportivo.it",
+                contact_name="Marco Rossi",
+                contact_phone="+39 123 456 789",
+                contact_email="marco.rossi@centrosportivo.it",
+                participants_plan=8,
+                payment_amount=400.00,
+                payment_method="bonifico",
+                payment_state="confermato"
+            )
+            db.add(corso_kayak)
+            db.flush()  # Per ottenere l'ID
+            
+            teambuilding = Activity(
+                title="Teambuilding Aziendale - Team Building",
+                short_description="Attività di team building per azienda",
+                state="da_confermare",
+                type_id=teambuilding_type.id,
+                date=next_week,
+                start_time=time(14, 0),
+                end_time=time(18, 0),
+                customer_name="TechCorp SRL",
+                customer_email="hr@techcorp.it",
+                contact_name="Anna Bianchi",
+                contact_phone="+39 987 654 321",
+                contact_email="anna.bianchi@techcorp.it",
+                participants_plan=15,
+                payment_amount=800.00,
+                payment_method="carta",
+                payment_state="da_effettuare"
+            )
+            db.add(teambuilding)
+            db.flush()  # Per ottenere l'ID
+            
+            # Crea requisiti per le attività
+            req_corso_istruttore = ActivityRequirement(
+                activity_id=corso_kayak.id,
+                qualification_type_id=istruttore_qual.id,
+                quantity=1
+            )
+            db.add(req_corso_istruttore)
+            
+            req_teambuilding_istruttore = ActivityRequirement(
+                activity_id=teambuilding.id,
+                qualification_type_id=istruttore_qual.id,
+                quantity=2
+            )
+            db.add(req_teambuilding_istruttore)
+            
+            req_teambuilding_autista = ActivityRequirement(
+                activity_id=teambuilding.id,
+                qualification_type_id=autista_gommone_qual.id,
+                quantity=1
+            )
+            db.add(req_teambuilding_autista)
+            
+            db.commit()
+            logger.info("Attività di esempio create con requisiti.")
+        
+        # Assegna qualifiche ad alcuni utenti esistenti
+        istruttore_role = db.query(models.Role).filter_by(name='istruttore').first()
+        if istruttore_role:
+            # Assegna ruolo istruttore ad alcuni utenti
+            istruttori_candidates = ["alberto.carizzoni", "anna.manenti"]
+            for username in istruttori_candidates:
+                user = db.query(models.User).filter_by(username=username).first()
+                if user and istruttore_role not in user.roles:
+                    user.roles.append(istruttore_role)
+            
+            db.commit()
+            logger.info("Ruoli istruttore assegnati.")
+        
+    except Exception as e:
+        logger.error(f"Errore durante il seeding delle attività: {e}")
+        db.rollback()
+        raise
 
 
 if __name__ == "__main__":
