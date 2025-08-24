@@ -680,3 +680,274 @@ async def get_payments_summary(
     )
     
     return PaymentSummary(kpi=kpi, activities=activities)
+
+
+@router.get("/{activity_id}/available-instructors")
+async def get_available_instructors(
+    activity_id: int,
+    requirement_id: int = Query(..., description="ID del requisito"),
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Ottiene gli istruttori disponibili per un requisito specifico."""
+    # Verifica che l'attività esista
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Attività non trovata")
+    
+    # Ottieni il requisito
+    requirement = db.query(ActivityRequirement).filter(
+        ActivityRequirement.id == requirement_id,
+        ActivityRequirement.activity_id == activity_id
+    ).first()
+    if not requirement:
+        raise HTTPException(status_code=404, detail="Requisito non trovato")
+    
+    # Ottieni tutti gli istruttori con la qualifica richiesta
+    qualified_instructors = db.query(User).join(UserQualification).options(
+        selectinload(User.user_qualifications).selectinload(UserQualification.qualification_type)
+    ).filter(
+        UserQualification.qualification_type_id == requirement.qualification_type_id,
+        User.is_active == True
+    ).all()
+    
+    # Calcola i conflitti per il periodo dell'attività
+    conflicts = []
+    for instructor in qualified_instructors:
+        # Verifica se l'istruttore è già assegnato a questa attività
+        existing_assignment = db.query(ActivityAssignment).filter(
+            ActivityAssignment.user_id == instructor.id,
+            ActivityAssignment.activity_id == activity_id
+        ).first()
+        
+        if existing_assignment:
+            conflicts.append(instructor.id)
+            continue
+        
+        # Verifica se l'istruttore ha conflitti di tempo con altre attività
+        conflicting_activities = db.query(Activity).join(ActivityAssignment).filter(
+            ActivityAssignment.user_id == instructor.id,
+            Activity.id != activity_id,
+            Activity.date == activity.date,
+            or_(
+                and_(Activity.start_time <= activity.start_time, Activity.end_time > activity.start_time),
+                and_(Activity.start_time < activity.end_time, Activity.end_time >= activity.end_time),
+                and_(Activity.start_time >= activity.start_time, Activity.end_time <= activity.end_time)
+            )
+        ).first()
+        
+        if conflicting_activities:
+            conflicts.append(instructor.id)
+    
+    return {
+        "instructors": [
+            {
+                "id": instructor.id,
+                "full_name": f"{instructor.first_name} {instructor.last_name}",
+                "email": instructor.email,
+                "qualifications": ", ".join([
+                    uq.qualification_type.name 
+                    for uq in instructor.user_qualifications 
+                    if uq.qualification_type.is_active
+                ])
+            }
+            for instructor in qualified_instructors
+        ],
+        "conflicts": conflicts
+    }
+
+
+@router.post("/{activity_id}/assign-instructor")
+async def assign_instructor(
+    activity_id: int,
+    assignment_data: dict,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Assegna un istruttore a un requisito specifico."""
+    instructor_id = assignment_data.get("instructor_id")
+    requirement_id = assignment_data.get("requirement_id")
+    
+    if not instructor_id or not requirement_id:
+        raise HTTPException(status_code=400, detail="Dati mancanti")
+    
+    # Verifica che l'attività esista
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Attività non trovata")
+    
+    # Verifica che il requisito esista
+    requirement = db.query(ActivityRequirement).filter(
+        ActivityRequirement.id == requirement_id,
+        ActivityRequirement.activity_id == activity_id
+    ).first()
+    if not requirement:
+        raise HTTPException(status_code=404, detail="Requisito non trovato")
+    
+    # Verifica che l'istruttore abbia la qualifica richiesta
+    user_qualification = db.query(UserQualification).filter(
+        UserQualification.user_id == instructor_id,
+        UserQualification.qualification_type_id == requirement.qualification_type_id
+    ).first()
+    if not user_qualification:
+        raise HTTPException(status_code=400, detail="L'utente non ha la qualifica richiesta")
+    
+    # Verifica che l'istruttore non sia già assegnato a questa attività
+    existing_assignment = db.query(ActivityAssignment).filter(
+        ActivityAssignment.user_id == instructor_id,
+        ActivityAssignment.activity_id == activity_id
+    ).first()
+    if existing_assignment:
+        raise HTTPException(status_code=400, detail="L'istruttore è già assegnato a questa attività")
+    
+    # Crea l'assegnazione
+    assignment = ActivityAssignment(
+        activity_id=activity_id,
+        user_id=instructor_id,
+        requirement_id=requirement_id,
+        hours=0  # Da calcolare in base alla durata dell'attività
+    )
+    
+    db.add(assignment)
+    db.commit()
+    
+    return {"success": True, "message": "Istruttore assegnato con successo"}
+
+
+@router.post("/{activity_id}/payment-notes")
+async def update_payment_notes(
+    activity_id: int,
+    notes_data: dict,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Aggiorna le note di pagamento di un'attività."""
+    notes = notes_data.get("notes", "")
+    
+    # Verifica che l'attività esista
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Attività non trovata")
+    
+    try:
+        # Aggiorna le note di pagamento
+        activity.payment_notes = notes
+        activity.updated_at = datetime.utcnow()
+        
+        db.commit()
+        
+        return {"success": True, "message": "Note di pagamento aggiornate con successo"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Errore nell'aggiornamento delle note: {str(e)}")
+
+
+# --- ENDPOINTS PER LA GESTIONE ISTRUTTORI ---
+
+@router.get("/istruttori/{instructor_id}")
+async def get_instructor(
+    instructor_id: int,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Ottiene i dettagli di un istruttore specifico."""
+    instructor = db.query(User).options(
+        selectinload(User.roles),
+        selectinload(User.qualifications).selectinload(UserQualification.qualification_type)
+    ).filter(User.id == instructor_id).first()
+    
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Istruttore non trovato")
+    
+    return {
+        "id": instructor.id,
+        "first_name": instructor.first_name,
+        "last_name": instructor.last_name,
+        "email": instructor.email,
+        "birth_date": instructor.birth_date.isoformat() if instructor.birth_date else None,
+        "phone": getattr(instructor, 'phone', None),
+        "address": getattr(instructor, 'address', None),
+        "roles": [{"id": role.id, "name": role.name} for role in instructor.roles],
+        "qualifications": [
+            {
+                "id": uq.id,
+                "qualification_type_id": uq.qualification_type_id,
+                "qualification_type": {
+                    "id": uq.qualification_type.id,
+                    "name": uq.qualification_type.name
+                }
+            }
+            for uq in instructor.qualifications
+        ]
+    }
+
+
+@router.put("/istruttori/{instructor_id}")
+async def update_instructor(
+    instructor_id: int,
+    instructor_data: dict,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Aggiorna i dati di un istruttore."""
+    # Verifica che l'istruttore esista
+    instructor = db.query(User).filter(User.id == instructor_id).first()
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Istruttore non trovato")
+    
+    try:
+        # Aggiorna i dati base
+        instructor.first_name = instructor_data.get("first_name")
+        instructor.last_name = instructor_data.get("last_name")
+        instructor.email = instructor_data.get("email")
+        
+        # Aggiorna data di nascita se fornita
+        if instructor_data.get("birth_date"):
+            instructor.birth_date = datetime.strptime(instructor_data.get("birth_date"), "%Y-%m-%d").date()
+        
+        # Aggiorna altri campi se esistono nel modello
+        if hasattr(instructor, 'phone'):
+            instructor.phone = instructor_data.get("phone")
+        if hasattr(instructor, 'address'):
+            instructor.address = instructor_data.get("address")
+        
+        # Aggiorna le qualifiche
+        new_qualifications = instructor_data.get("qualifications", [])
+        
+        # Rimuovi qualifiche esistenti
+        db.query(UserQualification).filter(UserQualification.user_id == instructor_id).delete()
+        
+        # Aggiungi nuove qualifiche
+        for qual_id in new_qualifications:
+            user_qual = UserQualification(
+                user_id=instructor_id,
+                qualification_type_id=qual_id
+            )
+            db.add(user_qual)
+        
+        db.commit()
+        
+        return {"success": True, "message": "Istruttore aggiornato con successo"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Errore nell'aggiornamento: {str(e)}")
+
+
+@router.get("/qualification-types")
+async def get_qualification_types(
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Ottiene tutti i tipi di qualifica disponibili."""
+    qualification_types = db.query(QualificationType).filter(QualificationType.is_active == True).all()
+    
+    return [
+        {
+            "id": qt.id,
+            "name": qt.name,
+            "description": getattr(qt, 'description', None)
+        }
+        for qt in qualification_types
+    ]

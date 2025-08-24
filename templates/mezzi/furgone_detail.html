@@ -10,18 +10,18 @@
                 <div>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi">Mezzi</a></li>
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi?tipo_filter=furgoni">Furgoni</a></li>
+                                            <li class="breadcrumb-item"><a href="/mezzi">Mezzi</a></li>
+                <li class="breadcrumb-item"><a href="/mezzi?tipo_filter=furgoni">Furgoni</a></li>
                             <li class="breadcrumb-item active">{{ furgone.marca }} {{ furgone.modello }}</li>
                         </ol>
                     </nav>
                 </div>
                 <div>
-                    <a href="/risorse/mezzi?tipo_filter=furgoni" class="btn btn-outline-secondary">
+                    <a href="/mezzi?tipo_filter=furgoni" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Torna ai Furgoni
                     </a>
                     {% if current_user.is_admin %}
-                    <a href="/risorse/mezzi/gestione" class="btn btn-primary">
+                    <a href="/mezzi/gestione" class="btn btn-primary">
                         <i class="fas fa-cog me-2"></i>Gestione
                     </a>
                     {% endif %}
@@ -111,7 +111,7 @@
                                                 {% if giorni_rimanenti > 0 %}
                                                     <small class="text-muted">{{ giorni_rimanenti }} giorni rimanenti</small>
                                                 {% else %}
-                                                    <small class="text-danger">Scaduto da {{ abs(giorni_rimanenti) }} giorni</small>
+                                                    <small class="text-danger">Scaduto da {{ -giorni_rimanenti }} giorni</small>
                                                 {% endif %}
                                                 {% if frazionamento %}
                                                 <br><small class="text-muted">{{ frazionamento }}</small>

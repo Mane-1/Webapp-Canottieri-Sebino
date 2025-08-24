@@ -1,0 +1,225 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Registro Ore - {{ gommone.nome }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/mezzi">Mezzi</a></li>
+            <li class="breadcrumb-item"><a href="/mezzi?tipo_filter=gommoni">Gommoni</a></li>
+            <li class="breadcrumb-item"><a href="/mezzi/gommone/{{ gommone.id }}">{{ gommone.nome }}</a></li>
+            <li class="breadcrumb-item active">Registro Ore</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h2 mb-0">
+                    <i class="fas fa-clock me-2"></i>Registro Ore - {{ gommone.nome }}
+                </h1>
+                <div>
+                    <a href="/mezzi/gommone/{{ gommone.id }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-2"></i>Torna al Dettaglio
+                    </a>
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#aggiungiOreModal">
+                        <i class="fas fa-plus me-2"></i>Aggiungi Ore
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiche -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Ore Totali</h5>
+                    <h2 class="mb-0">{{ "%.1f"|format(ore_totali) }}</h2>
+                    <small>Ore di utilizzo complessive</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Utilizzi Registrati</h5>
+                    <h2 class="mb-0">{{ utilizzi|length }}</h2>
+                    <small>Numero di utilizzi</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Allenatori</h5>
+                    <h2 class="mb-0">{{ ore_per_allenatore|length }}</h2>
+                    <small>Allenatori che hanno utilizzato</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ore per Allenatore -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Ore per Allenatore</h5>
+                </div>
+                <div class="card-body">
+                    {% if ore_per_allenatore %}
+                        <div class="row">
+                            {% for allenatore, ore in ore_per_allenatore.items() %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                                    <span class="fw-bold">{{ allenatore }}</span>
+                                    <span class="badge bg-primary fs-6">{{ "%.1f"|format(ore) }} ore</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mb-0">Nessun allenatore ha ancora utilizzato questo gommone.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabella Utilizzi -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Storico Utilizzi</h5>
+        </div>
+        <div class="card-body">
+            {% if utilizzi %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Allenatore</th>
+                                <th>Ore</th>
+                                <th>Note</th>
+                                <th>Registrato il</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for utilizzo in utilizzi %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold">{{ utilizzo.data_utilizzo.strftime('%d/%m/%Y') }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-primary">{{ utilizzo.allenatore.full_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success fs-6">{{ "%.1f"|format(utilizzo.ore_utilizzo) }} ore</span>
+                                </td>
+                                <td>
+                                    {% if utilizzo.note %}
+                                        <span class="text-muted">{{ utilizzo.note }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ utilizzo.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">Nessun utilizzo registrato</h4>
+                    <p class="text-muted">Inizia ad aggiungere le ore di utilizzo del gommone.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Aggiungi Ore -->
+<div class="modal fade" id="aggiungiOreModal" tabindex="-1" aria-labelledby="aggiungiOreModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aggiungiOreModalLabel">Aggiungi Ore di Utilizzo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/mezzi/gommone/{{ gommone.id }}/ore">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="data_utilizzo" class="form-label">Data di utilizzo *</label>
+                        <input type="date" class="form-control" id="data_utilizzo" name="data_utilizzo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ore_utilizzo" class="form-label">Ore di utilizzo *</label>
+                        <input type="number" class="form-control" id="ore_utilizzo" name="ore_utilizzo" 
+                               step="0.1" min="0.1" max="24" required>
+                        <div class="form-text">Inserisci le ore in formato decimale (es. 2.5 per 2 ore e 30 minuti)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="note" class="form-label">Note (opzionale)</label>
+                        <textarea class="form-control" id="note" name="note" rows="3" 
+                                  placeholder="Eventuali note sull'utilizzo..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Salva Ore
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.badge {
+    font-weight: 500;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    background-color: white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: ">";
+}
+
+.text-primary {
+    color: var(--bs-primary) !important;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: var(--bs-gray-700);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Imposta la data di oggi come default
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('data_utilizzo').value = today;
+});
+</script>
+{% endblock %}

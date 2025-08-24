@@ -3,9 +3,10 @@
 from datetime import date, datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, Request, HTTPException, status, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_, func
+from decimal import Decimal
 
 from database import get_db
 from dependencies import get_current_user, require_roles
@@ -233,7 +234,7 @@ async def activities_payments(
         }
     }
     
-    return render(request, "attivita/pagamenti.html", ctx=context)
+    return render(request, "attivita/pagamenti.html", ctx=context, user=current_user)
 
 
 @router.get("/estrazioni", response_class=HTMLResponse)
@@ -290,13 +291,15 @@ async def instructors_management(
     request: Request,
     current_user: User = Depends(require_roles("admin", "allenatore")),
     db: Session = Depends(get_db),
-    qualification_id: Optional[int] = Query(None)
+    qualification_id: Optional[int] = Query(None),
+    search_text: Optional[str] = Query(None)
 ):
     """Pagina gestione istruttori."""
     # Query base per utenti con ruolo istruttore
     query = db.query(User).join(User.roles).join(Role).filter(
         Role.name == "istruttore"
     ).options(
+        selectinload(User.roles),
         selectinload(User.qualifications).selectinload(UserQualification.qualification_type)
     )
     
@@ -304,6 +307,17 @@ async def instructors_management(
     if qualification_id:
         query = query.join(UserQualification).filter(
             UserQualification.qualification_type_id == qualification_id
+        )
+    
+    # Filtra per testo di ricerca
+    if search_text:
+        text_filter = f"%{search_text}%"
+        query = query.filter(
+            or_(
+                User.first_name.ilike(text_filter),
+                User.last_name.ilike(text_filter),
+                User.email.ilike(text_filter)
+            )
         )
     
     instructors = query.all()
@@ -314,7 +328,11 @@ async def instructors_management(
     context = {
         "instructors": instructors,
         "qualification_types": qualification_types,
-        "selected_qualification_id": qualification_id
+        "selected_qualification_id": qualification_id,
+        "filters": {
+            "qualification_id": qualification_id,
+            "search_text": search_text
+        }
     }
     
     return render(request, "attivita/istruttori.html", ctx=context)
@@ -368,3 +386,58 @@ async def edit_activity_form(
     }
     
     return render(request, "attivita/modifica.html", ctx=context)
+
+
+@router.post("/modifica/{activity_id}", response_class=HTMLResponse)
+async def update_activity(
+    request: Request,
+    activity_id: int,
+    current_user: User = Depends(require_roles("admin", "allenatore")),
+    db: Session = Depends(get_db)
+):
+    """Salva le modifiche a un'attività esistente."""
+    # Ottieni i dati dal form
+    form_data = await request.form()
+    
+    # Ottieni l'attività
+    activity = db.query(Activity).filter(Activity.id == activity_id).first()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Attività non trovata")
+    
+    try:
+        # Aggiorna i campi dell'attività
+        activity.title = form_data.get("title")
+        activity.short_description = form_data.get("short_description")
+        activity.type_id = int(form_data.get("type_id"))
+        activity.state = form_data.get("state")
+        activity.date = datetime.strptime(form_data.get("date"), "%Y-%m-%d").date()
+        activity.start_time = datetime.strptime(form_data.get("start_time"), "%H:%M").time()
+        activity.end_time = datetime.strptime(form_data.get("end_time"), "%H:%M").time()
+        activity.participants_plan = int(form_data.get("participants_plan", 0)) if form_data.get("participants_plan") else 0
+        activity.participants_actual = int(form_data.get("participants_actual", 0)) if form_data.get("participants_actual") else 0
+        activity.participants_notes = form_data.get("participants_notes")
+        activity.customer_name = form_data.get("customer_name")
+        activity.customer_email = form_data.get("customer_email")
+        activity.contact_name = form_data.get("contact_name")
+        activity.contact_phone = form_data.get("contact_phone")
+        activity.contact_email = form_data.get("contact_email")
+        activity.payment_amount = Decimal(form_data.get("payment_amount", 0)) if form_data.get("payment_amount") else None
+        activity.payment_method = form_data.get("payment_method")
+        activity.payment_state = form_data.get("payment_state")
+        activity.billing_name = form_data.get("billing_name")
+        activity.billing_vat_or_cf = form_data.get("billing_vat_or_cf")
+        activity.billing_sdi_or_pec = form_data.get("billing_sdi_or_pec")
+        activity.billing_address = form_data.get("billing_address")
+        
+        # Aggiorna il timestamp
+        activity.updated_at = datetime.utcnow()
+        
+        db.commit()
+        
+        # Redirect alla pagina di gestione con messaggio di successo
+        return RedirectResponse(url=f"/attivita/gestione?message=Attività aggiornata con successo", status_code=303)
+        
+    except Exception as e:
+        db.rollback()
+        # Redirect con messaggio di errore
+        return RedirectResponse(url=f"/attivita/modifica/{activity_id}?error=Errore nell'aggiornamento: {str(e)}", status_code=303)

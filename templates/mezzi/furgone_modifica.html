@@ -10,14 +10,14 @@
                 <div>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi">Mezzi</a></li>
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi/gestione">Gestione Mezzi</a></li>
+                            <li class="breadcrumb-item"><a href="/mezzi">Mezzi</a></li>
+                            <li class="breadcrumb-item"><a href="/mezzi/gestione">Gestione Mezzi</a></li>
                             <li class="breadcrumb-item active">Modifica {{ furgone.marca }} {{ furgone.modello }}</li>
                         </ol>
                     </nav>
                 </div>
                 <div>
-                    <a href="/risorse/mezzi/gestione" class="btn btn-outline-secondary">
+                    <a href="/mezzi/gestione" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Torna alla Gestione
                     </a>
                 </div>
@@ -71,7 +71,7 @@
                             <h5 class="card-title mb-0">Modifica Informazioni Furgone</h5>
                         </div>
                         <div class="card-body">
-                            <form id="modificaFurgoneForm" method="POST" action="/risorse/mezzi/furgone/{{ furgone.id }}/modifica">
+                            <form id="modificaFurgoneForm" method="POST" action="/mezzi/furgone/{{ furgone.id }}/modifica">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
@@ -161,7 +161,7 @@
                                                 {% if giorni > 0 %}
                                                     <span class="badge bg-success">{{ giorni }} giorni</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                    <span class="badge bg-danger">Scaduto da {{ -giorni }} giorni</span>
                                                 {% endif %}
                                             </td>
                                             <td>
@@ -186,7 +186,7 @@
                                                 {% if giorni > 0 %}
                                                     <span class="badge bg-success">{{ giorni }} giorni</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                    <span class="badge bg-danger">Scaduto da {{ -giorni }} giorni</span>
                                                 {% endif %}
                                             </td>
                                             <td>
@@ -211,7 +211,7 @@
                                                 {% if giorni > 0 %}
                                                     <span class="badge bg-success">{{ giorni }} giorni</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                    <span class="badge bg-danger">Scaduto da {{ -giorni }} giorni</span>
                                                 {% endif %}
                                             </td>
                                             <td>
@@ -236,7 +236,7 @@
                                                 {% if giorni > 0 %}
                                                     <span class="badge bg-success">{{ giorni }} giorni</span>
                                                 {% else %}
-                                                    <span class="badge bg-danger">Scaduto da {{ abs(giorni) }} giorni</span>
+                                                    <span class="badge bg-danger">Scaduto da {{ -giorni }} giorni</span>
                                                 {% endif %}
                                             </td>
                                             <td>
@@ -278,7 +278,7 @@
                 <h5 class="modal-title">Nuova Scadenza</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="addScadenzaForm" method="POST" action="/risorse/mezzi/furgone/{{ furgone.id }}/scadenza">
+                            <form id="addScadenzaForm" method="POST" action="/mezzi/furgone/{{ furgone.id }}/scadenza">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="tipo_scadenza" class="form-label">Tipo Scadenza *</label>

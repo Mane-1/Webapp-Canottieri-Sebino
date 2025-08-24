@@ -12,17 +12,20 @@
           <a href="/attivita/gestione" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Torna alla lista
           </a>
-          <a href="/attivita/dettaglio/{{ activity.id }}" class="btn btn-outline-primary">
-            <i class="bi bi-eye"></i> Visualizza
-          </a>
         </div>
       </div>
       
+      <!-- Messaggi di errore e successo -->
+      {% if error %}
+      <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endif %}
+      
       <div class="card">
         <div class="card-body">
-          <form method="POST" action="/api/attivita/{{ activity.id }}">
-            <input type="hidden" name="_method" value="PUT">
-            
+          <form method="POST" action="/attivita/modifica/{{ activity.id }}">
             <div class="row">
               <div class="col-md-8">
                 <h5 class="card-title">Informazioni Generali</h5>
@@ -122,34 +125,37 @@
                 </div>
                 
                 <div class="mb-3">
-                  <label for="contact_name" class="form-label">Nome Contatto</label>
+                  <label for="contact_name" class="form-label">Nome Referente</label>
                   <input type="text" class="form-control" id="contact_name" name="contact_name" value="{{ activity.contact_name or '' }}">
                 </div>
                 
                 <div class="mb-3">
-                  <label for="contact_phone" class="form-label">Telefono Contatto</label>
+                  <label for="contact_phone" class="form-label">Telefono Referente</label>
                   <input type="tel" class="form-control" id="contact_phone" name="contact_phone" value="{{ activity.contact_phone or '' }}">
                 </div>
                 
                 <div class="mb-3">
-                  <label for="contact_email" class="form-label">Email Contatto</label>
+                  <label for="contact_email" class="form-label">Email Referente</label>
                   <input type="email" class="form-control" id="contact_email" name="contact_email" value="{{ activity.contact_email or '' }}">
                 </div>
-                
-                <h5 class="card-title mt-4">Pagamento</h5>
+              </div>
+            </div>
+            
+            <hr class="my-4">
+            
+            <div class="row">
+              <div class="col-md-6">
+                <h5 class="card-title">Pagamento</h5>
                 
                 <div class="mb-3">
                   <label for="payment_amount" class="form-label">Importo</label>
-                  <div class="input-group">
-                    <span class="input-group-text">€</span>
-                    <input type="number" class="form-control" id="payment_amount" name="payment_amount" value="{{ activity.payment_amount or '' }}" step="0.01" min="0">
-                  </div>
+                  <input type="number" class="form-control" id="payment_amount" name="payment_amount" value="{{ activity.payment_amount or '' }}" step="0.01" min="0">
                 </div>
                 
                 <div class="mb-3">
-                  <label for="payment_method" class="form-label">Metodo Pagamento</label>
+                  <label for="payment_method" class="form-label">Metodo di Pagamento</label>
                   <select class="form-select" id="payment_method" name="payment_method">
-                    <option value="">Seleziona...</option>
+                    <option value="">Seleziona metodo</option>
                     <option value="contanti" {% if activity.payment_method == 'contanti' %}selected{% endif %}>Contanti</option>
                     <option value="carta" {% if activity.payment_method == 'carta' %}selected{% endif %}>Carta</option>
                     <option value="bonifico" {% if activity.payment_method == 'bonifico' %}selected{% endif %}>Bonifico</option>
@@ -159,52 +165,50 @@
                 </div>
                 
                 <div class="mb-3">
-                  <label for="payment_state" class="form-label">Stato Pagamento *</label>
+                  <label for="payment_state" class="form-label">Stato Pagamento</label>
                   <select class="form-select" id="payment_state" name="payment_state" required>
-                    <option value="da_effettuare" {% if activity.payment_state == 'da_effettuare' %}selected{% endif %}>Da Effettuare</option>
-                    <option value="da_verificare" {% if activity.payment_state == 'da_verificare' %}selected{% endif %}>Da Verificare</option>
+                    <option value="da_effettuare" {% if activity.payment_state == 'da_effettuare' %}selected{% endif %}>Da effettuare</option>
+                    <option value="da_verificare" {% if activity.payment_state == 'da_verificare' %}selected{% endif %}>Da verificare</option>
                     <option value="confermato" {% if activity.payment_state == 'confermato' %}selected{% endif %}>Confermato</option>
-                    <option value="rifiutato" {% if activity.payment_state == 'rifiutato' %}selected{% endif %}>Rifiutato</option>
                   </select>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <h5 class="card-title">Fatturazione</h5>
+                
+                <div class="mb-3">
+                  <label for="billing_name" class="form-label">Nome/Ragione Sociale</label>
+                  <input type="text" class="form-control" id="billing_name" name="billing_name" value="{{ activity.billing_name or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="billing_vat_or_cf" class="form-label">P.IVA/Codice Fiscale</label>
+                  <input type="text" class="form-control" id="billing_vat_or_cf" name="billing_vat_or_cf" value="{{ activity.billing_vat_or_cf or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="billing_sdi_or_pec" class="form-label">SDI/PEC</label>
+                  <input type="text" class="form-control" id="billing_sdi_or_pec" name="billing_sdi_or_pec" value="{{ activity.billing_sdi_or_pec or '' }}">
+                </div>
+                
+                <div class="mb-3">
+                  <label for="billing_address" class="form-label">Indirizzo</label>
+                  <textarea class="form-control" id="billing_address" name="billing_address" rows="3">{{ activity.billing_address or '' }}</textarea>
                 </div>
               </div>
             </div>
             
-            <hr class="my-4">
-            
-            <div class="d-flex justify-content-between">
-              <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteActivityModal">
-                <i class="bi bi-trash"></i> Elimina Attività
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <a href="/attivita/gestione" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Annulla
+              </a>
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Salva Modifiche
               </button>
-              <div>
-                <a href="/attivita/gestione" class="btn btn-secondary me-2">Annulla</a>
-                <button type="submit" class="btn btn-primary">
-                  <i class="bi bi-check-circle"></i> Salva Modifiche
-                </button>
-              </div>
             </div>
           </form>
         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal conferma eliminazione -->
-<div class="modal fade" id="deleteActivityModal" tabindex="-1" aria-labelledby="deleteActivityModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="deleteActivityModalLabel">Conferma eliminazione</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Sei sicuro di voler eliminare l'attività <strong>{{ activity.title }}</strong>?</p>
-        <p class="text-danger"><small>Questa azione non può essere annullata.</small></p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-        <button type="button" class="btn btn-danger" onclick="deleteActivity({{ activity.id }}, '{{ activity.title }}')">Elimina</button>
       </div>
     </div>
   </div>

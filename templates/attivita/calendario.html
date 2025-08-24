@@ -100,6 +100,59 @@
     background-color: #dc3545;
     color: white;
   }
+  
+  /* Stili per la barra laterale colorata nella vista elenco */
+  .coverage-sidebar {
+    transition: all 0.3s ease;
+  }
+  
+  /* Stili per il modal di assegnazione istruttori */
+  .instructor-badge {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+  }
+  
+  .instructor-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+  
+  .instructor-badge.selected {
+    border-color: #0d6efd;
+    transform: scale(1.05);
+  }
+  
+  .instructor-badge.bg-success:hover {
+    background-color: #198754 !important;
+  }
+  
+  .instructor-badge.bg-danger:hover {
+    background-color: #dc3545 !important;
+  }
+  
+  /* Stili per le card degli istruttori */
+  .instructor-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  
+  .instructor-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .instructor-card.selected {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .instructor-card.border-success {
+    border-left: 4px solid #198754;
+  }
+  
+  .instructor-card.border-danger {
+    border-left: 4px solid #dc3545;
+  }
 </style>
 {% endblock %}
 

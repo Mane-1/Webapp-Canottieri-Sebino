@@ -28,23 +28,39 @@
     background-color: #dc3545;
   }
   
+  /* Colori badge stato */
   .state-badge {
     font-size: 0.75rem;
   }
   
-  .state-bozza { background-color: #6c757d; }
-  .state-confermato { background-color: #198754; }
+  .state-bozza { background-color: #6c757d; color: white; }
+  .state-da_confermare { background-color: #fd7e14; color: white; }
+  .state-confermato { background-color: #198754; color: white; }
+  .state-rimandata { background-color: #fd7e14; color: white; }
   .state-in_corso { background-color: #ffc107; color: black; }
-  .state-completato { background-color: #0d6efd; }
-  .state-annullato { background-color: #dc3545; }
+  .state-completato { background-color: #0d6efd; color: white; }
+  .state-annullato { background-color: #dc3545; color: white; }
   
+  /* Colori badge pagamento */
   .payment-badge {
     font-size: 0.75rem;
   }
   
-  .payment-da_effettuare { background-color: #dc3545; }
+  .payment-da_effettuare { background-color: #dc3545; color: white; }
   .payment-da_verificare { background-color: #ffc107; color: black; }
-  .payment-confermato { background-color: #198754; }
+  .payment-confermato { background-color: #198754; color: white; }
+  
+  /* Barra laterale copertura */
+  .coverage-sidebar {
+    width: 8px;
+    border-radius: 4px 0 0 4px;
+    min-height: 100%;
+    transition: all 0.3s ease;
+  }
+  
+  .coverage-sidebar.green { background-color: #198754; }
+  .coverage-sidebar.yellow { background-color: #ffc107; }
+  .coverage-sidebar.red { background-color: #dc3545; }
 </style>
 {% endblock %}
 
@@ -58,6 +74,14 @@
           <i class="bi bi-plus-circle"></i> Nuova Attività
         </a>
       </div>
+      
+      <!-- Messaggi di successo/errore -->
+      {% if request.query_params.get('message') %}
+      <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> {{ request.query_params.get('message') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endif %}
       
       <!-- Filtri avanzati -->
       <div class="filters-section">
@@ -88,7 +112,9 @@
             <select class="form-select" id="state" name="state">
               <option value="">Tutti gli stati</option>
               <option value="bozza" {% if filters.state == 'bozza' %}selected{% endif %}>Bozza</option>
+              <option value="da_confermare" {% if filters.state == 'da_confermare' %}selected{% endif %}>Da confermare</option>
               <option value="confermato" {% if filters.state == 'confermato' %}selected{% endif %}>Confermato</option>
+              <option value="rimandata" {% if filters.state == 'rimandata' %}selected{% endif %}>Rimandata</option>
               <option value="in_corso" {% if filters.state == 'in_corso' %}selected{% endif %}>In Corso</option>
               <option value="completato" {% if filters.state == 'completato' %}selected{% endif %}>Completato</option>
               <option value="annullato" {% if filters.state == 'annullato' %}selected{% endif %}>Annullato</option>
@@ -127,6 +153,7 @@
             <table class="table table-hover">
               <thead>
                 <tr>
+                  <th style="width: 8px;"></th>
                   <th>Titolo</th>
                   <th>Tipo</th>
                   <th>Data</th>
@@ -139,6 +166,9 @@
               <tbody>
                 {% for activity in activities %}
                 <tr>
+                  <td>
+                    <div class="coverage-sidebar {% if activity.coverage_percentage >= 100 %}green{% elif activity.coverage_percentage > 0 %}yellow{% else %}red{% endif %}"></div>
+                  </td>
                   <td>
                     <strong>{{ activity.title }}</strong>
                     {% if activity.short_description %}
@@ -198,7 +228,7 @@
                       </a>
                       <button type="button" class="btn btn-outline-danger" title="Elimina" 
                               onclick="deleteActivity({{ activity.id }}, '{{ activity.title }}')">
-                        <i class="bi bi-trash me-1"></i>Elimina
+                        <i class="bi bi-trash"></i>
                       </button>
                     </div>
                   </td>
@@ -212,9 +242,6 @@
             <i class="bi bi-calendar-x display-1 text-muted"></i>
             <h5 class="mt-3">Nessuna attività trovata</h5>
             <p class="text-muted">Prova a modificare i filtri o crea una nuova attività.</p>
-            <a href="/attivita/nuova" class="btn btn-primary">
-              <i class="bi bi-plus-circle"></i> Crea la prima attività
-            </a>
           </div>
           {% endif %}
         </div>
@@ -224,11 +251,11 @@
 </div>
 
 <!-- Modal conferma eliminazione -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+<div class="modal fade" id="deleteActivityModal" tabindex="-1" aria-labelledby="deleteActivityModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="deleteModalLabel">Conferma eliminazione</h5>
+        <h5 class="modal-title" id="deleteActivityModalLabel">Conferma eliminazione</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -237,7 +264,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
-        <button type="button" class="btn btn-danger" id="confirmDelete">Elimina</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmDelete">Elimina</button>
       </div>
     </div>
   </div>
@@ -246,39 +273,16 @@
 
 {% block scripts %}
 <script>
-let activityToDelete = null;
-
 function deleteActivity(activityId, activityTitle) {
-    activityToDelete = activityId;
-    document.getElementById('deleteActivityTitle').textContent = activityTitle;
-    
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
+  document.getElementById('deleteActivityTitle').textContent = activityTitle;
+  document.getElementById('btnConfirmDelete').onclick = function() {
+    // Implementa la logica di eliminazione
+    console.log('Eliminazione attività:', activityId);
+    // Qui puoi aggiungere una chiamata AJAX per eliminare l'attività
+  };
+  
+  const modal = new bootstrap.Modal(document.getElementById('deleteActivityModal'));
+  modal.show();
 }
-
-document.getElementById('confirmDelete').addEventListener('click', async function() {
-    if (!activityToDelete) return;
-    
-    try {
-        const response = await fetch(`/api/attivita/${activityToDelete}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            // Ricarica la pagina per aggiornare la lista
-            window.location.reload();
-        } else {
-            const error = await response.json();
-            alert('Errore nell\'eliminazione: ' + (error.detail || 'Errore sconosciuto'));
-        }
-    } catch (error) {
-        console.error('Errore nell\'eliminazione:', error);
-        alert('Errore nell\'eliminazione dell\'attività');
-    }
-    
-    // Chiudi il modal
-    const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-    deleteModal.hide();
-});
 </script>
 {% endblock %}

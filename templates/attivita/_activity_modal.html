@@ -37,34 +37,106 @@
           <div class="tab-pane fade show active" id="generale" role="tabpanel">
             <div class="row mt-3">
               <div class="col-md-8">
-                <h6 class="fw-bold" id="activity-title">Titolo Attività</h6>
-                <p class="text-muted" id="activity-description">Descrizione attività</p>
-                
-                <div class="row">
-                  <div class="col-md-6">
-                    <strong>Data:</strong> <span id="activity-date"></span><br>
-                    <strong>Orario:</strong> <span id="activity-time"></span><br>
-                    <strong>Tipo:</strong> <span id="activity-type"></span><br>
-                    <strong>Stato:</strong> <span id="activity-state"></span>
+                <!-- Informazioni Principali -->
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-info-circle"></i> Informazioni Principali</h6>
                   </div>
-                  <div class="col-md-6">
-                    <strong>Partecipanti previsti:</strong> <span id="activity-participants"></span><br>
-                    <strong>Partecipanti effettivi:</strong> <span id="activity-participants-actual"></span><br>
-                    <strong>Note partecipanti:</strong> <span id="activity-participants-notes"></span>
+                  <div class="card-body">
+                    <h5 class="card-title" id="activity-title">Titolo Attività</h5>
+                    <p class="text-muted" id="activity-description">Descrizione attività</p>
+                  </div>
+                </div>
+                
+                <!-- Dettagli Temporali -->
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-calendar-event"></i> Dettagli Temporali</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="mb-2">
+                          <strong class="text-muted">Data:</strong><br>
+                          <span id="activity-date" class="fw-bold"></span>
+                        </div>
+                        <div class="mb-2">
+                          <strong class="text-muted">Orario:</strong><br>
+                          <span id="activity-time" class="fw-bold"></span>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-2">
+                          <strong class="text-muted">Tipo Attività:</strong><br>
+                          <span id="activity-type" class="fw-bold"></span>
+                        </div>
+                        <div class="mb-2">
+                          <strong class="text-muted">Stato:</strong><br>
+                          <span id="activity-state" class="fw-bold"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Partecipanti -->
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-people"></i> Partecipanti</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="mb-2">
+                          <strong class="text-muted">Partecipanti previsti:</strong><br>
+                          <span id="activity-participants" class="fw-bold"></span>
+                        </div>
+                        <div class="mb-2">
+                          <strong class="text-muted">Partecipanti effettivi:</strong><br>
+                          <span id="activity-participants-actual" class="fw-bold"></span>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-2">
+                          <strong class="text-muted">Note partecipanti:</strong><br>
+                          <span id="activity-participants-notes" class="fw-bold"></span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              
               <div class="col-md-4">
-                <div class="card">
+                <!-- Cliente e Contatti -->
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-person-badge"></i> Cliente</h6>
+                  </div>
                   <div class="card-body">
-                    <h6 class="card-title">Cliente</h6>
-                    <p class="mb-1"><strong id="activity-customer-name"></strong></p>
-                    <p class="mb-1" id="activity-customer-email"></p>
-                    <hr>
-                    <h6 class="card-title">Contatti</h6>
-                    <p class="mb-1"><strong id="activity-contact-name"></strong></p>
-                    <p class="mb-1" id="activity-contact-phone"></p>
-                    <p class="mb-0" id="activity-contact-email"></p>
+                    <div class="mb-3">
+                      <strong id="activity-customer-name" class="d-block mb-2"></strong>
+                      <span id="activity-customer-email" class="text-muted small"></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="card">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-telephone"></i> Contatti</h6>
+                  </div>
+                  <div class="card-body">
+                    <div class="mb-2">
+                      <strong id="activity-contact-name" class="d-block mb-1"></strong>
+                    </div>
+                    <div class="mb-2">
+                      <i class="bi bi-telephone text-muted me-2"></i>
+                      <span id="activity-contact-phone" class="small"></span>
+                    </div>
+                    <div class="mb-0">
+                      <i class="bi bi-envelope text-muted me-2"></i>
+                      <span id="activity-contact-email" class="small"></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -75,7 +147,7 @@
           <div class="tab-pane fade" id="copertura" role="tabpanel">
             <div class="mt-3">
               <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Requisiti e Assegnazioni</h6>
+                <h6 class="mb-0"><i class="bi bi-person-check"></i> Requisiti e Assegnazioni</h6>
                 <div class="coverage-summary">
                   <span class="badge" id="coverage-badge">0/0 (0%)</span>
                 </div>
@@ -104,12 +176,24 @@
               
               <div class="row">
                 <div class="col-md-6">
-                  <h6>Barche necessarie</h6>
-                  <p class="text-muted">Nessuna barca specificata</p>
+                  <div class="card">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-water"></i> Barche necessarie</h6>
+                    </div>
+                    <div class="card-body">
+                      <p class="text-muted mb-0">Nessuna barca specificata</p>
+                    </div>
+                  </div>
                 </div>
                 <div class="col-md-6">
-                  <h6>Attrezzature</h6>
-                  <p class="text-muted">Nessuna attrezzatura specificata</p>
+                  <div class="card">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-tools"></i> Attrezzature</h6>
+                    </div>
+                    <div class="card-body">
+                      <p class="text-muted mb-0">Nessuna attrezzatura specificata</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -119,43 +203,94 @@
           <div class="tab-pane fade" id="pagamento" role="tabpanel">
             <div class="mt-3">
               <div class="row">
-                <div class="col-md-6">
-                  <h6>Dettagli Pagamento</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td><strong>Importo:</strong></td>
-                      <td id="activity-payment-amount"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Metodo:</strong></td>
-                      <td id="activity-payment-method"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Stato:</strong></td>
-                      <td id="activity-payment-state"></td>
-                    </tr>
-                  </table>
-                </div>
-                <div class="col-md-6">
-                  <h6>Fatturazione</h6>
-                  <table class="table table-sm">
-                    <tr>
-                      <td><strong>Nome:</strong></td>
-                      <td id="activity-billing-name"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>P.IVA/CF:</strong></td>
-                      <td id="activity-billing-vat"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>SDI/PEC:</strong></td>
-                      <td id="activity-billing-sdi"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Indirizzo:</strong></td>
-                      <td id="activity-billing-address"></td>
-                    </tr>
-                  </table>
+                <div class="col-12">
+                  <!-- Stato Pagamento con Badge -->
+                  <div class="card mb-3">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-credit-card"></i> Stato Pagamento</h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="d-flex align-items-center mb-3">
+                        <span class="badge fs-6 me-3" id="payment-status-badge">Da effettuare</span>
+                        <span class="text-muted">Ultimo aggiornamento: <span id="payment-last-update">N/A</span></span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Dettagli Pagamento -->
+                  <div class="card mb-3">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-cash-stack"></i> Dettagli Pagamento</h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">Importo</label>
+                          <div class="fs-5 text-primary" id="activity-payment-amount">€ 0.00</div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">Metodo di Pagamento</label>
+                          <div id="activity-payment-method">N/A</div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">Data Scadenza</label>
+                          <div id="activity-payment-due-date">N/A</div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">Riferimento</label>
+                          <div id="activity-payment-reference">N/A</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Note Pagamento -->
+                  <div class="card mb-3">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-sticky"></i> Note Pagamento</h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="mb-3">
+                        <label for="payment-notes" class="form-label">Note e Dettagli</label>
+                        <textarea class="form-control" id="payment-notes" rows="3" placeholder="Inserisci eventuali note o dettagli sul pagamento..."></textarea>
+                      </div>
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-save-notes">
+                          <i class="bi bi-save"></i> Salva Note
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-clear-notes">
+                          <i class="bi bi-trash"></i> Cancella
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Fatturazione -->
+                  <div class="card">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0"><i class="bi bi-building"></i> Dettagli Fatturazione</h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3">
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">Nome/Ragione Sociale</label>
+                          <div id="activity-billing-name">N/A</div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">P.IVA/Codice Fiscale</label>
+                          <div id="activity-billing-vat">N/A</div>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label fw-bold">SDI/PEC</label>
+                          <div id="activity-billing-sdi">N/A</div>
+                        </div>
+                        <div class="col-12">
+                          <label class="form-label fw-bold">Indirizzo Completo</label>
+                          <div id="activity-billing-address">N/A</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -175,17 +310,22 @@
 <!-- Template per i requisiti -->
 <template id="requirement-template">
   <div class="requirement-item card mb-3">
-    <div class="card-body">
-      <div class="d-flex justify-content-between align-items-start">
-        <div>
-          <h6 class="card-title requirement-title">Titolo Requisito</h6>
-          <p class="card-text requirement-description">Descrizione requisito</p>
+    <div class="card-body p-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex align-items-center">
+          <div class="me-3">
+            <i class="bi bi-person-badge text-primary fs-5"></i>
+          </div>
+          <div>
+            <h6 class="card-title mb-1 requirement-title">Titolo Requisito</h6>
+            <small class="text-muted requirement-description">Descrizione requisito</small>
+          </div>
         </div>
         <div class="text-end">
           <span class="badge bg-primary requirement-coverage">0/0</span>
           <div class="mt-1">
             <button type="button" class="btn btn-sm btn-outline-primary btn-add-assignment" style="display: none;">
-              <i class="bi bi-person-plus"></i> Aggiungi
+              <i class="bi bi-person-plus"></i> Assegna
             </button>
           </div>
         </div>
@@ -201,16 +341,56 @@
 <!-- Template per le assegnazioni -->
 <template id="assignment-template">
   <div class="assignment-item d-flex justify-content-between align-items-center p-2 bg-light rounded mb-1">
-    <div>
-      <i class="bi bi-person-circle"></i>
-      <span class="assignment-user-name">Nome Utente</span>
-      <small class="text-muted assignment-role">(Ruolo)</small>
+    <div class="d-flex align-items-center">
+      <i class="bi bi-person-circle text-success me-2"></i>
+      <div>
+        <span class="assignment-user-name fw-medium">Nome Utente</span>
+        <small class="text-muted d-block assignment-role">Ruolo</small>
+      </div>
     </div>
-    <div>
-      <span class="badge bg-secondary assignment-hours">0h</span>
-      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-assignment ms-1" style="display: none;">
+    <div class="d-flex align-items-center">
+      <span class="badge bg-secondary assignment-hours me-2">0h</span>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remove-assignment" style="display: none;">
         <i class="bi bi-x"></i>
       </button>
     </div>
   </div>
 </template>
+
+<!-- Modal per assegnazione istruttori -->
+<div class="modal fade" id="assignInstructorModal" tabindex="-1" aria-labelledby="assignInstructorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="assignInstructorModalLabel">Assegna Istruttore</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <h6 id="requirement-title" class="text-primary"></h6>
+          <p class="text-muted mb-0" id="requirement-description"></p>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Seleziona Istruttore</label>
+          <div id="instructors-container" class="d-flex flex-wrap gap-2">
+            <!-- Popolato via JavaScript -->
+          </div>
+        </div>
+        
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle"></i>
+          <strong>Legenda:</strong>
+          <span class="badge bg-success ms-2">Disponibile</span>
+          <span class="badge bg-danger ms-2">Impegnato in altre attività</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-assignment" disabled>
+          <i class="bi bi-check"></i> Conferma Assegnazione
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

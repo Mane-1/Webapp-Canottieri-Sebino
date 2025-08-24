@@ -7,14 +7,17 @@ from sqlalchemy.orm import Session, joinedload
 from fastapi.templating import Jinja2Templates
 import models
 from database import get_db
-from dependencies import get_current_user, get_current_admin_user
+from dependencies import get_current_user, get_current_admin_user, require_roles
 from services import barche as barche_service, users as users_service
 from services.users import ALLOWED_PESI_CATEGORIES
 from utils.parsing import to_float
 from services import athletes_service
 
 router = APIRouter(prefix="/risorse", tags=["Risorse"])
+mezzi_router = APIRouter(tags=["Mezzi"])  # Router separato per i mezzi senza prefisso
 templates = Jinja2Templates(directory="templates")
+
+
 
 
 @router.get("/barche", response_class=HTMLResponse)
@@ -848,7 +851,7 @@ async def statistiche_pesi(
 
 # --- ROUTE PER I MEZZI ---
 
-@router.get("/mezzi", response_class=HTMLResponse)
+@mezzi_router.get("/", response_class=HTMLResponse)
 async def list_mezzi(
     request: Request,
     db: Session = Depends(get_db),
@@ -856,6 +859,10 @@ async def list_mezzi(
     tipo_filter: str = Query("furgoni", description="Tipo di mezzo da visualizzare")
 ):
     """Lista dei mezzi (furgoni o gommoni)"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
     furgoni = db.query(models.Furgone).order_by(models.Furgone.marca, models.Furgone.modello).all()
     gommoni = db.query(models.Gommone).order_by(models.Gommone.nome).all()
     
@@ -872,13 +879,17 @@ async def list_mezzi(
     )
 
 
-@router.get("/mezzi/furgoni", response_class=HTMLResponse)
+@mezzi_router.get("/furgoni", response_class=HTMLResponse)
 async def list_furgoni(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """Lista dei furgoni"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
     furgoni = db.query(models.Furgone).order_by(models.Furgone.marca, models.Furgone.modello).all()
     return templates.TemplateResponse(
         request,
@@ -892,13 +903,17 @@ async def list_furgoni(
     )
 
 
-@router.get("/mezzi/gommoni", response_class=HTMLResponse)
+@mezzi_router.get("/gommoni", response_class=HTMLResponse)
 async def list_gommoni(
     request: Request,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
     """Lista dei gommoni"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
     gommoni = db.query(models.Gommone).order_by(models.Gommone.nome).all()
     return templates.TemplateResponse(
         request,
@@ -912,7 +927,7 @@ async def list_gommoni(
     )
 
 
-@router.get("/mezzi/gestione", response_class=HTMLResponse)
+@mezzi_router.get("/gestione", response_class=HTMLResponse)
 async def gestione_mezzi(
     request: Request,
     db: Session = Depends(get_db),
@@ -933,7 +948,7 @@ async def gestione_mezzi(
     )
 
 
-@router.get("/mezzi/furgone/{furgone_id}", response_class=HTMLResponse)
+@mezzi_router.get("/furgone/{furgone_id}", response_class=HTMLResponse)
 async def furgone_detail(
     furgone_id: int,
     request: Request,
@@ -941,6 +956,10 @@ async def furgone_detail(
     current_user: models.User = Depends(get_current_user)
 ):
     """Dettaglio furgone"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
     furgone = db.query(models.Furgone).filter(models.Furgone.id == furgone_id).first()
     if not furgone:
         raise HTTPException(status_code=404, detail="Furgone non trovato")
@@ -956,7 +975,7 @@ async def furgone_detail(
     )
 
 
-@router.get("/mezzi/gommone/{gommone_id}", response_class=HTMLResponse)
+@mezzi_router.get("/gommone/{gommone_id}", response_class=HTMLResponse)
 async def gommone_detail(
     gommone_id: int,
     request: Request,
@@ -964,6 +983,10 @@ async def gommone_detail(
     current_user: models.User = Depends(get_current_user)
 ):
     """Dettaglio gommone"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
     gommone = db.query(models.Gommone).filter(models.Gommone.id == gommone_id).first()
     if not gommone:
         raise HTTPException(status_code=404, detail="Gommone non trovato")
@@ -979,9 +1002,93 @@ async def gommone_detail(
     )
 
 
+# --- ROUTE PER REGISTRO ORE GOMMONE SELVA 20CV ---
+
+@mezzi_router.get("/gommone/{gommone_id}/ore", response_class=HTMLResponse)
+async def gommone_ore_detail(
+    gommone_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Dettaglio registro ore gommone - solo per allenatori e admin"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    gommone = db.query(models.Gommone).filter(models.Gommone.id == gommone_id).first()
+    if not gommone:
+        raise HTTPException(status_code=404, detail="Gommone non trovato")
+    
+    # Ottieni tutti gli utilizzi ordinati per data (più recenti prima)
+    utilizzi = db.query(models.GommoneOre).filter(
+        models.GommoneOre.gommone_id == gommone_id
+    ).order_by(models.GommoneOre.data_utilizzo.desc()).all()
+    
+    # Calcola statistiche
+    ore_totali = sum(u.ore_utilizzo for u in utilizzi)
+    
+    # Ore per allenatore
+    ore_per_allenatore = {}
+    for utilizzo in utilizzi:
+        allenatore_nome = utilizzo.allenatore.full_name
+        if allenatore_nome not in ore_per_allenatore:
+            ore_per_allenatore[allenatore_nome] = 0
+        ore_per_allenatore[allenatore_nome] += utilizzo.ore_utilizzo
+    
+    return templates.TemplateResponse(
+        request,
+        "mezzi/gommone_ore_detail.html",
+        {
+            "current_user": current_user,
+            "gommone": gommone,
+            "utilizzi": utilizzi,
+            "ore_totali": ore_totali,
+            "ore_per_allenatore": ore_per_allenatore
+        }
+    )
+
+
+@mezzi_router.post("/gommone/{gommone_id}/ore", response_class=RedirectResponse)
+async def gommone_aggiungi_ore(
+    gommone_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    data_utilizzo: date = Form(...),
+    ore_utilizzo: float = Form(...),
+    note: Optional[str] = Form(None)
+):
+    """Aggiunge ore di utilizzo al gommone - solo per allenatori e admin"""
+    # Verifica che l'utente sia admin o allenatore
+    if not (current_user.is_admin or current_user.is_allenatore):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    gommone = db.query(models.Gommone).filter(models.Gommone.id == gommone_id).first()
+    if not gommone:
+        raise HTTPException(status_code=404, detail="Gommone non trovato")
+    
+    try:
+        nuovo_utilizzo = models.GommoneOre(
+            gommone_id=gommone_id,
+            allenatore_id=current_user.id,
+            data_utilizzo=data_utilizzo,
+            ore_utilizzo=ore_utilizzo,
+            note=note
+        )
+        
+        db.add(nuovo_utilizzo)
+        db.commit()
+        
+        return RedirectResponse(url=f"/mezzi/gommone/{gommone_id}/ore?message=Ore aggiunte con successo", status_code=303)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Errore nell'aggiunta ore: {str(e)}")
+
+
 # --- ROUTE PER MODIFICA MEZZI (SOLO ADMIN) ---
 
-@router.get("/mezzi/furgone/{furgone_id}/modifica", response_class=HTMLResponse)
+@mezzi_router.get("/furgone/{furgone_id}/modifica", response_class=HTMLResponse)
 async def furgone_modifica_form(
     furgone_id: int,
     request: Request,
@@ -1004,7 +1111,7 @@ async def furgone_modifica_form(
     )
 
 
-@router.post("/mezzi/furgone/{furgone_id}/modifica", response_class=RedirectResponse)
+@mezzi_router.post("/furgone/{furgone_id}/modifica", response_class=RedirectResponse)
 async def furgone_modifica_save(
     furgone_id: int,
     request: Request,
@@ -1030,13 +1137,13 @@ async def furgone_modifica_save(
         furgone.updated_at = datetime.now(timezone.utc)
         
         db.commit()
-        return RedirectResponse(url=f"/risorse/mezzi/furgone/{furgone_id}/modifica?message=Modifiche salvate con successo", status_code=303)
+        return RedirectResponse(url=f"/mezzi/furgone/{furgone_id}/modifica?message=Modifiche salvate con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nel salvataggio: {str(e)}")
 
 
-@router.get("/mezzi/gommone/{gommone_id}/modifica", response_class=HTMLResponse)
+@mezzi_router.get("/gommone/{gommone_id}/modifica", response_class=HTMLResponse)
 async def gommone_modifica_form(
     gommone_id: int,
     request: Request,
@@ -1059,7 +1166,7 @@ async def gommone_modifica_form(
     )
 
 
-@router.post("/mezzi/gommone/{gommone_id}/modifica", response_class=RedirectResponse)
+@mezzi_router.post("/gommone/{gommone_id}/modifica", response_class=RedirectResponse)
 async def gommone_modifica_save(
     gommone_id: int,
     request: Request,
@@ -1083,7 +1190,7 @@ async def gommone_modifica_save(
         gommone.updated_at = datetime.now(timezone.utc)
         
         db.commit()
-        return RedirectResponse(url=f"/risorse/mezzi/gommone/{gommone_id}/modifica?message=Modifiche salvate con successo", status_code=303)
+        return RedirectResponse(url=f"/mezzi/gommone/{gommone_id}/modifica?message=Modifiche salvate con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nel salvataggio: {str(e)}")
@@ -1091,7 +1198,7 @@ async def gommone_modifica_save(
 
 # --- ROUTE PER GESTIONE SCADENZE (SOLO ADMIN) ---
 
-@router.post("/mezzi/furgone/{furgone_id}/scadenza", response_class=RedirectResponse)
+@mezzi_router.post("/furgone/{furgone_id}/scadenza", response_class=RedirectResponse)
 async def furgone_aggiungi_scadenza(
     furgone_id: int,
     request: Request,
@@ -1132,13 +1239,13 @@ async def furgone_aggiungi_scadenza(
         
         furgone.updated_at = datetime.now(timezone.utc)
         db.commit()
-        return RedirectResponse(url=f"/risorse/mezzi/furgone/{furgone_id}/modifica?message=Scadenza aggiunta con successo", status_code=303)
+        return RedirectResponse(url=f"/mezzi/furgone/{furgone_id}/modifica?message=Scadenza aggiunta con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nell'aggiunta scadenza: {str(e)}")
 
 
-@router.post("/mezzi/gommone/{gommone_id}/scadenza", response_class=RedirectResponse)
+@mezzi_router.post("/gommone/{gommone_id}/scadenza", response_class=RedirectResponse)
 async def gommone_aggiungi_scadenza(
     gommone_id: int,
     request: Request,
@@ -1169,7 +1276,7 @@ async def gommone_aggiungi_scadenza(
         
         gommone.updated_at = datetime.now(timezone.utc)
         db.commit()
-        return RedirectResponse(url=f"/risorse/mezzi/gommone/{gommone_id}/modifica?message=Scadenza aggiunta con successo", status_code=303)
+        return RedirectResponse(url=f"/mezzi/gommone/{gommone_id}/modifica?message=Scadenza aggiunta con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nell'aggiunta scadenza: {str(e)}")
@@ -1177,7 +1284,7 @@ async def gommone_aggiungi_scadenza(
 
 # --- ROUTE PER ELIMINAZIONE MEZZI (SOLO ADMIN) ---
 
-@router.delete("/mezzi/furgone/{furgone_id}", response_class=RedirectResponse)
+@mezzi_router.delete("/furgone/{furgone_id}", response_class=RedirectResponse)
 async def furgone_delete(
     furgone_id: int,
     request: Request,
@@ -1192,13 +1299,13 @@ async def furgone_delete(
     try:
         db.delete(furgone)
         db.commit()
-        return RedirectResponse(url="/risorse/mezzi/gestione?message=Furgone eliminato con successo", status_code=303)
+        return RedirectResponse(url="/mezzi/gestione?message=Furgone eliminato con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nell'eliminazione: {str(e)}")
 
 
-@router.delete("/mezzi/gommone/{gommone_id}", response_class=RedirectResponse)
+@mezzi_router.delete("/gommone/{gommone_id}", response_class=RedirectResponse)
 async def gommone_delete(
     gommone_id: int,
     request: Request,
@@ -1213,7 +1320,7 @@ async def gommone_delete(
     try:
         db.delete(gommone)
         db.commit()
-        return RedirectResponse(url="/risorse/mezzi/gestione?message=Gommone eliminato con successo", status_code=303)
+        return RedirectResponse(url="/mezzi/gestione?message=Gommone eliminato con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nell'eliminazione: {str(e)}")
@@ -1221,7 +1328,7 @@ async def gommone_delete(
 
 # --- ROUTE PER CREAZIONE MEZZI ---
 
-@router.post("/mezzi/furgone/nuovo", response_class=RedirectResponse)
+@mezzi_router.post("/furgone/nuovo", response_class=RedirectResponse)
 async def crea_furgone(
     request: Request,
     db: Session = Depends(get_db),
@@ -1272,13 +1379,13 @@ async def crea_furgone(
         db.add(nuovo_furgone)
         db.commit()
         
-        return RedirectResponse(url="/risorse/mezzi/gestione?message=Furgone creato con successo", status_code=303)
+        return RedirectResponse(url="/mezzi/gestione?message=Furgone creato con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nella creazione: {str(e)}")
 
 
-@router.post("/mezzi/gommone/nuovo", response_class=RedirectResponse)
+@mezzi_router.post("/gommone/nuovo", response_class=RedirectResponse)
 async def crea_gommone(
     request: Request,
     db: Session = Depends(get_db),
@@ -1315,7 +1422,10 @@ async def crea_gommone(
         db.add(nuovo_gommone)
         db.commit()
         
-        return RedirectResponse(url="/risorse/mezzi/gestione?message=Gommone creato con successo", status_code=303)
+        return RedirectResponse(url="/mezzi/gestione?message=Gommone creato con successo", status_code=303)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Errore nella creazione: {str(e)}")
+
+
+

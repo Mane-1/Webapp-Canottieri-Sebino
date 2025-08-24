@@ -11,7 +11,7 @@
                     <i class="fas fa-truck me-2"></i>Mezzi
                 </h1>
                 {% if current_user.is_admin %}
-                <a href="/risorse/mezzi/gestione" class="btn btn-primary">
+                <a href="/mezzi/gestione" class="btn btn-primary">
                     <i class="fas fa-cog me-2"></i>Gestione Mezzi
                 </a>
                 {% endif %}
@@ -25,11 +25,11 @@
             <div class="card">
                 <div class="card-body">
                     <div class="btn-group w-100" role="group" aria-label="Tipo mezzo">
-                        <a href="/risorse/mezzi?tipo_filter=furgoni" 
+                        <a href="/mezzi?tipo_filter=furgoni" 
                            class="btn btn-outline-primary {% if tipo_filter == 'furgoni' %}active{% endif %}">
                             <i class="fas fa-truck me-2"></i>Furgoni ({{ furgoni|length }})
                         </a>
-                        <a href="/risorse/mezzi?tipo_filter=gommoni" 
+                        <a href="/mezzi?tipo_filter=gommoni" 
                            class="btn btn-outline-primary {% if tipo_filter == 'gommoni' %}active{% endif %}">
                             <i class="fas fa-ship me-2"></i>Gommoni ({{ gommoni|length }})
                         </a>

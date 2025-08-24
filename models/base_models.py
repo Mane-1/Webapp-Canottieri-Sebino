@@ -104,6 +104,9 @@ class User(Base):
     # Relazioni per le attività
     qualifications = relationship("UserQualification", back_populates="user")
     activity_assignments = relationship("ActivityAssignment", back_populates="user")
+    
+    # Relazione per il registro ore gommoni
+    gommone_ore = relationship("GommoneOre", back_populates="allenatore")
 
     @property
     def age(self) -> int:
@@ -412,6 +415,22 @@ class Furgone(Base):
         return scadenze
 
 
+class GommoneOre(Base):
+    __tablename__ = "gommone_ore"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    gommone_id = Column(Integer, ForeignKey("gommoni.id"), nullable=False)
+    allenatore_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    data_utilizzo = Column(Date, nullable=False)
+    ore_utilizzo = Column(Float, nullable=False)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relazioni
+    gommone = relationship("Gommone", back_populates="registro_ore")
+    allenatore = relationship("User", back_populates="gommone_ore")
+
+
 class Gommone(Base):
     __tablename__ = "gommoni"
     
@@ -434,6 +453,9 @@ class Gommone(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relazione con il registro ore
+    registro_ore = relationship("GommoneOre", back_populates="gommone")
     
     @property
     def status_info(self) -> Tuple[str, str]:

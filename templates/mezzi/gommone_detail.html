@@ -10,18 +10,18 @@
                 <div>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi">Mezzi</a></li>
-                            <li class="breadcrumb-item"><a href="/risorse/mezzi?tipo_filter=gommoni">Gommoni</a></li>
+                                            <li class="breadcrumb-item"><a href="/mezzi">Mezzi</a></li>
+                <li class="breadcrumb-item"><a href="/mezzi?tipo_filter=gommoni">Gommoni</a></li>
                             <li class="breadcrumb-item active">{{ gommone.nome }}</li>
                         </ol>
                     </nav>
                 </div>
                 <div>
-                    <a href="/risorse/mezzi?tipo_filter=gommoni" class="btn btn-outline-secondary">
+                    <a href="/mezzi?tipo_filter=gommoni" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Torna ai Gommoni
                     </a>
                     {% if current_user.is_admin %}
-                    <a href="/risorse/mezzi/gestione" class="btn btn-primary">
+                    <a href="/mezzi/gestione" class="btn btn-primary">
                         <i class="fas fa-cog me-2"></i>Gestione
                     </a>
                     {% endif %}
@@ -110,7 +110,7 @@
                                                 {% if giorni_rimanenti > 0 %}
                                                     <small class="text-muted">{{ giorni_rimanenti }} giorni rimanenti</small>
                                                 {% else %}
-                                                    <small class="text-danger">Scaduto da {{ abs(giorni_rimanenti) }} giorni</small>
+                                                    <small class="text-danger">Scaduto da {{ -giorni_rimanenti }} giorni</small>
                                                 {% endif %}
                                                 {% if frazionamento %}
                                                 <br><small class="text-muted">{{ frazionamento }}</small>
@@ -135,6 +135,115 @@
             </div>
         </div>
     </div>
+    
+    <!-- Scheda Registro Orario (solo per Selva 20CV) -->
+    {% if gommone.motore == "Selva 20CV" %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clock me-2 text-success"></i>Registro Orario
+                        </h5>
+                        <a href="/mezzi/gommone/{{ gommone.id }}/ore" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Gestisci Ore
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Ore Totali</h6>
+                                <h3 class="text-primary mb-0">
+                                    {% set ore_totali = gommone.registro_ore|sum(attribute='ore_utilizzo') %}
+                                    {{ "%.1f"|format(ore_totali) }}
+                                </h3>
+                                <small class="text-muted">Ore di utilizzo</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Utilizzi</h6>
+                                <h3 class="text-info mb-0">{{ gommone.registro_ore|length }}</h3>
+                                <small class="text-muted">Numero di utilizzi</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Ultimo Utilizzo</h6>
+                                <h3 class="text-success mb-0">
+                                    {% if gommone.registro_ore %}
+                                        {% set ultimo = gommone.registro_ore|sort(attribute='data_utilizzo', reverse=true)|first %}
+                                        {{ ultimo.data_utilizzo.strftime('%d/%m') }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </h3>
+                                <small class="text-muted">Data ultimo utilizzo</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabella ultimi utilizzi -->
+                    {% if gommone.registro_ore %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Allenatore</th>
+                                    <th>Ore</th>
+                                    <th>Note</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for utilizzo in gommone.registro_ore|sort(attribute='data_utilizzo', reverse=true)[:5] %}
+                                <tr>
+                                    <td>
+                                        <span class="fw-bold">{{ utilizzo.data_utilizzo.strftime('%d/%m/%Y') }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-primary">{{ utilizzo.allenatore.full_name }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ "%.1f"|format(utilizzo.ore_utilizzo) }} ore</span>
+                                    </td>
+                                    <td>
+                                        {% if utilizzo.note %}
+                                            <span class="text-muted">{{ utilizzo.note }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% if gommone.registro_ore|length > 5 %}
+                        <div class="text-center mt-3">
+                            <a href="/mezzi/gommone/{{ gommone.id }}/ore" class="btn btn-outline-primary">
+                                <i class="fas fa-list me-2"></i>Vedi Tutti gli Utilizzi
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                        <h5 class="text-muted">Nessun utilizzo registrato</h5>
+                        <p class="text-muted">Inizia ad aggiungere le ore di utilizzo del gommone.</p>
+                        <a href="/mezzi/gommone/{{ gommone.id }}/ore" class="btn btn-success">
+                            <i class="fas fa-plus me-2"></i>Primo Utilizzo
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <style>

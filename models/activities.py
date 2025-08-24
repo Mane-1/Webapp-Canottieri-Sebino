@@ -83,6 +83,7 @@ class Activity(Base):
     payment_amount = Column(DECIMAL(10, 2), nullable=True)
     payment_method = Column(Enum(PaymentMethod), nullable=True)
     payment_state = Column(Enum(PaymentState), nullable=False, default=PaymentState.da_effettuare)
+    payment_notes = Column(Text, nullable=True)  # Note aggiuntive sul pagamento
     
     # Fatturazione
     billing_name = Column(String(200), nullable=True)

@@ -2,30 +2,115 @@
 
 {% block title %}Estrazioni Ore{% endblock %}
 
+{% block head_extra %}
+<style>
+  .instructor-card {
+    transition: all 0.2s ease;
+    border-left: 4px solid #dee2e6;
+  }
+  
+  .instructor-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .instructor-card.selected {
+    border-left-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  }
+  
+  .hours-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .hours-stat {
+    text-align: center;
+    padding: 1rem;
+  }
+  
+  .hours-stat .number {
+    font-size: 2rem;
+    font-weight: bold;
+    display: block;
+  }
+  
+  .hours-stat .label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+  }
+  
+  .activity-type-badge {
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
       <h1 class="h3 mb-4">Estrazioni Ore</h1>
       
-      <!-- Filtri -->
+      <!-- Selezione Istruttore -->
       <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-person-check"></i> Selezione Istruttore</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            {% for user in users_for_filter %}
+            <div class="col-md-4 col-lg-3 mb-3">
+              <div class="card instructor-card h-100 {% if request.query_params.user_id|string == user.id|string %}selected{% endif %}" 
+                   onclick="selectInstructor({{ user.id }}, '{{ user.full_name }}')" style="cursor: pointer;">
+                <div class="card-body text-center">
+                  <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
+                       style="width: 60px; height: 60px;">
+                    <i class="bi bi-person-fill fs-4"></i>
+                  </div>
+                  <h6 class="card-title mb-2">{{ user.full_name }}</h6>
+                  <p class="text-muted small mb-2">{{ user.email or 'N/A' }}</p>
+                  
+                  <!-- Qualifiche -->
+                  {% if user.qualifications %}
+                  <div class="mb-2">
+                    {% for qual in user.qualifications[:3] %}
+                    <span class="badge bg-secondary me-1">{{ qual.qualification_type.name }}</span>
+                    {% endfor %}
+                    {% if user.qualifications|length > 3 %}
+                    <span class="badge bg-secondary">+{{ user.qualifications|length - 3 }}</span>
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                  
+                  <!-- Ore totali (se disponibili) -->
+                  {% if user.total_hours %}
+                  <div class="text-primary">
+                    <strong>{{ "%.1f"|format(user.total_hours) }}h totali</strong>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Filtri Periodo -->
+      {% if request.query_params.user_id %}
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0"><i class="bi bi-calendar-range"></i> Filtri Periodo</h5>
+        </div>
         <div class="card-body">
           <form method="GET" class="row g-3">
-            {% if current_user.is_admin or current_user.is_allenatore %}
+            <input type="hidden" name="user_id" value="{{ request.query_params.user_id }}">
             <div class="col-md-3">
-              <label for="user_id" class="form-label">Istruttore</label>
-              <select class="form-select" id="user_id" name="user_id">
-                <option value="">Seleziona istruttore</option>
-                {% for user in users_for_filter %}
-                <option value="{{ user.id }}" {% if request.query_params.user_id|string == user.id|string %}selected{% endif %}>
-                  {{ user.full_name }}
-                </option>
-                {% endfor %}
-              </select>
-            </div>
-            {% endif %}
-            <div class="col-md-2">
               <label for="month" class="form-label">Mese</label>
               <select class="form-select" id="month" name="month">
                 <option value="1" {% if month == 1 %}selected{% endif %}>Gennaio</option>
@@ -42,7 +127,7 @@
                 <option value="12" {% if month == 12 %}selected{% endif %}>Dicembre</option>
               </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
               <label for="year" class="form-label">Anno</label>
               <select class="form-select" id="year" name="year">
                 {% for y in range(2020, 2031) %}
@@ -50,7 +135,7 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
               <label class="form-label">&nbsp;</label>
               <div>
                 <button type="submit" class="btn btn-primary">
@@ -59,33 +144,64 @@
                 <button type="button" class="btn btn-success" onclick="exportData()">
                   <i class="bi bi-download"></i> Export CSV
                 </button>
+                <a href="/attivita/estrazioni" class="btn btn-outline-secondary">
+                  <i class="bi bi-x-circle"></i> Pulisci
+                </a>
               </div>
             </div>
           </form>
         </div>
       </div>
       
-      <!-- Riepilogo -->
-      {% if user_name %}
-      <div class="alert alert-info">
-        <h6 class="mb-1">Estrazione per: <strong>{{ user_name }}</strong></h6>
-        <p class="mb-0">Periodo: {{ month }}/{{ year }}</p>
+      <!-- Riepilogo Ore -->
+      {% if user_name and hours_data %}
+      <div class="hours-summary">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="hours-stat">
+              <span class="number">{{ "%.1f"|format(hours_data|sum(attribute='hours')) }}</span>
+              <span class="label">Ore Totali</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="hours-stat">
+              <span class="number">{{ hours_data|length }}</span>
+              <span class="label">Attività</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="hours-stat">
+              <span class="number">{{ (hours_data|sum(attribute='hours') / hours_data|length)|round(1) }}</span>
+              <span class="label">Media per Attività</span>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="hours-stat">
+              <span class="number">{{ user_name }}</span>
+              <span class="label">Istruttore</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-3">
+          <small>Periodo: {{ month }}/{{ year }}</small>
+        </div>
       </div>
       {% endif %}
       
       <!-- Tabella ore -->
+      {% if hours_data %}
       <div class="card">
         <div class="card-header">
-          <h5 class="mb-0">Dettaglio Ore</h5>
+          <h5 class="mb-0"><i class="bi bi-clock-history"></i> Dettaglio Ore</h5>
         </div>
         <div class="card-body">
-          {% if hours_data %}
           <div class="table-responsive">
             <table class="table table-hover" id="hours-table">
               <thead>
                 <tr>
                   <th>Data</th>
                   <th>Attività</th>
+                  <th>Tipo</th>
                   <th>Qualifica</th>
                   <th>Ruolo</th>
                   <th>Ore</th>
@@ -100,6 +216,15 @@
                       {{ row.activity_title }}
                     </a>
                   </td>
+                  <td>
+                    {% if row.activity_type %}
+                    <span class="badge activity-type-badge" style="background-color: {{ row.activity_type.color }}; color: white;">
+                      {{ row.activity_type.name }}
+                    </span>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
                   <td>{{ row.qualification_name }}</td>
                   <td>{{ row.role_label or '-' }}</td>
                   <td><strong>{{ "%.1f"|format(row.hours) }}h</strong></td>
@@ -108,21 +233,27 @@
               </tbody>
               <tfoot>
                 <tr class="table-info">
-                  <td colspan="4"><strong>Totale ore</strong></td>
+                  <td colspan="5"><strong>Totale ore</strong></td>
                   <td><strong>{{ "%.1f"|format(hours_data|sum(attribute='hours')) }}h</strong></td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          {% else %}
-          <div class="text-center py-5">
-            <i class="bi bi-clock display-1 text-muted"></i>
-            <h5 class="mt-3">Nessuna ora registrata</h5>
-            <p class="text-muted">Non ci sono ore registrate per il periodo selezionato.</p>
-          </div>
-          {% endif %}
         </div>
       </div>
+      {% elif request.query_params.user_id %}
+      <div class="text-center py-5">
+        <i class="bi bi-clock display-1 text-muted"></i>
+        <h5 class="mt-3">Nessuna ora registrata</h5>
+        <p class="text-muted">Non ci sono ore registrate per {{ user_name }} nel periodo {{ month }}/{{ year }}.</p>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <i class="bi bi-person-check display-1 text-muted"></i>
+        <h5 class="mt-3">Seleziona un Istruttore</h5>
+        <p class="text-muted">Clicca su un istruttore per visualizzare le sue ore di attività.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -130,11 +261,18 @@
 
 {% block scripts %}
 <script>
+function selectInstructor(userId, userName) {
+  // Aggiorna l'URL con l'istruttore selezionato
+  const url = new URL(window.location);
+  url.searchParams.set('user_id', userId);
+  window.location.href = url.toString();
+}
+
 function exportData() {
     const table = document.getElementById('hours-table');
     if (!table) return;
     
-    let csv = 'Data,Attività,Qualifica,Ruolo,Ore\n';
+    let csv = 'Data,Attività,Tipo,Qualifica,Ruolo,Ore\n';
     
     const rows = table.querySelectorAll('tbody tr');
     rows.forEach(row => {

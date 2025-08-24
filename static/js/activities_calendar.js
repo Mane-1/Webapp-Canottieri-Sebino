@@ -13,10 +13,17 @@ class ActivitiesCalendar {
     }
     
     init() {
-        this.initViewSwitch();
-        this.initFilters();
-        this.initCalendar();
-        this.bindEvents();
+        try {
+            console.log('Inizializzazione ActivitiesCalendar...');
+            this.initViewSwitch();
+            this.initFilters();
+            this.initCalendar();
+            this.bindEvents();
+            this.loadSavedFilters();
+            console.log('ActivitiesCalendar inizializzato con successo');
+        } catch (error) {
+            console.error('Errore nell\'inizializzazione di ActivitiesCalendar:', error);
+        }
     }
     
     initViewSwitch() {
@@ -93,6 +100,63 @@ class ActivitiesCalendar {
         if (btnSelfAssign) {
             btnSelfAssign.addEventListener('click', () => {
                 this.selfAssign();
+            });
+        }
+        
+        // Gestione note di pagamento
+        const btnSaveNotes = document.getElementById('btn-save-notes');
+        const btnClearNotes = document.getElementById('btn-clear-notes');
+        
+        if (btnSaveNotes) {
+            btnSaveNotes.addEventListener('click', () => {
+                this.savePaymentNotes();
+            });
+        }
+        
+        if (btnClearNotes) {
+            btnClearNotes.addEventListener('click', () => {
+                this.clearPaymentNotes();
+            });
+        }
+        
+        // Gestione modal assegnazione istruttori
+        const assignModal = document.getElementById('assignInstructorModal');
+        if (assignModal) {
+            const btnConfirm = document.getElementById('btn-confirm-assignment');
+            const instructorsContainer = document.getElementById('instructors-container');
+            
+            // Gestione selezione istruttore
+            instructorsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('instructor-badge')) {
+                    // Rimuovi selezione precedente
+                    instructorsContainer.querySelectorAll('.instructor-badge').forEach(badge => {
+                        badge.classList.remove('selected');
+                    });
+                    
+                    // Seleziona quello cliccato
+                    e.target.classList.add('selected');
+                    btnConfirm.disabled = false;
+                    
+                    // Salva l'ID dell'istruttore selezionato
+                    this.selectedInstructorId = e.target.dataset.instructorId;
+                }
+            });
+            
+            // Gestione conferma assegnazione
+            btnConfirm.addEventListener('click', () => {
+                if (this.selectedInstructorId && this.currentRequirementId) {
+                    this.confirmAssignment(this.selectedInstructorId, this.currentRequirementId);
+                }
+            });
+            
+            // Reset quando si chiude il modal
+            assignModal.addEventListener('hidden.bs.modal', () => {
+                this.selectedInstructorId = null;
+                this.currentRequirementId = null;
+                btnConfirm.disabled = true;
+                instructorsContainer.querySelectorAll('.instructor-badge').forEach(badge => {
+                    badge.classList.remove('selected');
+                });
             });
         }
     }
@@ -227,6 +291,7 @@ class ActivitiesCalendar {
             
             this.populateModal(activity);
             this.showSelfAssignButton(activity);
+            this.updatePaymentTab(activity); // Aggiorna la tab pagamento
             
             const modal = new bootstrap.Modal(document.getElementById('activityModal'));
             modal.show();
@@ -455,18 +520,31 @@ class ActivitiesCalendar {
         const stateLabel = this.getStateLabel(activity.state);
         const coverageClass = this.getCoverageClass(activity.coverage_percentage);
         
+        // Determina il colore della barra laterale in base alla copertura
+        let sidebarColor = '';
+        if (activity.coverage_percentage >= 100) {
+            sidebarColor = '#198754'; // Verde per 100% coperto
+        } else if (activity.coverage_percentage > 0) {
+            sidebarColor = '#ffc107'; // Giallo per parzialmente coperto
+        } else {
+            sidebarColor = '#dc3545'; // Rosso per non coperto
+        }
+        
         div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">${activity.title}</h6>
-                    <p class="mb-1 text-muted small">
-                        <i class="bi bi-clock"></i> ${activity.start_time} - ${activity.end_time} | 
-                        <i class="bi bi-tag"></i> ${activity.activity_type?.name || 'N/A'}
-                    </p>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-secondary">${stateLabel}</span>
-                        <span class="badge ${coverageClass}">${activity.coverage_percentage}% coperto</span>
-                        ${activity.payment_amount ? `<span class="badge bg-info">€ ${activity.payment_amount}</span>` : ''}
+                <div class="flex-grow-1 d-flex">
+                    <div class="coverage-sidebar me-3" style="width: 8px; background-color: ${sidebarColor}; border-radius: 4px 0 0 4px; min-height: 100%;"></div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${activity.title}</h6>
+                        <p class="mb-1 text-muted small">
+                            <i class="bi bi-clock"></i> ${activity.start_time} - ${activity.end_time} | 
+                            <i class="bi bi-tag"></i> ${activity.activity_type?.name || 'N/A'}
+                        </p>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-secondary">${stateLabel}</span>
+                            <span class="badge ${coverageClass}">${activity.coverage_percentage}% coperto</span>
+                            ${activity.payment_amount ? `<span class="badge bg-info">€ ${activity.payment_amount}</span>` : ''}
+                        </div>
                     </div>
                 </div>
                 <div class="ms-3">
@@ -517,6 +595,9 @@ class ActivitiesCalendar {
         } else {
             this.loadListView();
         }
+        
+        // Salva i filtri nella sessione per mantenere lo stato
+        sessionStorage.setItem('activities_filters', JSON.stringify(this.filters));
     }
     
     clearFilters() {
@@ -531,6 +612,32 @@ class ActivitiesCalendar {
             }
         } else {
             this.loadListView();
+        }
+        
+        // Rimuovi i filtri dalla sessione
+        sessionStorage.removeItem('activities_filters');
+    }
+    
+    loadSavedFilters() {
+        const savedFilters = sessionStorage.getItem('activities_filters');
+        if (savedFilters) {
+            try {
+                this.filters = JSON.parse(savedFilters);
+                
+                // Applica i filtri salvati al form
+                const form = document.getElementById('filters-form');
+                if (form) {
+                    Object.keys(this.filters).forEach(key => {
+                        const input = form.querySelector(`[name="${key}"]`);
+                        if (input) {
+                            input.value = this.filters[key];
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento dei filtri salvati:', error);
+                sessionStorage.removeItem('activities_filters');
+            }
         }
     }
     
@@ -617,6 +724,266 @@ class ActivitiesCalendar {
         // Implementa un sistema di toast/notifiche
         console.log(`${type.toUpperCase()}: ${message}`);
         // Puoi integrare con il sistema di toast esistente del progetto
+    }
+
+    showAddAssignmentModal(requirementId) {
+        this.currentRequirementId = requirementId;
+        
+        // Trova il requisito corrente
+        const requirement = this.currentActivity.requirements.find(r => r.id === requirementId);
+        if (!requirement) return;
+        
+        // Popola il modal
+        document.getElementById('requirement-title').textContent = requirement.qualification_type.name;
+        document.getElementById('requirement-description').textContent = `Quantità richiesta: ${requirement.quantity}`;
+        
+        // Carica gli istruttori disponibili
+        this.loadAvailableInstructors(requirement);
+        
+        // Mostra il modal
+        const modal = new bootstrap.Modal(document.getElementById('assignInstructorModal'));
+        modal.show();
+    }
+    
+    async loadAvailableInstructors(requirement) {
+        try {
+            const response = await fetch(`/api/attivita/${this.currentActivity.id}/available-instructors?requirement_id=${requirement.id}`);
+            if (!response.ok) throw new Error('Errore nel caricamento degli istruttori');
+            
+            const data = await response.json();
+            this.renderInstructorsList(data.instructors, data.conflicts);
+        } catch (error) {
+            console.error('Errore nel caricamento degli istruttori:', error);
+            this.showToast('Errore nel caricamento degli istruttori', 'error');
+        }
+    }
+    
+    renderInstructorsList(instructors, conflicts) {
+        const container = document.getElementById('instructors-container');
+        container.innerHTML = '';
+        
+        if (instructors.length === 0) {
+            container.innerHTML = '<p class="text-muted">Nessun istruttore disponibile per questa qualifica.</p>';
+            return;
+        }
+        
+        // Ordina istruttori alfabeticamente
+        instructors.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        
+        instructors.forEach(instructor => {
+            const isConflicted = conflicts.includes(instructor.id);
+            const instructorCard = document.createElement('div');
+            instructorCard.className = `instructor-card card ${isConflicted ? 'border-danger' : 'border-success'} mb-2`;
+            instructorCard.style.cursor = 'pointer';
+            instructorCard.dataset.instructorId = instructor.id;
+            
+            instructorCard.innerHTML = `
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-person-circle text-primary me-2 fs-5"></i>
+                                <h6 class="mb-0">${instructor.full_name}</h6>
+                                <span class="badge ${isConflicted ? 'bg-danger' : 'bg-success'} ms-2">
+                                    ${isConflicted ? 'Impegnato' : 'Disponibile'}
+                                </span>
+                            </div>
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-tag me-1"></i>
+                                    <strong>Risorse compatibili:</strong> ${instructor.qualifications || 'N/A'}
+                                </small>
+                            </div>
+                            ${instructor.email ? `<small class="text-muted d-block"><i class="bi bi-envelope me-1"></i>${instructor.email}</small>` : ''}
+                        </div>
+                        <div class="ms-3">
+                            <button type="button" class="btn btn-primary btn-sm btn-prenota" ${isConflicted ? 'disabled' : ''}>
+                                <i class="bi bi-calendar-check"></i> Prenota
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Aggiungi event listener per la selezione
+            instructorCard.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-prenota')) return; // Non selezionare se clicchi il bottone
+                
+                // Rimuovi selezione precedente
+                container.querySelectorAll('.instructor-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Seleziona quello cliccato
+                instructorCard.classList.add('selected');
+                document.getElementById('btn-confirm-assignment').disabled = false;
+                
+                // Salva l'ID dell'istruttore selezionato
+                this.selectedInstructorId = instructor.id;
+            });
+            
+            // Event listener per il bottone Prenota
+            const btnPrenota = instructorCard.querySelector('.btn-prenota');
+            btnPrenota.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                // Rimuovi selezione precedente
+                container.querySelectorAll('.instructor-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // Seleziona questo istruttore
+                instructorCard.classList.add('selected');
+                document.getElementById('btn-confirm-assignment').disabled = false;
+                this.selectedInstructorId = instructor.id;
+            });
+            
+            container.appendChild(instructorCard);
+        });
+    }
+    
+    async confirmAssignment(instructorId, requirementId) {
+        try {
+            const response = await fetch(`/api/attivita/${this.currentActivity.id}/assign-instructor`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    instructor_id: instructorId,
+                    requirement_id: requirementId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('Istruttore assegnato con successo!', 'success');
+                
+                // Chiudi il modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('assignInstructorModal'));
+                modal.hide();
+                
+                // Ricarica i dettagli dell'attività
+                await this.showActivityDetails(this.currentActivity.id);
+                
+                // Aggiorna il calendario
+                if (this.calendar) {
+                    this.calendar.refetchEvents();
+                }
+            } else {
+                this.showToast(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Errore nell\'assegnazione:', error);
+            this.showToast('Errore nell\'assegnazione dell\'istruttore', 'error');
+        }
+    }
+
+    async savePaymentNotes() {
+        if (!this.currentActivity) return;
+        
+        const notes = document.getElementById('payment-notes').value;
+        
+        try {
+            const response = await fetch(`/api/attivita/${this.currentActivity.id}/payment-notes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    notes: notes
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showToast('Note salvate con successo!', 'success');
+            } else {
+                this.showToast(result.message, 'error');
+            }
+        } catch (error) {
+            console.error('Errore nel salvataggio delle note:', error);
+            this.showToast('Errore nel salvataggio delle note', 'error');
+        }
+    }
+    
+    clearPaymentNotes() {
+        document.getElementById('payment-notes').value = '';
+        this.showToast('Note cancellate', 'info');
+    }
+    
+    updatePaymentTab(activity) {
+        // Aggiorna il badge dello stato pagamento
+        const statusBadge = document.getElementById('payment-status-badge');
+        if (statusBadge) {
+            statusBadge.textContent = this.getPaymentStateLabel(activity.payment_state);
+            statusBadge.className = `badge fs-6 me-3 ${this.getPaymentStateClass(activity.payment_state)}`;
+        }
+        
+        // Aggiorna l'ultimo aggiornamento
+        const lastUpdate = document.getElementById('payment-last-update');
+        if (lastUpdate) {
+            lastUpdate.textContent = activity.updated_at ? new Date(activity.updated_at).toLocaleString('it-IT') : 'N/A';
+        }
+        
+        // Aggiorna i dettagli pagamento
+        const amount = document.getElementById('activity-payment-amount');
+        if (amount) {
+            amount.textContent = activity.payment_amount ? `€ ${parseFloat(activity.payment_amount).toFixed(2)}` : '€ 0.00';
+        }
+        
+        const method = document.getElementById('activity-payment-method');
+        if (method) {
+            method.textContent = this.getPaymentMethodLabel(activity.payment_method);
+        }
+        
+        const dueDate = document.getElementById('activity-payment-due-date');
+        if (dueDate) {
+            dueDate.textContent = activity.payment_due_date || 'N/A';
+        }
+        
+        const reference = document.getElementById('activity-payment-reference');
+        if (reference) {
+            reference.textContent = activity.payment_reference || 'N/A';
+        }
+        
+        // Aggiorna le note
+        const notes = document.getElementById('payment-notes');
+        if (notes) {
+            notes.value = activity.payment_notes || '';
+        }
+        
+        // Aggiorna la fatturazione
+        const billingName = document.getElementById('activity-billing-name');
+        if (billingName) {
+            billingName.textContent = activity.billing_name || 'N/A';
+        }
+        
+        const billingVat = document.getElementById('activity-billing-vat');
+        if (billingVat) {
+            billingVat.textContent = activity.billing_vat_or_cf || 'N/A';
+        }
+        
+        const billingSdi = document.getElementById('activity-billing-sdi');
+        if (billingSdi) {
+            billingSdi.textContent = activity.billing_sdi_or_pec || 'N/A';
+        }
+        
+        const billingAddress = document.getElementById('activity-billing-address');
+        if (billingAddress) {
+            billingAddress.textContent = activity.billing_address || 'N/A';
+        }
+    }
+    
+    getPaymentStateClass(state) {
+        const classes = {
+            'da_effettuare': 'bg-danger',
+            'da_verificare': 'bg-warning text-dark',
+            'confermato': 'bg-success'
+        };
+        return classes[state] || 'bg-secondary';
     }
 }
 

@@ -2,6 +2,31 @@
 
 {% block title %}Pagamenti Attività{% endblock %}
 
+{% block head_extra %}
+<style>
+  /* Barra laterale per stato pagamento */
+  .payment-sidebar {
+    width: 8px;
+    border-radius: 4px 0 0 4px;
+    min-height: 100%;
+    transition: all 0.3s ease;
+  }
+  
+  .payment-sidebar.red { background-color: #dc3545; }
+  .payment-sidebar.yellow { background-color: #ffc107; }
+  .payment-sidebar.green { background-color: #198754; }
+  
+  /* Stili per i badge */
+  .payment-badge {
+    font-size: 0.75rem;
+  }
+  
+  .payment-da_effettuare { background-color: #dc3545; color: white; }
+  .payment-da_verificare { background-color: #ffc107; color: black; }
+  .payment-confermato { background-color: #198754; color: white; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
   <div class="row">
@@ -95,6 +120,7 @@
             <table class="table table-hover">
               <thead>
                 <tr>
+                  <th style="width: 8px;"></th>
                   <th>Attività</th>
                   <th>Cliente</th>
                   <th>Data</th>
@@ -107,6 +133,14 @@
               <tbody>
                 {% for activity in activities %}
                 <tr>
+                  <td>
+                    <div class="payment-sidebar 
+                         {% if activity.payment_state == 'da_effettuare' %}red
+                         {% elif activity.payment_state == 'da_verificare' %}yellow
+                         {% elif activity.payment_state == 'confermato' %}green
+                         {% else %}red{% endif %}">
+                    </div>
+                  </td>
                   <td>
                     <strong>{{ activity.title }}</strong><br>
                     <small class="text-muted">{{ activity.activity_type.name }}</small>
@@ -121,14 +155,25 @@
                     {% endif %}
                   </td>
                   <td>
-                    <span class="badge {% if activity.payment_state == 'da_effettuare' %}bg-danger{% elif activity.payment_state == 'da_verificare' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                    <span class="badge payment-badge payment-{{ activity.payment_state }}">
                       {% if activity.payment_state == 'da_effettuare' %}Da effettuare
                       {% elif activity.payment_state == 'da_verificare' %}Da verificare
                       {% elif activity.payment_state == 'confermato' %}Confermato
                       {% else %}{{ activity.payment_state }}{% endif %}
                     </span>
                   </td>
-                  <td>{{ activity.payment_method or 'N/A' }}</td>
+                  <td>
+                    {% if activity.payment_method %}
+                      {% if activity.payment_method == 'contanti' %}Contanti
+                      {% elif activity.payment_method == 'carta' %}Carta di Credito
+                      {% elif activity.payment_method == 'bonifico' %}Bonifico Bancario
+                      {% elif activity.payment_method == 'assegno' %}Assegno
+                      {% elif activity.payment_method == 'altro' %}Altro
+                      {% else %}{{ activity.payment_method|title }}{% endif %}
+                    {% else %}
+                      <span class="text-muted">Non specificato</span>
+                    {% endif %}
+                  </td>
                   <td>
                     <a href="/attivita/dettaglio/{{ activity.id }}" class="btn btn-sm btn-outline-primary">
                       <i class="bi bi-eye"></i> Dettagli
