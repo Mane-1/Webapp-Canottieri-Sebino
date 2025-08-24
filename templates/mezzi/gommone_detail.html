@@ -21,6 +21,9 @@
                         <i class="fas fa-arrow-left me-2"></i>Torna ai Gommoni
                     </a>
                     {% if current_user.is_admin %}
+                    <a href="/mezzi/gommone/{{ gommone.id }}/modifica" class="btn btn-warning me-2">
+                        <i class="fas fa-edit me-2"></i>Modifica
+                    </a>
                     <a href="/mezzi/gestione" class="btn btn-primary">
                         <i class="fas fa-cog me-2"></i>Gestione
                     </a>
@@ -199,7 +202,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for utilizzo in gommone.registro_ore|sort(attribute='data_utilizzo', reverse=true)[:5] %}
+                                {% for utilizzo in gommone.registro_ore|sort(attribute='data_utilizzo', reverse=True) %}
                                 <tr>
                                     <td>
                                         <span class="fw-bold">{{ utilizzo.data_utilizzo.strftime('%d/%m/%Y') }}</span>
