@@ -94,15 +94,78 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 
+<style>
+.is-invalid-duplicate {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Gestione validazione form
     const form = document.querySelector('form');
     const requiredSelects = form.querySelectorAll('select[required]');
+    const allSelects = form.querySelectorAll('select[name$="_id"]');
+    
+    // Funzione per validare duplicati
+    function validateDuplicates() {
+        const selectedValues = [];
+        const duplicateSelects = [];
+        
+        allSelects.forEach(select => {
+            if (select.value && select.value !== '') {
+                if (selectedValues.includes(select.value)) {
+                    duplicateSelects.push(select);
+                } else {
+                    selectedValues.push(select.value);
+                }
+            }
+        });
+        
+        // Rimuovi classe di errore da tutti i select
+        allSelects.forEach(select => {
+            select.classList.remove('is-invalid-duplicate');
+            const errorMsg = select.parentNode.querySelector('.duplicate-error');
+            if (errorMsg) errorMsg.remove();
+        });
+        
+        // Aggiungi classe di errore ai duplicati
+        if (duplicateSelects.length > 0) {
+            // Trova tutti i select con lo stesso valore duplicato
+            const duplicateValues = [...new Set(duplicateSelects.map(s => s.value))];
+            duplicateValues.forEach(value => {
+                allSelects.forEach(select => {
+                    if (select.value === value) {
+                        select.classList.add('is-invalid-duplicate');
+                        if (!select.parentNode.querySelector('.duplicate-error')) {
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'text-danger small mt-1 duplicate-error';
+                            errorDiv.textContent = 'Questo atleta è già stato selezionato in un altro ruolo';
+                            select.parentNode.appendChild(errorDiv);
+                        }
+                    }
+                });
+            });
+            return false;
+        }
+        return true;
+    }
+    
+    // Validazione in tempo reale sui cambi di selezione
+    allSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            validateDuplicates();
+            if (this.value) {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
     
     form.addEventListener('submit', function(e) {
         let isValid = true;
         
+        // Validazione campi obbligatori
         requiredSelects.forEach(select => {
             if (!select.value) {
                 select.classList.add('is-invalid');
@@ -112,9 +175,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Validazione duplicati
+        if (!validateDuplicates()) {
+            isValid = false;
+        }
+        
         if (!isValid) {
             e.preventDefault();
-            alert('Per favore compila tutti i campi obbligatori.');
+            alert('Per favore correggi gli errori nel form prima di procedere.');
         }
     });
     

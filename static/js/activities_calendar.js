@@ -17,7 +17,14 @@ class ActivitiesCalendar {
             console.log('Inizializzazione ActivitiesCalendar...');
             this.initViewSwitch();
             this.initFilters();
-            this.initCalendar();
+            
+            // Imposta la vista predefinita in base alla dimensione dello schermo
+            if (this.isMobile()) {
+                this.switchView('list');
+            } else {
+                this.initCalendar();
+            }
+            
             this.bindEvents();
             this.loadSavedFilters();
             console.log('ActivitiesCalendar inizializzato con successo');
@@ -70,6 +77,10 @@ class ActivitiesCalendar {
                 list: 'Lista'
             },
             height: 'auto',
+            slotMinTime: '07:00:00',
+            slotMaxTime: '21:00:00',
+            scrollTime: '08:00:00',
+            allDaySlot: false,
             events: (info, successCallback, failureCallback) => {
                 this.fetchActivities(info.start, info.end, successCallback, failureCallback);
             },
@@ -175,8 +186,10 @@ class ActivitiesCalendar {
             calendarDiv.classList.remove('d-none');
             listDiv.classList.add('d-none');
             
-            // Aggiorna il calendario
-            if (this.calendar) {
+            // Inizializza il calendario se non è ancora stato fatto
+            if (!this.calendar) {
+                this.initCalendar();
+            } else {
                 this.calendar.render();
             }
         } else {
@@ -192,16 +205,20 @@ class ActivitiesCalendar {
     
     async fetchActivities(start, end, successCallback, failureCallback) {
         try {
+            // Mostra indicatore di caricamento
+            this.showLoadingIndicator();
+            
             const params = new URLSearchParams({
                 date_from: start.toISOString().split('T')[0],
-                date_to: end.toISOString().split('T')[0],
-                ...this.filters
+                date_to: end.toISOString().split('T')[0]
             });
             
-            // Aggiungi filtro copertura se presente
-            if (this.filters.coverage) {
-                params.append('coverage', this.filters.coverage);
-            }
+            // Aggiungi filtri se presenti
+            Object.keys(this.filters).forEach(key => {
+                if (this.filters[key] && key !== 'coverage') {
+                    params.append(key, this.filters[key]);
+                }
+            });
             
             const response = await fetch(`/api/attivita?${params}`);
             if (!response.ok) throw new Error('Errore nel caricamento delle attività');
@@ -233,21 +250,54 @@ class ActivitiesCalendar {
             successCallback(events);
         } catch (error) {
             console.error('Errore nel caricamento delle attività:', error);
+            this.showToast('Si è verificato un errore nel caricamento delle attività', 'error');
             failureCallback(error);
+        } finally {
+            // Nascondi indicatore di caricamento
+            this.hideLoadingIndicator();
+        }
+    }
+    
+    showLoadingIndicator() {
+        const calendarEl = document.getElementById('activities-calendar');
+        if (!calendarEl) return;
+        
+        // Verifica se esiste già un indicatore
+        if (document.getElementById('calendar-loading-indicator')) return;
+        
+        // Crea l'indicatore di caricamento
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'calendar-loading-indicator';
+        loadingDiv.className = 'position-absolute top-50 start-50 translate-middle bg-white p-3 rounded shadow-sm';
+        loadingDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span>Caricamento attività...</span>
+            </div>
+        `;
+        
+        // Assicurati che il container abbia position relative
+        calendarEl.style.position = 'relative';
+        calendarEl.appendChild(loadingDiv);
+    }
+    
+    hideLoadingIndicator() {
+        const indicator = document.getElementById('calendar-loading-indicator');
+        if (indicator) {
+            indicator.remove();
         }
     }
     
     filterByCoverage(activities, coverageFilter) {
-        switch (coverageFilter) {
-            case '100':
-                return activities.filter(a => a.coverage_percentage >= 100);
-            case 'partial':
-                return activities.filter(a => a.coverage_percentage > 0 && a.coverage_percentage < 100);
-            case 'low':
-                return activities.filter(a => a.coverage_percentage === 0);
-            default:
-                return activities;
-        }
+        if (!coverageFilter) return activities;
+        
+        return activities.filter(activity => {
+            const coverage = activity.coverage_percentage || 0;
+            if (coverageFilter === '100') return coverage >= 100;
+            if (coverageFilter === 'partial') return coverage > 0 && coverage < 100;
+            if (coverageFilter === '0') return coverage === 0;
+            return true;
+        });
     }
     
     styleEvent(event, element) {
@@ -277,8 +327,37 @@ class ActivitiesCalendar {
             element.classList.add(stateClass);
         }
         
+        // Migliora l'accessibilità aggiungendo attributi ARIA
+        element.setAttribute('aria-label', `${event.title}, ${this.getStateLabel(state)}`);
+        
         // Aggiungi tooltip con informazioni
         element.title = `${event.title}\n${event.extendedProps.type}\nStato: ${state}\nCopertura: ${event.extendedProps.coverage}%`;
+        
+        // Aggiungi icona in base al tipo di attività
+        const activityType = event.extendedProps.type;
+        if (activityType) {
+            const typeIcon = document.createElement('span');
+            typeIcon.className = 'activity-type-icon';
+            
+            // Scegli l'icona in base al tipo
+            let iconClass = 'bi-calendar-event';
+            if (activityType.toLowerCase().includes('allenamento')) {
+                iconClass = 'bi-stopwatch';
+            } else if (activityType.toLowerCase().includes('gara')) {
+                iconClass = 'bi-trophy';
+            } else if (activityType.toLowerCase().includes('corso')) {
+                iconClass = 'bi-mortarboard';
+            }
+            
+            typeIcon.innerHTML = `<i class="bi ${iconClass}"></i>`;
+            typeIcon.title = activityType;
+            
+            // Inserisci l'icona all'inizio del titolo
+            const titleElement = element.querySelector('.fc-event-title');
+            if (titleElement) {
+                titleElement.insertBefore(typeIcon, titleElement.firstChild);
+            }
+        }
     }
     
     async showActivityDetails(activityId) {
@@ -481,8 +560,13 @@ class ActivitiesCalendar {
         const container = document.getElementById('activities-list-content');
         container.innerHTML = '';
         
-        if (activities.length === 0) {
-            container.innerHTML = '<div class="col-12"><p class="text-muted text-center">Nessuna attività trovata.</p></div>';
+        if (!activities || activities.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info text-center my-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Nessuna attività trovata con i filtri selezionati
+                </div>
+            `;
             return;
         }
         
@@ -494,7 +578,7 @@ class ActivitiesCalendar {
             dateGroup.className = 'col-12 mb-3';
             
             const dateHeader = document.createElement('h6');
-            dateHeader.className = 'text-muted border-bottom pb-2';
+            dateHeader.className = 'text-muted border-bottom pb-2 sticky-top bg-light pt-2';
             dateHeader.textContent = new Date(date).toLocaleDateString('it-IT', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -537,8 +621,8 @@ class ActivitiesCalendar {
                     <div class="flex-grow-1">
                         <h6 class="mb-1">${activity.title}</h6>
                         <p class="mb-1 text-muted small">
-                            <i class="bi bi-clock"></i> ${activity.start_time} - ${activity.end_time} | 
-                            <i class="bi bi-tag"></i> ${activity.activity_type?.name || 'N/A'}
+                            <i class="bi bi-clock me-1"></i> ${activity.start_time} - ${activity.end_time} | 
+                            <i class="bi bi-tag ms-2 me-1"></i> ${activity.activity_type?.name || 'N/A'}
                         </p>
                         <div class="d-flex gap-2">
                             <span class="badge bg-secondary">${stateLabel}</span>
@@ -549,7 +633,7 @@ class ActivitiesCalendar {
                 </div>
                 <div class="ms-3">
                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="activitiesCalendar.showActivityDetails(${activity.id})">
-                        <i class="bi bi-eye"></i> Dettagli
+                        Dettagli
                     </button>
                 </div>
             </div>
@@ -655,6 +739,8 @@ class ActivitiesCalendar {
     }
     
     getStateLabel(state) {
+        if (!state) return 'Sconosciuto';
+        
         const labels = {
             'bozza': 'Bozza',
             'da_confermare': 'Da confermare',
@@ -678,6 +764,21 @@ class ActivitiesCalendar {
             'completato': 'completed'
         };
         return classes[state] || '';
+    }
+    
+    getStateBadgeClass(state) {
+        if (!state) return 'bg-secondary';
+        
+        const classes = {
+            'bozza': 'bg-secondary',
+            'da_confermare': 'bg-warning text-dark',
+            'confermato': 'bg-success',
+            'rimandata': 'bg-warning text-dark',
+            'in_corso': 'bg-primary',
+            'annullato': 'bg-danger',
+            'completato': 'bg-info'
+        };
+        return classes[state] || 'bg-secondary';
     }
     
     getPaymentMethodLabel(method) {
@@ -721,9 +822,50 @@ class ActivitiesCalendar {
     }
     
     showToast(message, type = 'info') {
-        // Implementa un sistema di toast/notifiche
-        console.log(`${type.toUpperCase()}: ${message}`);
-        // Puoi integrare con il sistema di toast esistente del progetto
+        // Crea container se non esiste
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            toastContainer.style.zIndex = '1050';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Crea toast
+        const toastId = `toast-${Date.now()}`;
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center border-0 show`;
+        toast.id = toastId;
+        
+        // Imposta classe in base al tipo
+        switch (type) {
+            case 'success': toast.classList.add('bg-success', 'text-white'); break;
+            case 'error': toast.classList.add('bg-danger', 'text-white'); break;
+            case 'warning': toast.classList.add('bg-warning'); break;
+            default: toast.classList.add('bg-info', 'text-white');
+        }
+        
+        // Contenuto toast
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Chiudi"></button>
+            </div>
+        `;
+        
+        // Aggiungi al container
+        toastContainer.appendChild(toast);
+        
+        // Rimuovi dopo 5 secondi
+        setTimeout(() => {
+            const toastElement = document.getElementById(toastId);
+            if (toastElement) {
+                toastElement.classList.remove('show');
+                setTimeout(() => toastElement.remove(), 500);
+            }
+        }, 5000);
     }
 
     showAddAssignmentModal(requirementId) {

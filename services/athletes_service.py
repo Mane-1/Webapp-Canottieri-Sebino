@@ -180,9 +180,16 @@ def get_equipaggio_by_id(db: Session, equipaggio_id: int) -> Optional[models.Equ
 
 
 def get_atleti_disponibili_for_posto(db: Session, barca_id: int, posto: str, equipaggio_id: int = None) -> List[models.User]:
-    """Restituisce gli atleti disponibili per un determinato posto in una barca"""
-    # Query base per atleti non sospesi (attivi)
-    query = db.query(models.User).filter(models.User.is_suspended == False)
+    """Restituisce gli atleti disponibili per un determinato posto in una barca
+    SOLO tra gli atleti assegnati a quella barca specifica"""
+    # Query base per atleti non sospesi (attivi) E assegnati alla barca specifica
+    query = db.query(models.User).filter(
+        models.User.is_suspended == False
+    ).join(
+        models.User.barche_assegnate
+    ).filter(
+        models.Barca.id == barca_id
+    )
     
     # Escludi atleti già assegnati a questo posto in altri equipaggi della stessa barca
     if equipaggio_id:
@@ -195,24 +202,24 @@ def get_atleti_disponibili_for_posto(db: Session, barca_id: int, posto: str, equ
         # Se stiamo creando un nuovo equipaggio, escludi tutti gli equipaggi esistenti
         subquery = db.query(models.Equipaggio).filter(models.Equipaggio.barca_id == barca_id)
     
-    # Aggiungi filtri per escludere atleti già assegnati
+    # Aggiungi filtri per escludere atleti già assegnati a questo posto specifico
     if posto == 'capovoga':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.capovoga_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.capovoga_id).filter(models.Equipaggio.capovoga_id.isnot(None))))
     elif posto == 'secondo':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.secondo_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.secondo_id).filter(models.Equipaggio.secondo_id.isnot(None))))
     elif posto == 'terzo':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.terzo_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.terzo_id).filter(models.Equipaggio.terzo_id.isnot(None))))
     elif posto == 'quarto':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.quarto_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.quarto_id).filter(models.Equipaggio.quarto_id.isnot(None))))
     elif posto == 'quinto':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.quinto_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.quinto_id).filter(models.Equipaggio.quinto_id.isnot(None))))
     elif posto == 'sesto':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.sesto_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.sesto_id).filter(models.Equipaggio.sesto_id.isnot(None))))
     elif posto == 'settimo':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.settimo_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.settimo_id).filter(models.Equipaggio.settimo_id.isnot(None))))
     elif posto == 'prodiere':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.prodiere_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.prodiere_id).filter(models.Equipaggio.prodiere_id.isnot(None))))
     elif posto == 'timoniere':
-        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.timoniere_id)))
+        query = query.filter(~models.User.id.in_(subquery.with_entities(models.Equipaggio.timoniere_id).filter(models.Equipaggio.timoniere_id.isnot(None))))
     
     return query.all()

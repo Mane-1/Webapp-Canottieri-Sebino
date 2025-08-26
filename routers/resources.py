@@ -7,14 +7,14 @@ from sqlalchemy.orm import Session, joinedload
 from fastapi.templating import Jinja2Templates
 import models
 from database import get_db
-from dependencies import get_current_user, get_current_admin_user, require_roles
+from dependencies import get_current_user, get_current_admin_user, get_current_admin_or_coach_user, require_roles
 from services import barche as barche_service, users as users_service
 from services.users import ALLOWED_PESI_CATEGORIES
 from utils.parsing import to_float
 from services import athletes_service
 
 router = APIRouter(prefix="/risorse", tags=["Risorse"])
-mezzi_router = APIRouter(tags=["Mezzi"])  # Router separato per i mezzi senza prefisso
+mezzi_router = APIRouter(tags=["Mezzi"], dependencies=[Depends(get_current_admin_user)])  # Router separato per i mezzi con restrizione di accesso
 templates = Jinja2Templates(directory="templates")
 
 
@@ -855,7 +855,7 @@ async def statistiche_pesi(
 async def list_mezzi(
     request: Request,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
     tipo_filter: str = Query("furgoni", description="Tipo di mezzo da visualizzare")
 ):
     """Lista dei mezzi (furgoni o gommoni)"""

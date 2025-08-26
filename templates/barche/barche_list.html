@@ -59,29 +59,90 @@
 
     {% if barche_assegnate %}
     <h2 class="h4 mb-3">Le mie barche</h2>
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nome</th>
-                            <th>Tipo</th>
-                            <th class="text-center">Stato</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for barca in barche_assegnate %}
-                        <tr onclick="window.location='{{ url_for('barca_detail', barca_id=barca.id) }}'" style="cursor: pointer;">
-                            <td class="fw-bold">{{ barca.nome }}</td>
-                            <td>{{ barca.tipo }}</td>
-                            <td class="text-center">{% set status, badge_class = barca.status %}<span class="badge rounded-pill {{ badge_class }}">{{ status }}</span></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="row mb-4">
+        {% for barca in barche_assegnate %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100 shadow-sm border-0 barca-card" onclick="window.location='{{ url_for('barca_detail', barca_id=barca.id) }}'" style="cursor: pointer;">
+                <div class="card-header bg-white border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-ship fa-2x me-3 text-primary"></i>
+                        <div>
+                            <h5 class="card-title mb-0 text-dark">{{ barca.nome }}</h5>
+                            <small class="text-muted">{{ barca.costruttore or 'N/A' }} - {{ barca.anno or 'N/A' }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Nome -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-tag me-2"></i>Nome
+                        </h6>
+                        <span class="fw-bold">{{ barca.nome }}</span>
+                    </div>
+                    
+                    <!-- Tipo -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-water me-2"></i>Tipo
+                        </h6>
+                        <span class="badge bg-info text-dark fs-6 px-3 py-2">{{ barca.tipo }}</span>
+                    </div>
+                    
+                    <!-- Composizione equipaggio -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-users me-2"></i>Composizione equipaggio
+                        </h6>
+                        {% if barca.equipaggi %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for equipaggio in barca.equipaggi[:2] %}
+                                    <span class="badge bg-success">{{ equipaggio.nome }}</span>
+                                {% endfor %}
+                                {% if barca.equipaggi|length > 2 %}
+                                    <span class="badge bg-secondary">+{{ barca.equipaggi|length - 2 }} altri</span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Nessun equipaggio</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Utilizzatori -->
+                    <div class="mb-3">
+                        <h6 class="card-subtitle mb-2 text-muted">
+                            <i class="fas fa-user-friends me-2"></i>Utilizzatori
+                        </h6>
+                        {% if barca.atleti_assegnati %}
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for atleta in barca.atleti_assegnati[:3] %}
+                                    <span class="badge bg-primary">{{ atleta.first_name }} {{ atleta.last_name }}</span>
+                                {% endfor %}
+                                {% if barca.atleti_assegnati|length > 3 %}
+                                    <span class="badge bg-secondary">+{{ barca.atleti_assegnati|length - 3 }} altri</span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">Nessun utilizzatore</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% set status, badge_class = barca.status %}
+                            <span class="badge {{ badge_class }}">{{ status }}</span>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-eye me-1"></i>Dettagli
+                        </small>
+                    </div>
+                </div>
             </div>
         </div>
+        {% endfor %}
     </div>
     {% endif %}
 
@@ -165,4 +226,32 @@
 </div>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<style>
+.barca-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.barca-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.barca-card .card-header {
+    background-color: white !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.barca-card .card-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.text-primary {
+    color: var(--bs-primary) !important;
+}
+</style>
 {% endblock %}

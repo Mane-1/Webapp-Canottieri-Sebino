@@ -47,46 +47,72 @@ async def get_activities(
     limit: int = Query(100, ge=1, le=1000)
 ):
     """Ottiene la lista delle attività con filtri."""
-    query = db.query(Activity).options(
-        selectinload(Activity.activity_type),
-        selectinload(Activity.requirements).selectinload(ActivityRequirement.qualification_type),
-        selectinload(Activity.assignments).selectinload(ActivityAssignment.user)
-    )
-    
-    # Applica filtri
-    if date_from:
-        query = query.filter(Activity.date >= date_from)
-    if date_to:
-        query = query.filter(Activity.date <= date_to)
-    if type_ids:
-        query = query.filter(Activity.type_id.in_(type_ids))
-    if states:
-        query = query.filter(Activity.state.in_(states))
-    if payment_states:
-        query = query.filter(Activity.payment_state.in_(payment_states))
-    if text:
-        text_filter = f"%{text}%"
-        query = query.filter(
-            or_(
-                Activity.title.ilike(text_filter),
-                Activity.short_description.ilike(text_filter),
-                Activity.customer_name.ilike(text_filter)
-            )
+    try:
+        query = db.query(Activity).options(
+            selectinload(Activity.activity_type),
+            selectinload(Activity.requirements).selectinload(ActivityRequirement.qualification_type),
+            selectinload(Activity.assignments).selectinload(ActivityAssignment.user)
         )
-    if user_id:
-        query = query.join(ActivityAssignment).filter(ActivityAssignment.user_id == user_id)
-    
-    # Ordina per data
-    activities = query.order_by(Activity.date.desc()).offset(skip).limit(limit).all()
-    
-    # Calcola copertura per ogni attività
-    for activity in activities:
-        assigned, required, percent = compute_activity_coverage(db, activity.id)
-        activity.coverage_percentage = percent
-        activity.total_required = required
-        activity.total_assigned = assigned
-    
-    return activities
+        
+        # Applica filtri
+        if date_from:
+            query = query.filter(Activity.date >= date_from)
+        if date_to:
+            query = query.filter(Activity.date <= date_to)
+        if type_ids:
+            query = query.filter(Activity.type_id.in_(type_ids))
+        if states:
+            # Verifica che gli stati siano validi
+            from models.activities import ActivityState
+            valid_states = [state.value for state in ActivityState]
+            for state in states:
+                if state not in valid_states:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Stato non valido: {state}. Stati validi: {', '.join(valid_states)}"
+                    )
+            query = query.filter(Activity.state.in_(states))
+        if payment_states:
+            # Verifica che gli stati di pagamento siano validi
+            from models.activities import PaymentState
+            valid_payment_states = [state.value for state in PaymentState]
+            for state in payment_states:
+                if state not in valid_payment_states:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Stato di pagamento non valido: {state}. Stati validi: {', '.join(valid_payment_states)}"
+                    )
+            query = query.filter(Activity.payment_state.in_(payment_states))
+        if text:
+            text_filter = f"%{text}%"
+            query = query.filter(
+                or_(
+                    Activity.title.ilike(text_filter),
+                    Activity.short_description.ilike(text_filter),
+                    Activity.customer_name.ilike(text_filter)
+                )
+            )
+        if user_id:
+            query = query.join(ActivityAssignment).filter(ActivityAssignment.user_id == user_id)
+        
+        # Ordina per data
+        activities = query.order_by(Activity.date.desc()).offset(skip).limit(limit).all()
+        
+        # Calcola copertura per ogni attività
+        for activity in activities:
+            assigned, required, percent = compute_activity_coverage(db, activity.id)
+            activity.coverage_percentage = percent
+            activity.total_required = required
+            activity.total_assigned = assigned
+        
+        return activities
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Errore durante il recupero delle attività: {str(e)}"
+        )
 
 
 @router.post("/", response_model=ActivityRead, status_code=status.HTTP_201_CREATED)

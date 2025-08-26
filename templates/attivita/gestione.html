@@ -34,11 +34,11 @@
   }
   
   .state-bozza { background-color: #6c757d; color: white; }
-  .state-da_confermare { background-color: #fd7e14; color: white; }
+  .state-da_confermare { background-color: #ffc107; color: black; }
   .state-confermato { background-color: #198754; color: white; }
-  .state-rimandata { background-color: #fd7e14; color: white; }
+  .state-rimandata { background-color: #6f42c1; color: white; }
   .state-in_corso { background-color: #ffc107; color: black; }
-  .state-completato { background-color: #0d6efd; color: white; }
+  .state-completato { background-color: #198754; color: white; }
   .state-annullato { background-color: #dc3545; color: white; }
   
   /* Colori badge pagamento */
@@ -165,7 +165,7 @@
               </thead>
               <tbody>
                 {% for activity in activities %}
-                <tr>
+                <tr class="activity-row" data-activity-id="{{ activity.id }}" style="cursor: pointer;">
                   <td>
                     <div class="coverage-sidebar {% if activity.coverage_percentage >= 100 %}green{% elif activity.coverage_percentage > 0 %}yellow{% else %}red{% endif %}"></div>
                   </td>
@@ -200,7 +200,7 @@
                         <div class="progress coverage-progress">
                           <div class="progress-bar {% if activity.coverage_percentage >= 100 %}coverage-100{% elif activity.coverage_percentage >= 50 %}coverage-partial{% else %}coverage-low{% endif %}" 
                                role="progressbar" style="width: {{ activity.coverage_percentage }}%">
-                            {{ activity.coverage_percentage }}%
+                            {{ "%.0f"|format(activity.coverage_percentage) }}%
                           </div>
                         </div>
                       </div>
@@ -220,14 +220,11 @@
                   </td>
                   <td>
                     <div class="btn-group" role="group">
-                      <a href="/attivita/dettaglio/{{ activity.id }}" class="btn btn-outline-primary" title="Visualizza dettagli">
-                        <i class="bi bi-eye"></i>
+                      <a href="/attivita/modifica/{{ activity.id }}" class="btn btn-sm btn-outline-warning" title="Modifica" onclick="event.stopPropagation();">
+                        <i class="bi bi-pencil"></i>
                       </a>
-                      <a href="/attivita/modifica/{{ activity.id }}" class="btn btn-outline-warning" title="Modifica">
-                        <i class="bi bi-pencil me-1"></i>Modifica
-                      </a>
-                      <button type="button" class="btn btn-outline-danger" title="Elimina" 
-                              onclick="deleteActivity({{ activity.id }}, '{{ activity.title }}')">
+                      <button type="button" class="btn btn-sm btn-outline-danger" title="Elimina" 
+                              onclick="event.stopPropagation(); deleteActivity({{ activity.id }}, '{{ activity.title|replace("'", "\\'")|replace('"', '\\"') }}');">
                         <i class="bi bi-trash"></i>
                       </button>
                     </div>
@@ -269,6 +266,9 @@
     </div>
   </div>
 </div>
+
+<!-- Include modal dettagli attività -->
+{% include 'attivita/_activity_modal.html' %}
 {% endblock %}
 
 {% block scripts %}
@@ -283,6 +283,66 @@ function deleteActivity(activityId, activityTitle) {
   
   const modal = new bootstrap.Modal(document.getElementById('deleteActivityModal'));
   modal.show();
+}
+
+// Gestione click sulla riga per aprire il popup dell'attività
+document.addEventListener('DOMContentLoaded', function() {
+  const activityRows = document.querySelectorAll('.activity-row');
+  
+  activityRows.forEach(row => {
+    row.addEventListener('click', function() {
+      const activityId = this.dataset.activityId;
+      // Apri il modal dei dettagli attività
+      openActivityModal(activityId);
+    });
+  });
+});
+
+// Funzione per aprire il modal dei dettagli attività
+function openActivityModal(activityId) {
+  // Carica i dati dell'attività via AJAX
+  fetch(`/api/attivita/${activityId}`)
+    .then(response => response.json())
+    .then(data => {
+      // Popola il modal con i dati dell'attività
+      populateActivityModal(data);
+      // Mostra il modal
+      const modal = new bootstrap.Modal(document.getElementById('activityModal'));
+      modal.show();
+    })
+    .catch(error => {
+      console.error('Errore nel caricamento dei dettagli attività:', error);
+      // Fallback: reindirizza alla pagina di dettaglio
+      window.location.href = `/attivita/dettaglio/${activityId}`;
+    });
+}
+
+// Funzione per popolare il modal con i dati dell'attività
+function populateActivityModal(activity) {
+  // Tab Generale
+  document.getElementById('activity-title').textContent = activity.title || 'N/A';
+  document.getElementById('activity-description').textContent = activity.short_description || 'Nessuna descrizione';
+  document.getElementById('activity-date').textContent = new Date(activity.date).toLocaleDateString('it-IT');
+  document.getElementById('activity-time').textContent = `${activity.start_time} - ${activity.end_time}`;
+  document.getElementById('activity-type').textContent = activity.activity_type?.name || 'N/A';
+  document.getElementById('activity-state').textContent = activity.state || 'N/A';
+  document.getElementById('activity-participants').textContent = activity.participants_plan || 'N/A';
+  document.getElementById('activity-participants-actual').textContent = activity.participants_actual || 'N/A';
+  document.getElementById('activity-participants-notes').textContent = activity.participants_notes || 'Nessuna nota';
+  
+  // Cliente e contatti
+  document.getElementById('activity-customer-name').textContent = activity.customer_name || 'N/A';
+  document.getElementById('activity-customer-email').textContent = activity.customer_email || 'N/A';
+  document.getElementById('activity-contact-name').textContent = activity.contact_name || 'N/A';
+  document.getElementById('activity-contact-phone').textContent = activity.contact_phone || 'N/A';
+  document.getElementById('activity-contact-email').textContent = activity.contact_email || 'N/A';
+  
+  // Pulsante modifica
+  const editBtn = document.getElementById('btn-edit-activity');
+  if (editBtn) {
+    editBtn.href = `/attivita/modifica/${activity.id}`;
+    editBtn.style.display = 'inline-block';
+  }
 }
 </script>
 {% endblock %}

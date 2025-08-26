@@ -75,13 +75,22 @@ async def activities_management(
             pass
     
     if type_id:
-        query = query.filter(Activity.type_id == type_id)
+        if isinstance(type_id, list):
+            query = query.filter(Activity.type_id.in_(type_id))
+        else:
+            query = query.filter(Activity.type_id == type_id)
     
     if state:
-        query = query.filter(Activity.state == state)
+        if isinstance(state, list):
+            query = query.filter(Activity.state.in_(state))
+        else:
+            query = query.filter(Activity.state == state)
     
     if payment_state:
-        query = query.filter(Activity.payment_state == payment_state)
+        if isinstance(payment_state, list):
+            query = query.filter(Activity.payment_state.in_(payment_state))
+        else:
+            query = query.filter(Activity.payment_state == payment_state)
     
     if text:
         text_filter = f"%{text}%"
