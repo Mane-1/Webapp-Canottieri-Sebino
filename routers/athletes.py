@@ -18,6 +18,10 @@ from services.athletes_service import (
     current_category_for_user,
     get_athlete_attendance_stats,
 )
+from services.attendance_service import (
+    get_roster_for_training,
+    compute_status_for_athlete,
+)
 
 router = APIRouter(tags=["Atleti"])
 templates = Jinja2Templates(directory="templates")
@@ -81,7 +85,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/athletes")
@@ -96,7 +100,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -127,7 +131,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -158,7 +162,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -189,7 +193,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -220,7 +224,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -251,7 +255,7 @@ def api_all_athletes(
         .order_by(models.User.last_name, models.User.first_name)
         .all()
     )
-    return [{"id": a.id, "name": a.full_name} for a in athletes]
+    return [{"id": a.id, "name": f"{a.first_name} {a.last_name}"} for a in athletes]
 
 
 @router.get("/api/categories")
@@ -363,11 +367,13 @@ async def add_measurement(
         measured_at=measured_at,
         height_cm=payload.height_cm,
         weight_kg=payload.weight_kg,
+        torso_height_cm=payload.torso_height_cm,
+        wingspan_cm=payload.wingspan_cm,
         leg_length_cm=payload.leg_length_cm,
         tibia_length_cm=payload.tibia_length_cm,
         arm_length_cm=payload.arm_length_cm,
-        torso_height_cm=payload.torso_height_cm,
-        wingspan_cm=payload.wingspan_cm,
+        foot_length_cm=payload.foot_length_cm,
+        flexibility_cm=payload.flexibility_cm,
         notes=payload.notes,
         recorded_by_user_id=current_user.id,
     )
@@ -379,6 +385,14 @@ async def add_measurement(
         "measured_at": measurement.measured_at.isoformat(),
         "height_cm": measurement.height_cm,
         "weight_kg": measurement.weight_kg,
+        "torso_height_cm": measurement.torso_height_cm,
+        "wingspan_cm": measurement.wingspan_cm,
+        "leg_length_cm": measurement.leg_length_cm,
+        "tibia_length_cm": measurement.tibia_length_cm,
+        "arm_length_cm": measurement.arm_length_cm,
+        "foot_length_cm": measurement.foot_length_cm,
+        "flexibility_cm": measurement.flexibility_cm,
+        "notes": measurement.notes,
     }
 
 
@@ -396,11 +410,129 @@ async def measurements_series(
     q = q.order_by(models.AthleteMeasurement.measured_at.asc())
     measurements = q.all()
     labels = [m.measured_at.isoformat() for m in measurements]
-    if metric == "weight":
-        data = [m.weight_kg for m in measurements]
+    
+    metric_mapping = {
+        "weight": "weight_kg",
+        "height": "height_cm",
+        "torso_height": "torso_height_cm",
+        "wingspan": "wingspan_cm",
+        "leg_length": "leg_length_cm",
+        "tibia_length": "tibia_length_cm",
+        "arm_length": "arm_length_cm",
+        "foot_length": "foot_length_cm",
+        "flexibility": "flexibility_cm"
+    }
+    
+    field_name = metric_mapping.get(metric)
+    if field_name:
+        data = [getattr(m, field_name) for m in measurements]
     else:
         data = []
+    
     return {"labels": labels, "data": data}
+
+
+@router.put("/risorse/athletes/{athlete_id}/measurements/{measurement_id}")
+async def update_measurement(
+    athlete_id: int,
+    measurement_id: int,
+    payload: MeasurementIn,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    measurement = db.query(models.AthleteMeasurement).filter_by(
+        id=measurement_id, athlete_id=athlete_id
+    ).first()
+    if not measurement:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    
+    # Update fields
+    if payload.measured_at is not None:
+        measurement.measured_at = payload.measured_at
+    if payload.height_cm is not None:
+        measurement.height_cm = payload.height_cm
+    if payload.weight_kg is not None:
+        measurement.weight_kg = payload.weight_kg
+    if payload.torso_height_cm is not None:
+        measurement.torso_height_cm = payload.torso_height_cm
+    if payload.wingspan_cm is not None:
+        measurement.wingspan_cm = payload.wingspan_cm
+    if payload.leg_length_cm is not None:
+        measurement.leg_length_cm = payload.leg_length_cm
+    if payload.tibia_length_cm is not None:
+        measurement.tibia_length_cm = payload.tibia_length_cm
+    if payload.arm_length_cm is not None:
+        measurement.arm_length_cm = payload.arm_length_cm
+    if payload.foot_length_cm is not None:
+        measurement.foot_length_cm = payload.foot_length_cm
+    if payload.flexibility_cm is not None:
+        measurement.flexibility_cm = payload.flexibility_cm
+    if payload.notes is not None:
+        measurement.notes = payload.notes
+    
+    db.commit()
+    db.refresh(measurement)
+    return {
+        "id": measurement.id,
+        "measured_at": measurement.measured_at.isoformat(),
+        "height_cm": measurement.height_cm,
+        "weight_kg": measurement.weight_kg,
+        "torso_height_cm": measurement.torso_height_cm,
+        "wingspan_cm": measurement.wingspan_cm,
+        "leg_length_cm": measurement.leg_length_cm,
+        "tibia_length_cm": measurement.tibia_length_cm,
+        "arm_length_cm": measurement.arm_length_cm,
+        "foot_length_cm": measurement.foot_length_cm,
+        "flexibility_cm": measurement.flexibility_cm,
+        "notes": measurement.notes,
+    }
+
+
+@router.delete("/risorse/athletes/{athlete_id}/measurements/{measurement_id}")
+async def delete_measurement(
+    athlete_id: int,
+    measurement_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    measurement = db.query(models.AthleteMeasurement).filter_by(
+        id=measurement_id, athlete_id=athlete_id
+    ).first()
+    if not measurement:
+        raise HTTPException(status_code=404, detail="Measurement not found")
+    
+    db.delete(measurement)
+    db.commit()
+    return {"message": "Measurement deleted successfully"}
+
+
+@router.get("/risorse/athletes/{athlete_id}/measurements")
+async def get_athlete_measurements(
+    athlete_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_admin_or_coach_user),
+):
+    measurements = db.query(models.AthleteMeasurement).filter_by(
+        athlete_id=athlete_id
+    ).order_by(models.AthleteMeasurement.measured_at.desc()).all()
+    
+    return [
+        {
+            "id": m.id,
+            "measured_at": m.measured_at.isoformat(),
+            "height_cm": m.height_cm,
+            "weight_kg": m.weight_kg,
+            "torso_height_cm": m.torso_height_cm,
+            "wingspan_cm": m.wingspan_cm,
+            "leg_length_cm": m.leg_length_cm,
+            "tibia_length_cm": m.tibia_length_cm,
+            "arm_length_cm": m.arm_length_cm,
+            "foot_length_cm": m.foot_length_cm,
+            "flexibility_cm": m.flexibility_cm,
+            "notes": m.notes,
+        }
+        for m in measurements
+    ]
 
 
 @router.get("/api/athletes/{athlete_id}/attendance_stats")

@@ -121,13 +121,13 @@ async def admin_add_user(db: Session = Depends(get_db), admin_user: models.User 
                             status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.get("/users/{user_id}", response_class=HTMLResponse)
+@router.get("/users/{user_id}", response_class=HTMLResponse, name="admin_view_user")
 async def admin_view_user(user_id: int, request: Request, db: Session = Depends(get_db),
                           admin_user: models.User = Depends(get_current_admin_user)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user: raise HTTPException(status_code=404, detail="Utente non trovato")
     return templates.TemplateResponse(
-        request, "admin/user_detail.html", {"user": user, "current_user": admin_user}
+        request, "admin/user_detail.html", {"user": user, "current_user": admin_user, "today": date.today()}
     )
 
 

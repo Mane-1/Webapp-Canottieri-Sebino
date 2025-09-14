@@ -358,7 +358,7 @@ async def get_activity_assignments(
     
     # Arricchisci con il nome dell'utente
     for assignment in assignments:
-        assignment.user_name = assignment.user.full_name
+        assignment.user_name = f"{assignment.user.first_name} {assignment.user.last_name}"
     
     return assignments
 
@@ -447,7 +447,7 @@ async def create_assignment(
         selectinload(ActivityAssignment.user)
     ).filter(ActivityAssignment.id == assignment.id).first()
     
-    assignment.user_name = assignment.user.full_name
+    assignment.user_name = f"{assignment.user.first_name} {assignment.user.last_name}"
     
     return assignment
 
@@ -519,7 +519,7 @@ async def self_assign_activity(
         selectinload(ActivityAssignment.user)
     ).filter(ActivityAssignment.id == assignment.id).first()
     
-    assignment.user_name = assignment.user.full_name
+    assignment.user_name = f"{assignment.user.first_name} {assignment.user.last_name}"
     
     return SelfAssignResponse(
         success=True,

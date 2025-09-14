@@ -1,0 +1,598 @@
+{% extends "layout/base.html" %}
+
+{% block title %}Dettaglio Atleta - {{ athlete.first_name }} {{ athlete.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h4 mb-0">{{ athlete.first_name }} {{ athlete.last_name }}</h2>
+                    <a href="{{ url_for('athletes_list') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Torna all'elenco
+                    </a>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-4" id="athleteTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Informazioni</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="measurements-tab" data-bs-toggle="tab" data-bs-target="#measurements" type="button" role="tab">Misurazioni</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="attendance-tab" data-bs-toggle="tab" data-bs-target="#attendance" type="button" role="tab">Presenze</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="athleteTabContent">
+                        <!-- Tab Informazioni -->
+                        <div class="tab-pane fade show active" id="info" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nome</label>
+                                        <p class="form-control-plaintext">{{ athlete.first_name }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Cognome</label>
+                                        <p class="form-control-plaintext">{{ athlete.last_name }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Email</label>
+                                        <p class="form-control-plaintext">{{ athlete.email or 'N/D' }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Categoria</label>
+                                        <p class="form-control-plaintext">{{ category or 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Data di nascita</label>
+                                        <p class="form-control-plaintext">{{ athlete.birth_date.strftime('%d/%m/%Y') if athlete.birth_date else 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Certificato medico</label>
+                                        {% if athlete.certificate_expiration %}
+                                            {% set days_left = (athlete.certificate_expiration - today).days %}
+                                            {% set badge_class = 'text-dark' %}
+                                            {% if days_left <= 0 %}
+                                                {% set badge_class = 'bg-dark text-white' %}
+                                            {% elif days_left <= 30 %}
+                                                {% set badge_class = 'bg-danger text-white' %}
+                                            {% elif days_left <= 90 %}
+                                                {% set badge_class = 'bg-warning text-dark' %}
+                                            {% else %}
+                                                {% set badge_class = 'bg-success text-white' %}
+                                            {% endif %}
+                                            <span class="badge rounded-pill {{ badge_class }}">{{ athlete.certificate_expiration.strftime('%d/%m/%Y') }}</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-secondary">N/D</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Misurazioni -->
+                        <div class="tab-pane fade" id="measurements" role="tabpanel">
+                            <!-- Form per nuove misurazioni -->
+                            <div class="card mb-4">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Nuova Misurazione</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form id="measurementForm">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <h6 class="text-primary mb-3">SEZIONE GENERALI</h6>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="weight_kg" class="form-label">Peso (Kg)</label>
+                                                        <input type="number" class="form-control" id="weight_kg" name="weight_kg" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="height_cm" class="form-label">Altezza (cm)</label>
+                                                        <input type="number" class="form-control" id="height_cm" name="height_cm" step="0.1" min="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6 class="text-success mb-3">SEZIONE SPECIFICHE</h6>
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="torso_height_cm" class="form-label">Altezza busto (cm)</label>
+                                                        <input type="number" class="form-control" id="torso_height_cm" name="torso_height_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="wingspan_cm" class="form-label">Apertura alare (cm)</label>
+                                                        <input type="number" class="form-control" id="wingspan_cm" name="wingspan_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="leg_length_cm" class="form-label">Lunghezza arto inferiore (cm)</label>
+                                                        <input type="number" class="form-control" id="leg_length_cm" name="leg_length_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="tibia_length_cm" class="form-label">Lunghezza tibia (cm)</label>
+                                                        <input type="number" class="form-control" id="tibia_length_cm" name="tibia_length_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="arm_length_cm" class="form-label">Lunghezza arto superiore (cm)</label>
+                                                        <input type="number" class="form-control" id="arm_length_cm" name="arm_length_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label for="foot_length_cm" class="form-label">Lunghezza piede (cm)</label>
+                                                        <input type="number" class="form-control" id="foot_length_cm" name="foot_length_cm" step="0.1" min="0">
+                                                    </div>
+                                                    <div class="col-md-12 mb-3">
+                                                        <label for="flexibility_cm" class="form-label">Flessibilità (cm)</label>
+                                                        <input type="number" class="form-control" id="flexibility_cm" name="flexibility_cm" step="0.1" min="0">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <h6 class="text-warning mb-3">SEZIONE NOTE</h6>
+                                                <div class="mb-3">
+                                                    <label for="notes" class="form-label">Annotazioni</label>
+                                                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Inserisci eventuali note o osservazioni..."></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-end">
+                                            <button type="button" class="btn btn-secondary me-2" onclick="resetForm()">Reset</button>
+                                            <button type="submit" class="btn btn-primary">Salva Misurazione</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Grafico interattivo -->
+                            <div class="card mb-4">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Andamento Storico</h5>
+                                    <div class="d-flex align-items-center">
+                                        <label for="metricSelect" class="form-label me-2 mb-0">Parametro:</label>
+                                        <select class="form-select" id="metricSelect" style="width: auto;" onchange="updateChart()">
+                                            <option value="weight">Peso</option>
+                                            <option value="height">Altezza</option>
+                                            <option value="torso_height">Altezza busto</option>
+                                            <option value="wingspan">Apertura alare</option>
+                                            <option value="leg_length">Lunghezza arto inferiore</option>
+                                            <option value="tibia_length">Lunghezza tibia</option>
+                                            <option value="arm_length">Lunghezza arto superiore</option>
+                                            <option value="foot_length">Lunghezza piede</option>
+                                            <option value="flexibility">Flessibilità</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="measurementChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Tabella cronologica -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Storico Misurazioni</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped" id="measurementsTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>Data</th>
+                                                    <th>Peso (kg)</th>
+                                                    <th>Altezza (cm)</th>
+                                                    <th>Altezza busto (cm)</th>
+                                                    <th>Apertura alare (cm)</th>
+                                                    <th>Note</th>
+                                                    <th>Azioni</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="measurementsTableBody">
+                                                <!-- Dati caricati dinamicamente -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div id="noMeasurementsAlert" class="alert alert-info" style="display: none;">
+                                        <i class="fas fa-info-circle"></i> Nessuna misurazione disponibile.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Presenze -->
+                        <div class="tab-pane fade" id="attendance" role="tabpanel">
+                            {% if att_stats %}
+                                <div class="row mb-4">
+                                    <div class="col-md-4">
+                                        <div class="card bg-primary text-white">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title">{{ att_stats.assigned }}</h5>
+                                                <p class="card-text">Allenamenti Assegnati</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-success text-white">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title">{{ att_stats.present }}</h5>
+                                                <p class="card-text">Presenze</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-info text-white">
+                                            <div class="card-body text-center">
+                                                <h5 class="card-title">{{ "%.1f"|format(att_stats.rate * 100) }}%</h5>
+                                                <p class="card-text">Percentuale Presenze</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            {% if attendance_rows %}
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Data</th>
+                                                <th>Tipo</th>
+                                                <th>Descrizione</th>
+                                                <th>Stato</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for attendance in attendance_rows %}
+                                            <tr>
+                                                <td>{{ attendance.data.strftime('%d/%m/%Y') if attendance.data else 'N/D' }}</td>
+                                                <td>{{ attendance.tipo or '-' }}</td>
+                                                <td>{{ attendance.descrizione or '-' }}</td>
+                                                <td>
+                                                    {% if attendance.status == 'present' %}
+                                                        <span class="badge bg-success">Presente</span>
+                                                    {% elif attendance.status == 'absent' %}
+                                                        <span class="badge bg-danger">Assente</span>
+                                                    {% elif attendance.status == 'maybe' %}
+                                                        <span class="badge bg-warning text-dark">Forse</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ attendance.status or 'N/D' }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Nessuna presenza disponibile.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let measurementChart;
+let measurementsData = [];
+const athleteId = parseInt('{{ athlete.id }}');
+
+// Inizializzazione quando la pagina è caricata
+document.addEventListener('DOMContentLoaded', function() {
+    initializeChart();
+    loadMeasurements();
+    setupRealTimeValidation();
+});
+
+// Configurazione validazione in tempo reale
+function setupRealTimeValidation() {
+    const numericInputs = document.querySelectorAll('input[type="number"]');
+    numericInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateSingleField(this);
+        });
+        input.addEventListener('input', function() {
+            clearFieldError(this);
+        });
+    });
+}
+
+// Validazione singolo campo
+function validateSingleField(input) {
+    const fieldName = input.labels[0]?.textContent || input.name;
+    const validation = validateNumericInput(input.value, fieldName, 
+        parseFloat(input.min) || 0, 
+        parseFloat(input.max) || 1000
+    );
+    
+    if (!validation.valid) {
+        showFieldError(input, validation.error);
+        return false;
+    }
+    clearFieldError(input);
+    return true;
+}
+
+// Mostra errore su campo specifico
+function showFieldError(input, message) {
+    clearFieldError(input);
+    input.classList.add('is-invalid');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'invalid-feedback';
+    errorDiv.textContent = message;
+    input.parentNode.appendChild(errorDiv);
+}
+
+// Rimuove errore da campo specifico
+function clearFieldError(input) {
+    input.classList.remove('is-invalid');
+    const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+    if (errorDiv) {
+        errorDiv.remove();
+    }
+}
+
+// Inizializza il grafico
+function initializeChart() {
+    const ctx = document.getElementById('measurementChart').getContext('2d');
+    measurementChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Peso (kg)',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Andamento nel tempo'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+}
+
+// Carica le misurazioni dall'API
+async function loadMeasurements() {
+    try {
+        const response = await fetch(`/risorse/athletes/${athleteId}/measurements`);
+        if (response.ok) {
+            measurementsData = await response.json();
+            updateMeasurementsTable();
+            updateChart();
+        } else {
+            console.error('Errore nel caricamento delle misurazioni');
+        }
+    } catch (error) {
+        console.error('Errore:', error);
+    }
+}
+
+// Aggiorna la tabella delle misurazioni
+function updateMeasurementsTable() {
+    const tbody = document.getElementById('measurementsTableBody');
+    const noDataAlert = document.getElementById('noMeasurementsAlert');
+    
+    if (measurementsData.length === 0) {
+        tbody.innerHTML = '';
+        noDataAlert.style.display = 'block';
+        return;
+    }
+    
+    noDataAlert.style.display = 'none';
+    tbody.innerHTML = measurementsData.map(measurement => `
+        <tr>
+            <td>${new Date(measurement.measured_at).toLocaleDateString('it-IT')}</td>
+            <td>${measurement.weight_kg || '-'}</td>
+            <td>${measurement.height_cm || '-'}</td>
+            <td>${measurement.torso_height_cm || '-'}</td>
+            <td>${measurement.wingspan_cm || '-'}</td>
+            <td>${measurement.notes || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="editMeasurement(${measurement.id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteMeasurement(${measurement.id})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Aggiorna il grafico in base al parametro selezionato
+function updateChart() {
+    const selectedMetric = document.getElementById('metricSelect').value;
+    const metricMapping = {
+        'weight': { field: 'weight_kg', label: 'Peso (kg)', color: 'rgb(75, 192, 192)' },
+        'height': { field: 'height_cm', label: 'Altezza (cm)', color: 'rgb(255, 99, 132)' },
+        'torso_height': { field: 'torso_height_cm', label: 'Altezza busto (cm)', color: 'rgb(54, 162, 235)' },
+        'wingspan': { field: 'wingspan_cm', label: 'Apertura alare (cm)', color: 'rgb(255, 205, 86)' },
+        'leg_length': { field: 'leg_length_cm', label: 'Lunghezza arto inferiore (cm)', color: 'rgb(153, 102, 255)' },
+        'tibia_length': { field: 'tibia_length_cm', label: 'Lunghezza tibia (cm)', color: 'rgb(255, 159, 64)' },
+        'arm_length': { field: 'arm_length_cm', label: 'Lunghezza arto superiore (cm)', color: 'rgb(199, 199, 199)' },
+        'foot_length': { field: 'foot_length_cm', label: 'Lunghezza piede (cm)', color: 'rgb(83, 102, 255)' },
+        'flexibility': { field: 'flexibility_cm', label: 'Flessibilità (cm)', color: 'rgb(255, 99, 255)' }
+    };
+    
+    const metric = metricMapping[selectedMetric];
+    const filteredData = measurementsData.filter(m => m[metric.field] !== null && m[metric.field] !== undefined);
+    
+    measurementChart.data.labels = filteredData.map(m => new Date(m.measured_at).toLocaleDateString('it-IT'));
+    measurementChart.data.datasets[0].data = filteredData.map(m => m[metric.field]);
+    measurementChart.data.datasets[0].label = metric.label;
+    measurementChart.data.datasets[0].borderColor = metric.color;
+    measurementChart.data.datasets[0].backgroundColor = metric.color.replace('rgb', 'rgba').replace(')', ', 0.2)');
+    
+    measurementChart.update();
+}
+
+// Validazione dei campi numerici
+function validateNumericInput(value, fieldName, min = 0, max = 1000) {
+    if (value === null || value === '') return { valid: true, value: null };
+    
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) {
+        return { valid: false, error: `${fieldName} deve essere un numero valido` };
+    }
+    if (numValue < min) {
+        return { valid: false, error: `${fieldName} deve essere maggiore di ${min}` };
+    }
+    if (numValue > max) {
+        return { valid: false, error: `${fieldName} deve essere minore di ${max}` };
+    }
+    return { valid: true, value: numValue };
+}
+
+// Validazione completa del form
+function validateForm(formData) {
+    const validations = [
+        validateNumericInput(formData.get('weight_kg'), 'Peso', 1, 300),
+        validateNumericInput(formData.get('height_cm'), 'Altezza', 50, 250),
+        validateNumericInput(formData.get('torso_height_cm'), 'Altezza busto', 20, 150),
+        validateNumericInput(formData.get('wingspan_cm'), 'Apertura alare', 50, 300),
+        validateNumericInput(formData.get('leg_length_cm'), 'Lunghezza arto inferiore', 30, 150),
+        validateNumericInput(formData.get('tibia_length_cm'), 'Lunghezza tibia', 15, 80),
+        validateNumericInput(formData.get('arm_length_cm'), 'Lunghezza arto superiore', 30, 120),
+        validateNumericInput(formData.get('foot_length_cm'), 'Lunghezza piede', 15, 50),
+        validateNumericInput(formData.get('flexibility_cm'), 'Flessibilità', -50, 100)
+    ];
+    
+    const errors = validations.filter(v => !v.valid).map(v => v.error);
+    if (errors.length > 0) {
+        return { valid: false, errors };
+    }
+    
+    // Verifica che almeno un campo sia compilato
+    const hasData = validations.some(v => v.value !== null) || formData.get('notes');
+    if (!hasData) {
+        return { valid: false, errors: ['Inserisci almeno un valore o una nota'] };
+    }
+    
+    return { valid: true };
+}
+
+// Gestione del form di inserimento
+document.getElementById('measurementForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    // Validazione
+    const validation = validateForm(formData);
+    if (!validation.valid) {
+        showAlert('Errori di validazione: ' + validation.errors.join(', '), 'danger');
+        return;
+    }
+    
+    const data = {
+        measured_at: new Date().toISOString(),
+        weight_kg: formData.get('weight_kg') ? parseFloat(formData.get('weight_kg')) : null,
+        height_cm: formData.get('height_cm') ? parseFloat(formData.get('height_cm')) : null,
+        torso_height_cm: formData.get('torso_height_cm') ? parseFloat(formData.get('torso_height_cm')) : null,
+        wingspan_cm: formData.get('wingspan_cm') ? parseFloat(formData.get('wingspan_cm')) : null,
+        leg_length_cm: formData.get('leg_length_cm') ? parseFloat(formData.get('leg_length_cm')) : null,
+        tibia_length_cm: formData.get('tibia_length_cm') ? parseFloat(formData.get('tibia_length_cm')) : null,
+        arm_length_cm: formData.get('arm_length_cm') ? parseFloat(formData.get('arm_length_cm')) : null,
+        foot_length_cm: formData.get('foot_length_cm') ? parseFloat(formData.get('foot_length_cm')) : null,
+        flexibility_cm: formData.get('flexibility_cm') ? parseFloat(formData.get('flexibility_cm')) : null,
+        notes: formData.get('notes') || null
+    };
+    
+    try {
+        const response = await fetch(`/risorse/athletes/${athleteId}/measurements`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            resetForm();
+            loadMeasurements();
+            showAlert('Misurazione salvata con successo!', 'success');
+        } else {
+            showAlert('Errore nel salvataggio della misurazione', 'danger');
+        }
+    } catch (error) {
+        console.error('Errore:', error);
+        showAlert('Errore di connessione', 'danger');
+    }
+});
+
+// Reset del form
+function resetForm() {
+    document.getElementById('measurementForm').reset();
+}
+
+// Modifica misurazione (placeholder)
+function editMeasurement(id) {
+    // TODO: Implementare modifica
+    showAlert('Funzionalità di modifica in sviluppo', 'info');
+}
+
+// Elimina misurazione
+async function deleteMeasurement(id) {
+    if (!confirm('Sei sicuro di voler eliminare questa misurazione?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/risorse/athletes/${athleteId}/measurements/${id}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            loadMeasurements();
+            showAlert('Misurazione eliminata con successo!', 'success');
+        } else {
+            showAlert('Errore nell\'eliminazione della misurazione', 'danger');
+        }
+    } catch (error) {
+        console.error('Errore:', error);
+        showAlert('Errore di connessione', 'danger');
+    }
+}
+
+// Mostra alert
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}

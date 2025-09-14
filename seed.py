@@ -266,7 +266,7 @@ def seed_turni(db: Session):
     while day <= end:
         if day.weekday() != 0:
             db.add(Turno(data=day, fascia_oraria="Mattina"))
-            db.add(Turno(data=day, fascia_oraria="Sera"))
+            email="info@canottierisebino.it",
         day += timedelta(days=1)
     db.commit()
 

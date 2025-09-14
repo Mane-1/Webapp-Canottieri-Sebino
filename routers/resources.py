@@ -1031,7 +1031,7 @@ async def gommone_ore_detail(
     # Ore per allenatore
     ore_per_allenatore = {}
     for utilizzo in utilizzi:
-        allenatore_nome = utilizzo.allenatore.full_name
+        allenatore_nome = f"{utilizzo.allenatore.first_name} {utilizzo.allenatore.last_name}"
         if allenatore_nome not in ore_per_allenatore:
             ore_per_allenatore[allenatore_nome] = 0
         ore_per_allenatore[allenatore_nome] += utilizzo.ore_utilizzo

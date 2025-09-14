@@ -115,7 +115,7 @@
                                     <span class="fw-bold">{{ utilizzo.data_utilizzo.strftime('%d/%m/%Y') }}</span>
                                 </td>
                                 <td>
-                                    <span class="text-primary">{{ utilizzo.allenatore.full_name }}</span>
+                                    <span class="text-primary">{{ utilizzo.allenatore.first_name }} {{ utilizzo.allenatore.last_name }}</span>
                                 </td>
                                 <td>
                                     <span class="badge bg-success fs-6">{{ "%.1f"|format(utilizzo.ore_utilizzo) }} ore</span>

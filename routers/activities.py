@@ -271,7 +271,7 @@ async def activities_extractions(
     if user_id:
         hours_data = get_user_activity_hours(db, user_id, month, year)
         user = db.query(User).filter(User.id == user_id).first()
-        user_name = user.full_name if user else f"Utente {user_id}"
+        user_name = f"{user.first_name} {user.last_name}" if user else f"Utente {user_id}"
     else:
         hours_data = []
         user_name = None

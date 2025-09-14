@@ -40,7 +40,7 @@ def calendar_view(request: Request, week: Optional[str] = None, coach_id: Option
         occs = expand_occurrences(t, (start, end))
         for occ in occs:
             occ["coach_id"] = t.coach_id
-            occ["coach_name"] = t.coach.full_name if t.coach else None
+            occ["coach_name"] = f"{t.coach.first_name} {t.coach.last_name}" if t.coach else None
         occurrences.extend(occs)
     coaches = (
         db.query(models.User)

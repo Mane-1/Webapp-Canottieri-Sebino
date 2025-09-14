@@ -910,7 +910,7 @@ class ActivitiesCalendar {
         }
         
         // Ordina istruttori alfabeticamente
-        instructors.sort((a, b) => a.full_name.localeCompare(b.full_name));
+        instructors.sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`));
         
         instructors.forEach(instructor => {
             const isConflicted = conflicts.includes(instructor.id);
@@ -925,7 +925,7 @@ class ActivitiesCalendar {
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center mb-2">
                                 <i class="bi bi-person-circle text-primary me-2 fs-5"></i>
-                                <h6 class="mb-0">${instructor.full_name}</h6>
+                                <h6 class="mb-0">${instructor.first_name} ${instructor.last_name}</h6>
                                 <span class="badge ${isConflicted ? 'bg-danger' : 'bg-success'} ms-2">
                                     ${isConflicted ? 'Impegnato' : 'Disponibile'}
                                 </span>

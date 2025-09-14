@@ -123,7 +123,7 @@ async def list_attendance(
         result.append(
             {
                 "athlete_id": athlete.id,
-                "athlete_name": athlete.full_name,
+                "athlete_name": f"{athlete.first_name} {athlete.last_name}",
                 "status": status_val.value,
                 "change_count": change_count,
                 "source": source,

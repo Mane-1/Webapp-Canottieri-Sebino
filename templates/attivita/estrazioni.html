@@ -66,13 +66,13 @@
             {% for user in users_for_filter %}
             <div class="col-md-4 col-lg-3 mb-3">
               <div class="card instructor-card h-100 {% if request.query_params.user_id|string == user.id|string %}selected{% endif %}" 
-                   onclick="selectInstructor({{ user.id }}, '{{ user.full_name }}')" style="cursor: pointer;">
+                   onclick="selectInstructor({{ user.id }}, '{{ user.first_name }}' + ' ' + '{{ user.last_name }}')" style="cursor: pointer;">
                 <div class="card-body text-center">
                   <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" 
                        style="width: 60px; height: 60px;">
                     <i class="bi bi-person-fill fs-4"></i>
                   </div>
-                  <h6 class="card-title mb-2">{{ user.full_name }}</h6>
+                  <h6 class="card-title mb-2">{{ user.first_name }} {{ user.last_name }}</h6>
                   <p class="text-muted small mb-2">{{ user.email or 'N/A' }}</p>
                   
                   <!-- Qualifiche -->

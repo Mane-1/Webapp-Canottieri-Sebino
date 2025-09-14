@@ -1,5 +1,208 @@
-from services.athletes_service import (
-    current_category_for_user,
-    get_athlete_attendance_stats,
-)
-from services.attendance_service import get_roster_for_training, compute_status_for_athlete
+{% extends "layout/base.html" %}
+
+{% block title %}Dettaglio Utente - {{ user.first_name }} {{ user.last_name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h4 mb-0">{{ user.first_name }} {{ user.last_name }}</h2>
+                    <div>
+                        <a href="{{ url_for('admin_edit_user_form', user_id=user.id) }}" class="btn btn-primary btn-sm me-2">
+                            <i class="fas fa-edit"></i> Modifica
+                        </a>
+                        <a href="{{ url_for('admin_users_list') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Torna all'elenco
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs mb-4" id="userTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Informazioni Generali</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="membership-tab" data-bs-toggle="tab" data-bs-target="#membership" type="button" role="tab">Iscrizione</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="roles-tab" data-bs-toggle="tab" data-bs-target="#roles" type="button" role="tab">Ruoli</button>
+                        </li>
+                        {% if user.payment_frequency or user.payment_method or user.payment_date %}
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments" type="button" role="tab">Pagamenti</button>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    
+                    <div class="tab-content" id="userTabContent">
+                        <!-- Tab Informazioni Generali -->
+                        <div class="tab-pane fade show active" id="info" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nome</label>
+                                        <p class="form-control-plaintext">{{ user.first_name }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Cognome</label>
+                                        <p class="form-control-plaintext">{{ user.last_name }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Username</label>
+                                        <p class="form-control-plaintext">{{ user.username }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Email</label>
+                                        <p class="form-control-plaintext">{{ user.email or 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Telefono</label>
+                                        <p class="form-control-plaintext">{{ user.phone_number or 'N/D' }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Data di nascita</label>
+                                        <p class="form-control-plaintext">{{ user.date_of_birth.strftime('%d/%m/%Y') if user.date_of_birth else 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Codice fiscale</label>
+                                        <p class="form-control-plaintext">{{ user.tax_code or 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Indirizzo</label>
+                                        <p class="form-control-plaintext">{{ user.address or 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Categoria manuale</label>
+                                        <p class="form-control-plaintext">{{ user.manual_category or 'N/D' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Iscrizione -->
+                        <div class="tab-pane fade" id="membership" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Anno di iscrizione</label>
+                                        <p class="form-control-plaintext">{{ user.enrollment_year or 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Data di iscrizione</label>
+                                        <p class="form-control-plaintext">{{ user.membership_date.strftime('%d/%m/%Y') if user.membership_date else 'N/D' }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Certificato medico</label>
+                                        {% if user.certificate_expiration %}
+                                            {% set days_left = (user.certificate_expiration - today).days %}
+                                            {% set badge_class = 'text-dark' %}
+                                            {% if days_left <= 0 %}
+                                                {% set badge_class = 'bg-dark text-white' %}
+                                            {% elif days_left <= 30 %}
+                                                {% set badge_class = 'bg-danger text-white' %}
+                                            {% elif days_left <= 90 %}
+                                                {% set badge_class = 'bg-warning text-dark' %}
+                                            {% else %}
+                                                {% set badge_class = 'bg-success text-white' %}
+                                            {% endif %}
+                                            <span class="badge rounded-pill {{ badge_class }}">{{ user.certificate_expiration.strftime('%d/%m/%Y') }}</span>
+                                        {% else %}
+                                            <span class="badge rounded-pill bg-secondary">N/D</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab Ruoli -->
+                        <div class="tab-pane fade" id="roles" role="tabpanel">
+                            {% if user.roles %}
+                                <div class="row">
+                                    {% for role in user.roles %}
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body text-center">
+                                                <h6 class="card-title">{{ role.name.title() }}</h6>
+                                                {% if role.description %}
+                                                <p class="card-text small text-muted">{{ role.description }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Nessun ruolo assegnato.
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Tab Pagamenti (se presenti) -->
+                        {% if user.payment_frequency or user.payment_method or user.payment_date %}
+                        <div class="tab-pane fade" id="payments" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Frequenza pagamento</label>
+                                        <p class="form-control-plaintext">
+                                            {% if user.payment_frequency == 'monthly' %}
+                                                Mensile
+                                            {% elif user.payment_frequency == 'quarterly' %}
+                                                Trimestrale
+                                            {% elif user.payment_frequency == 'yearly' %}
+                                                Annuale
+                                            {% else %}
+                                                {{ user.payment_frequency or 'N/D' }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Metodo di pagamento</label>
+                                        <p class="form-control-plaintext">
+                                            {% if user.payment_method == 'bank_transfer' %}
+                                                Bonifico bancario
+                                            {% elif user.payment_method == 'cash' %}
+                                                Contanti
+                                            {% elif user.payment_method == 'card' %}
+                                                Carta
+                                            {% else %}
+                                                {{ user.payment_method or 'N/D' }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Data ultimo pagamento</label>
+                                        <p class="form-control-plaintext">{{ user.payment_date.strftime('%d/%m/%Y') if user.payment_date else 'N/D' }}</p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Stato pagamento</label>
+                                        {% if user.calculated_payment_status == 'up_to_date' %}
+                                            <span class="badge bg-success">In regola</span>
+                                        {% elif user.calculated_payment_status == 'due_soon' %}
+                                            <span class="badge bg-warning text-dark">In scadenza</span>
+                                        {% elif user.calculated_payment_status == 'overdue' %}
+                                            <span class="badge bg-danger">In ritardo</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">N/D</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

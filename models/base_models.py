@@ -136,14 +136,10 @@ class User(Base):
         return any(role.name == "istruttore" for role in self.roles)
 
     @property
-    def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}".strip()
-
-    @property
-    def _category_obj(self) -> Categoria | None:
-        if not self.is_atleta or not self.date_of_birth: return None
+    def _category_obj(self):
         db_session = object_session(self)
-        if not db_session: return None
+        if not db_session or not self.date_of_birth:
+            return None
         age = self.solar_age
         return db_session.query(Categoria).filter(Categoria.eta_min <= age, Categoria.eta_max >= age).first()
 
@@ -636,15 +632,18 @@ class AthleteMeasurement(Base):
     id = Column(Integer, primary_key=True)
     athlete_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     measured_at = Column(Date, nullable=False, default=date.today)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     # GENERALI
     height_cm = Column(Float, nullable=True)
     weight_kg = Column(Float, nullable=True)
     # SPECIFICHE
+    torso_height_cm = Column(Float, nullable=True)
+    wingspan_cm = Column(Float, nullable=True)
     leg_length_cm = Column(Float, nullable=True)
     tibia_length_cm = Column(Float, nullable=True)
     arm_length_cm = Column(Float, nullable=True)
-    torso_height_cm = Column(Float, nullable=True)
-    wingspan_cm = Column(Float, nullable=True)
+    foot_length_cm = Column(Float, nullable=True)
+    flexibility_cm = Column(Float, nullable=True)
     # NOTE
     notes = Column(Text, nullable=True)
 

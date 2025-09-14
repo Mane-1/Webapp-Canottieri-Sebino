@@ -97,6 +97,9 @@ async def lifespan(app: FastAPI):
         seed_turni(db)
         seed_default_allenamenti(db)
         seed_mezzi(db)
+        seed_turni(db)
+        seed_default_allenamenti(db)
+        seed_mezzi(db)
 
         admin_username = os.environ.get("ADMIN_USERNAME", "admin")
         admin_password = os.environ.get("ADMIN_PASSWORD")
